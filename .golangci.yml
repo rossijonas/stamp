@@ -1,0 +1,29 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - testifylint
+    - unused
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - shadow

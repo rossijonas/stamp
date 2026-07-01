@@ -1,0 +1,109 @@
+// Package manifest handles the reading, writing, and manipulation
+// of the stamp intention manifest file (manifest.toml).
+package manifest
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/pelletier/go-toml/v2"
+)
+
+// Package represents a single installed application or tool in the manifest.
+type Package struct {
+	Name     string `toml:"name"`
+	Manager  string `toml:"manager"`
+	Category string `toml:"category,omitempty"`
+	Notes    string `toml:"notes,omitempty"`
+}
+
+// Repository represents a tracked third-party repository or tap.
+type Repository struct {
+	Name    string `toml:"name"`
+	Manager string `toml:"manager"`
+	URL     string `toml:"url,omitempty"`
+}
+
+// Manifest represents the structure of the user's intended state.
+type Manifest struct {
+	Version      int          `toml:"version"`
+	System       string       `toml:"system,omitempty"`
+	UpdatedAt    time.Time    `toml:"updated_at"`
+	Repositories []Repository `toml:"repositories,omitempty"`
+	Packages     []Package    `toml:"packages"`
+}
+
+// Load reads a manifest from the given path.
+func Load(path string) (*Manifest, error) {
+	//nolint:gosec // path is resolved securely via internal config, not user input
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("manifest not found at %s: %w", path, err)
+		}
+		return nil, fmt.Errorf("failed to read manifest at %s: %w", path, err)
+	}
+
+	var m Manifest
+	if err := toml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("failed to parse manifest: %w", err)
+	}
+
+	return &m, nil
+}
+
+// Save writes the manifest to the given path, creating directories if necessary.
+func (m *Manifest) Save(path string) error {
+	m.UpdatedAt = time.Now().UTC()
+
+	// Create parent directories if they don't exist
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return fmt.Errorf("failed to create manifest directory %s: %w", dir, err)
+	}
+
+	data, err := toml.Marshal(m)
+	if err != nil {
+		return fmt.Errorf("failed to encode manifest: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("failed to write manifest to %s: %w", path, err)
+	}
+
+	return nil
+}
+
+// AddPackage appends a new package to the manifest if it doesn't already exist.
+func (m *Manifest) AddPackage(pkg Package) bool {
+	if m.HasPackage(pkg.Name, pkg.Manager) {
+		return false
+	}
+	m.Packages = append(m.Packages, pkg)
+	return true
+}
+
+// RemovePackage removes a package from the manifest.
+func (m *Manifest) RemovePackage(name, manager string) bool {
+	for i, pkg := range m.Packages {
+		if pkg.Name == name && pkg.Manager == manager {
+			// Remove element efficiently
+			m.Packages = append(m.Packages[:i], m.Packages[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// HasPackage checks if a package is already tracked.
+func (m *Manifest) HasPackage(name, manager string) bool {
+	for _, pkg := range m.Packages {
+		if pkg.Name == name && pkg.Manager == manager {
+			return true
+		}
+	}
+	return false
+}

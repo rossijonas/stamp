@@ -1,0 +1,34 @@
+version: '3'
+
+tasks:
+  default:
+    desc: "Lists available tasks"
+    cmds:
+      - task --list
+
+  build:
+    desc: "Builds the stamp binary"
+    cmds:
+      - mkdir -p bin
+      - go build -o bin/stamp cmd/stamp/main.go
+
+  test:
+    desc: "Runs all unit tests"
+    cmds:
+      - go test -v -race ./...
+
+  lint:
+    desc: "Runs golangci-lint"
+    cmds:
+      - golangci-lint run
+
+  check:
+    desc: "Runs linting and tests (run this before PR)"
+    cmds:
+      - task: lint
+      - task: test
+
+  clean:
+    desc: "Removes build artifacts"
+    cmds:
+      - rm -rf bin/
