@@ -22,11 +22,24 @@ tasks:
     cmds:
       - golangci-lint run
 
-  check:
-    desc: "Runs linting and tests (run this before PR)"
+  verify:
+    desc: "Verifies module dependencies and checksums"
     cmds:
+      - go mod tidy
+      - go mod verify
+
+  security:
+    desc: "Runs govulncheck for known vulnerabilities"
+    cmds:
+      - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  check:
+    desc: "Runs all quality gates (run this before PR)"
+    cmds:
+      - task: verify
       - task: lint
       - task: test
+      - task: security
 
   clean:
     desc: "Removes build artifacts"

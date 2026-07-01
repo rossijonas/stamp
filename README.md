@@ -113,7 +113,7 @@ Before starting, ensure you have downloaded the required dependencies:
 go mod tidy
 ```
 
-- **Check**: `task check` (runs linter and tests)
+- **Check**: `task check` (runs verify, lint, test, and security)
 - **Build**: `task build`
 
 ## License
