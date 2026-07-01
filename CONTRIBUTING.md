@@ -15,10 +15,12 @@ go mod tidy
 ```
 
 We use `task` instead of `make`. Here are the essential commands:
-- `task check` - Runs static analysis and unit tests sequentially. **Must pass before opening a PR.**
+- `task check` - Runs all quality gates: module verification, static analysis, unit tests, and vulnerability scanning. **Must pass before opening a PR.**
 - `task build` - Builds the binary into the `bin/` directory.
 - `task test` - Runs all unit tests with the race detector enabled.
 - `task lint` - Runs static analysis.
+- `task verify` - Ensures `go.mod` and `go.sum` are clean and cryptographically verified.
+- `task security` - Runs `govulncheck` to scan for known CVEs.
 - `task clean` - Removes build artifacts.
 
 ## Commit Messages
