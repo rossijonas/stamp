@@ -21,6 +21,7 @@ linters:
       enable-all: true
       disable:
         - shadow
+        - fieldalignment
 
 formatters:
   enable:

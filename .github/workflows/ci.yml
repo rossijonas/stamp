@@ -41,8 +41,15 @@ jobs:
           git diff --exit-code go.mod go.sum || (echo "go.mod/go.sum not tidy. Run 'go mod tidy' and commit the changes." && exit 1)
           go mod verify
 
-      - name: Run Tests with Race Detector
-        run: go test -v -race ./...
+      - name: Run Tests & Enforce Coverage
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+          TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total Coverage: $TOTAL_COVERAGE%"
+          if (( $(echo "$TOTAL_COVERAGE < 90.0" | bc -l) )); then
+            echo "Error: Test coverage ($TOTAL_COVERAGE%) is below the required 90% threshold."
+            exit 1
+          fi
 
   security:
     name: Security Audit

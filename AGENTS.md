@@ -11,13 +11,17 @@ If you are an AI agent working in this repository, you **MUST** adhere to the fo
 1. **No `pkg/` directory:** `stamp` is a CLI application, not an external library. Business logic goes in `internal/`.
 2. **Naming:** Use lowercase, semantic package names. Avoid `utils` or `helpers`.
 3. **Interface-Driven:** Abstract external dependencies (like package managers or shell executions) behind interfaces to enable easy mocking.
+4. **Error Handling:** Wrap errors with context (`fmt.Errorf("failed to do X: %w", err)`). Errors must be logged OR returned, never both. Error strings must be lowercase without trailing punctuation.
+5. **Code Style:** Handle errors first (early return) to keep the happy path un-indented. Use `:=` for non-zero values, `var` for zero-value initialization.
+6. **Safety:** Always initialize maps before use (`make(map[K]V)`). Return defensive copies (`slices.Clone`) of internal data structures to prevent caller mutation.
+7. **Design Patterns:** Constructors should be explicit (no `init()` functions unless strictly required by a framework like Cobra).
 
 ## Testing
 1. **Framework:** Use the standard `testing` package + `github.com/stretchr/testify` (`assert` and `require`).
 2. **Mocks:** Use `testify/mock` for mocking internal interfaces.
 3. **Structure:** Use Table-Driven Tests for multiple scenarios.
-4. **Coverage:** Core logic packages (like `internal/state` and `internal/manifest`) demand 100% test coverage.
+4. **Coverage:** Overall project test coverage MUST remain above **90%**. Core logic packages demand 100%.
 
 ## Tools
 1. Use `task` instead of `make`.
-2. Validate code quality with `task lint` (golangci-lint).
+2. Validate code quality with `task check`.
