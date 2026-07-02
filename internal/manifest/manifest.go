@@ -77,6 +77,37 @@ func (m *Manifest) Save(path string) error {
 	return nil
 }
 
+// AddRepository appends a new repository to the manifest if it doesn't already exist.
+func (m *Manifest) AddRepository(repo Repository) bool {
+	if m.HasRepository(repo.Name, repo.Manager) {
+		return false
+	}
+	m.Repositories = append(m.Repositories, repo)
+	return true
+}
+
+// RemoveRepository removes a repository from the manifest.
+func (m *Manifest) RemoveRepository(name, manager string) bool {
+	for i, repo := range m.Repositories {
+		if repo.Name == name && repo.Manager == manager {
+			// Remove element efficiently
+			m.Repositories = append(m.Repositories[:i], m.Repositories[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// HasRepository checks if a repository is already tracked.
+func (m *Manifest) HasRepository(name, manager string) bool {
+	for _, repo := range m.Repositories {
+		if repo.Name == name && repo.Manager == manager {
+			return true
+		}
+	}
+	return false
+}
+
 // AddPackage appends a new package to the manifest if it doesn't already exist.
 func (m *Manifest) AddPackage(pkg Package) bool {
 	if m.HasPackage(pkg.Name, pkg.Manager) {
