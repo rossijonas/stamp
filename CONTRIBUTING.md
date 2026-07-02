@@ -10,6 +10,7 @@ We welcome contributions to `stamp`! This document outlines our development stan
 ## Development Workflow
 
 After cloning the repository, ensure you download the required dependencies:
+
 ```bash
 go mod tidy
 ```
@@ -24,6 +25,7 @@ We use `task` instead of `make`. Here are the essential commands:
 - `task clean` - Removes build artifacts.
 
 ## Commit Messages
+
 We follow [Conventional Commits](https://www.conventionalcommits.org/), example:
 - `feat:` for new features.
 - `fix:` for bug fixes.

@@ -23,11 +23,14 @@
 
 **Current Scope:** The MVP of `stamp` is focused on the Red Hat ecosystem (e.g., Fedora), natively supporting the trio of package managers most commonly used on these systems: `dnf`, `flatpak`, and `brew`.
 
-## The Two Workflows
+## Usage
+
+### The Two Workflows
 
 `stamp` is designed to be flexible. You can use it actively as a unified wrapper, or passively as a safety net.
 
-### Workflow A: Active Management (Recommended)
+#### Workflow A: Active Management (Recommended)
+
 Use `stamp` as your primary package installer. This guarantees 100% traceability of your intent instantly. It will auto-detect the best package manager or allow you to specify one.
 
 **Search across all managers:**
@@ -46,7 +49,8 @@ stamp install spotify --via flatpak
 stamp remove htop
 ```
 
-### Workflow B: The Passive Observer (The Safety Net)
+#### Workflow B: The Passive Observer (The Safety Net)
+
 If you or a script accidentally bypass `stamp` and use native tools directly, `stamp` acts as a safety net to retroactively capture your intent.
 
 **1. Install Normally (Bypassing stamp):**
@@ -61,7 +65,7 @@ Run `reconcile` periodically. `stamp` compares your current system against its s
 stamp reconcile
 ```
 
-## Rebuilding Your Environment
+### Rebuilding Your Environment
 
 When you get a new laptop, clone your dotfiles (containing your `manifest.toml`) and run:
 
@@ -75,7 +79,8 @@ To keep everything fresh, run a unified update across all your managers at once:
 stamp update
 ```
 
-## Adding Notes to Packages
+### Adding Notes to Packages
+
 You can annotate why you installed a specific package directly in the CLI, which saves it to your manifest. This is incredibly useful for remembering why you needed an obscure tool 6 months later.
 
 ```bash
@@ -86,25 +91,28 @@ Or add a note to an existing tracked package:
 stamp edit lazygit --note "Required for the backend build script"
 ```
 
-## Roadmap
+## The Project
+
+### Roadmap
 
 While `stamp` currently targets Red Hat-based systems, our goal is to become the universal intent tracker across all major Linux distributions and macOS.
 
 ### Upcoming Milestones
+
 - **[ ] Debian/Ubuntu Ecosystem Support**
-  - Implement native adapters for `apt` and `snap`.
-  - Add Debian-specific reconciling rules.
-  - ![Debian](https://img.shields.io/badge/Debian-D70A53?style=flat&logo=debian&logoColor=white) ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=flat&logo=ubuntu&logoColor=white)
-- **[ ] Arch Linux Support**
-  - Implement native adapters for `pacman`.
+  - Implement support for `apt` and `snap`.
+- **[ ] Extend MacOS Support**
+  - Implement support for MacPorts.
+- **[ ] Arch Linux Ecosystem Support**
+  - Implement support for `pacman`.
 - **[ ] Developer Toolchains**
   - Track language-specific global installs (`cargo`, `pipx`, `go install`).
 
-## Compatibility & Support Tracker
+### Compatibility & Support Tracker
 
 `stamp` aims to be the universal intent tracker across all major operating systems and developer toolchains. Below is the current support matrix and architectural context for the package managers we track (or plan to track).
 
-### OS Package Managers
+#### OS Package Managers
 
 | Status | Package Manager | Target Platforms | Core Binary Format | Scope & Permissions | Key Unique Architectural Feature |
 | :---: | :--- | :--- | :--- | :--- | :--- |
@@ -120,7 +128,7 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 | | **[Scoop](https://scoop.sh/)** | Windows | Portable ZIP extracts | User-space, no admin | Shim-based path management to avoid path pollution |
 | | **[APK](https://wiki.alpinelinux.org/wiki/Alpine_Package_Keeper)** | Alpine Linux | `.apk` | System-wide, root/sudo | Designed around musl and BusyBox for minimal size |
 
-### Developer Toolchains (Language Package Managers)
+#### Developer Toolchains (Language Package Managers)
 
 Tracking global CLI tools installed via language package managers is on our roadmap.
 
@@ -139,16 +147,6 @@ Tracking global CLI tools installed via language package managers is on our road
 ## Architecture & Vision
 
 Read the [Project Vision](docs/VISION.md) to understand the "why" behind the project, or check out the [Technical Specs](docs/SPEC.md) and [Architecture Decisions](docs/decisions/).
-
-## Development
-
-Before starting, ensure you have downloaded the required dependencies:
-```bash
-go mod tidy
-```
-
-- **Check**: `task check` (runs verify, lint, test, and security)
-- **Build**: `task build`
 
 ## License
 
