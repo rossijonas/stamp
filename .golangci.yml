@@ -4,7 +4,7 @@ run:
   timeout: 5m
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - errcheck
     - gocritic
@@ -16,14 +16,14 @@ linters:
     - staticcheck
     - testifylint
     - unused
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+        - fieldalignment
 
 formatters:
   enable:
     - gofmt
     - goimports
-
-linters-settings:
-  govet:
-    enable-all: true
-    disable:
-      - shadow

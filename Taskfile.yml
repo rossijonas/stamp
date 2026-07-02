@@ -13,9 +13,10 @@ tasks:
       - go build -o bin/stamp cmd/stamp/main.go
 
   test:
-    desc: "Runs all unit tests"
+    desc: "Runs all unit tests and enforces 90% coverage"
     cmds:
-      - go test -v -race ./...
+      - go test -v -race -coverprofile=coverage.out ./...
+      - go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}' | awk '{if ($1 < 90.0) {print "Error:\nCoverage is below 90% ("$1"%)"; exit 1} else {print "Coverage is good ("$1"%)"}}'
 
   lint:
     desc: "Runs golangci-lint"

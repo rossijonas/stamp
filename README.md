@@ -13,9 +13,7 @@
 
 ```
 
-*<p style="text-align:center;">
-Track your package installation intent across multiple package managers. Rebuild your environment anywhere.
-</p>*
+*Track your package installation intent across multiple package managers. Rebuild your environment anywhere.*
 
 ---
 
