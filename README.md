@@ -110,19 +110,17 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 
 | Status | Package Manager | Target Platforms | Core Binary Format | Scope & Permissions | Key Unique Architectural Feature |
 | :---: | :--- | :--- | :--- | :--- | :--- |
-| ✅ | **DNF** | Fedora, RHEL, CentOS | `.rpm` | System-wide, root/sudo | High-performance C-based libsolv engine |
-| ✅ | **Homebrew** | macOS, Linux | Bottles (tarballs) | User-space, no root/sudo | Avoids duplicating host OS dynamic libraries |
-| ✅ | **Flatpak** | Linux (Universal) | OSTree / OCI | User or System | Sandboxed application distribution |
-| ⏳ | **APT** | Debian, Ubuntu, Mint | `.deb` | System-wide, root/sudo | Robust dependency resolution, stable release focus |
-| ⏳ | **Snap** | Ubuntu, Linux | SquashFS | System-wide, root/sudo | Containerized, auto-updating application bundles |
-| ⏳ | **Pacman** | Arch Linux | `.pkg.tar.zst` | System-wide, root/sudo | Lightweight rolling-release synchronization |
-| ⏳ | **Winget** | Windows 11 | AppX/MSIX, MSI, EXE | Mixed, user or system | In-place version synchronization with registry |
-| | **Chocolatey** | Windows | `.nupkg` (NuGet wrappers) | System-wide, admin | First-party configuration management integration |
-| | **Scoop** | Windows | Portable ZIP extracts | User-space, no admin | Shim-based path management to avoid path pollution |
-| | **MacPorts** | macOS | Source files, frameworks | System-wide, root/sudo | Fully isolated `/opt/local` directory tree |
-| | **APK** | Alpine Linux | `.apk` | System-wide, root/sudo | Designed around musl and BusyBox for minimal size |
-| | **Portage** | Gentoo Linux | Source (ebuild) | System-wide, root/sudo | USE flags for precise compile-time tailoring |
-| | **PKGNG** | FreeBSD | Precompiled `.txz` | System-wide, root/sudo | Transactional SQLite database engine |
+| ✅ | **[DNF](https://docs.fedoraproject.org/en-US/quick-docs/dnf/)** | Fedora, RHEL, CentOS | `.rpm` | System-wide, root/sudo | High-performance C-based libsolv engine |
+| ✅ | **[Homebrew](https://brew.sh/)** | macOS, Linux | Bottles (tarballs) | User-space, no root/sudo | Avoids duplicating host OS dynamic libraries |
+| ✅ | **[Flatpak](https://flatpak.org/)** | Linux (Universal) | OSTree / OCI | User or System | Sandboxed application distribution |
+| ⏳ | **[APT](https://ubuntu.com/server/docs/how-to/software/package-management/#)** | Debian, Ubuntu, Mint | `.deb` | System-wide, root/sudo | Robust dependency resolution, stable release focus |
+| ⏳ | **[Snap](https://snapcraft.io/)** | Ubuntu, Linux | SquashFS | System-wide, root/sudo | Containerized, auto-updating application bundles |
+| ⏳ | **[MacPorts](https://www.macports.org/)** | macOS | Source files, frameworks | System-wide, root/sudo | Fully isolated `/opt/local` directory tree |
+| ⏳ | **[Pacman](https://wiki.archlinux.org/title/Pacman)** | Arch Linux | `.pkg.tar.zst` | System-wide, root/sudo | Lightweight rolling-release synchronization |
+| | **[Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/)** | Windows 11 | AppX/MSIX, MSI, EXE | Mixed, user or system | In-place version synchronization with registry |
+| | **[Chocolatey](https://chocolatey.org/)** | Windows | `.nupkg` (NuGet wrappers) | System-wide, admin | First-party configuration management integration |
+| | **[Scoop](https://scoop.sh/)** | Windows | Portable ZIP extracts | User-space, no admin | Shim-based path management to avoid path pollution |
+| | **[APK](https://wiki.alpinelinux.org/wiki/Alpine_Package_Keeper)** | Alpine Linux | `.apk` | System-wide, root/sudo | Designed around musl and BusyBox for minimal size |
 
 ### Developer Toolchains (Language Package Managers)
 
