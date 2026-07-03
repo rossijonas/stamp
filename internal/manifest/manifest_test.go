@@ -86,3 +86,51 @@ func TestManifestLoadNotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "manifest not found")
 }
+
+func TestManifestLoadInvalidTOML(t *testing.T) {
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "invalid.toml")
+
+	// Write malformed TOML
+	err := os.WriteFile(manifestPath, []byte("invalid = [toml\n"), 0600)
+	require.NoError(t, err)
+
+	_, err = Load(manifestPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
+}
+
+func TestManifestSavePermissionError(t *testing.T) {
+	tmpDir := t.TempDir()
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	err := os.Mkdir(readOnlyDir, 0400) // Read-only
+	require.NoError(t, err)
+
+	m := &Manifest{Version: 1}
+	manifestPath := filepath.Join(readOnlyDir, "manifest.toml")
+
+	err = m.Save(manifestPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create temp file")
+}
+
+func TestManifestSaveRenameError(t *testing.T) {
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	
+	// Create a directory at the target path to make rename fail
+	err := os.Mkdir(manifestPath, 0750)
+	require.NoError(t, err)
+
+	m := &Manifest{Version: 1}
+	
+	err = m.Save(manifestPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to rename temp manifest")
+
+	// Ensure the temp file was removed
+	files, err := os.ReadDir(tmpDir)
+	require.NoError(t, err)
+	assert.Len(t, files, 1) // Only the "manifest.toml" directory should exist
+	assert.Equal(t, "manifest.toml", files[0].Name())
+}
