@@ -17,6 +17,10 @@
 
 ---
 
+[![CI](https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp)
+
+---
+
 ## ▪ Intro
 
 `stamp` is a CLI tool that tracks the software you *intentionally* install across fragmented package managers (`dnf`, `flatpak`, `brew`, etc.). It records your choices into a portable, version-controlled TOML manifest. When you move to a new machine,  run `stamp restore` to recreate your exact environment.
