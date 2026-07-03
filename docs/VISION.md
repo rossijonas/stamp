@@ -46,6 +46,9 @@ Existing tools fail to bridge this gap:
 7. **Context Preservation (Notes)**
    Intent is often forgotten. By supporting package-level notes, `stamp` acts as a memory aid. You aren't just restoring `libfoo`, you are restoring `libfoo (required for the legacy billing service compilation)`.
 
+8. **Predictability & Scriptability**
+   `stamp` is designed for automation. With the global `--yes` / `-y` flag, it runs deterministically in non-interactive environments (like bootstrapping pipelines), and strictly avoids holding interactive prompts unless stdout is a TTY and the user hasn't explicitly opted into auto-acceptance.
+
 ## Who is this for?
 
 `stamp` is built primarily for the **solo developer, SRE, or DevOps engineer** who wants a reproducible local workstation without the cognitive overhead of maintaining local Ansible playbooks or Nix flakes. 

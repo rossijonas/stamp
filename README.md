@@ -42,15 +42,19 @@ Use `stamp` as your primary package installer. This guarantees 100% traceability
 stamp search ripgrep
 ```
 
-**Install and track in one step:**
+**Install and track in one step (with aliases like `add`):**
 ```bash
 stamp install htop              # auto-detects dnf on Fedora
-stamp install spotify --via flatpak
+stamp install spotify --manager flatpak # or: -m flatpak
+stamp add lazygit -m brew       # using the 'add' alias
 ```
 
-**Remove and untrack:**
+**Remove and untrack (with aliases like `uninstall`, `rm`, `delete`, `del`):**
 ```bash
 stamp remove htop
+stamp uninstall lazygit         # using the 'uninstall' alias
+stamp rm htop                   # using the 'rm' alias
+stamp del htop                  # using the 'del' alias
 ```
 
 #### ⛨ Workflow B: The Passive Observer (The Safety Net)
@@ -64,9 +68,9 @@ brew install jq
 ```
 
 **2. Reconcile:**
-Run `reconcile` periodically. `stamp` compares your current system against its snapshot, detects the newly installed `ripgrep` and `jq`, and prompts you to add them to your manifest.
+Run `reconcile` periodically. `stamp` compares your current system against its snapshot, detects the newly installed `ripgrep` and `jq`, and prompts you to add them to your manifest. You can also pass the `-y` / `--yes` flag to automatically track all newly detected packages without interactive prompts (ideal for automated crontabs).
 ```bash
-stamp reconcile
+stamp reconcile -y
 ```
 
 ### ⚒ Rebuilding Your Environment
@@ -74,9 +78,9 @@ stamp reconcile
 When you get a new laptop, clone your dotfiles (containing your `manifest.toml`) and run:
 
 ```bash
-stamp restore
+stamp restore -y
 ```
-`stamp` will read the manifest and execute the appropriate native install commands concurrently.
+`stamp` will read the manifest and execute the appropriate native install commands concurrently. The `-y` / `--yes` flag ensures any safety confirmations are auto-accepted.
 
 To keep everything fresh, run a unified update across all your managers at once:
 ```bash
@@ -94,6 +98,29 @@ Or add a note to an existing tracked package:
 ```bash
 stamp edit lazygit --note "Required for the backend build script"
 ```
+
+### ⚙️ Configuration
+
+`stamp` is configured via a simple, human-editable TOML file located at `~/.config/stamp/config.toml`. This file governs how `stamp` resolves ambiguity when a package exists in multiple package managers.
+
+Example configuration:
+```toml
+# ~/.config/stamp/config.toml
+
+# Global package manager priority (highest to lowest)
+precedence = ["dnf", "flatpak", "brew"]
+
+# Fine-grained pattern-based matching rules
+[[rules]]
+pattern = "^com\\..*|^org\\..*" # Force reverse-DNS names to Flatpak
+prefer = "flatpak"
+
+[[rules]]
+pattern = "^lib.*|-devel$"     # Force libraries and dev headers to DNF
+prefer = "dnf"
+```
+
+If you run `stamp install htop`, and `htop` is available in both DNF and Homebrew, `stamp` will automatically select DNF because `dnf` has higher priority than `brew` in your `precedence` config.
 
 ## ▪ The Project
 
