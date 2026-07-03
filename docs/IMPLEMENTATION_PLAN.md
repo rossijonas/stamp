@@ -61,16 +61,16 @@ Build the ability to actually modify the system (Install, Remove, Search) as the
 *   **Description:** Define the `PackageManager` interface. Implement `MockManager` for testing.
 *   **Acceptance:** Interface defines `Name()`, `ListInstalled()`, `Install()`, `Remove()`, `Search()`, `AddRepo()`, `RemoveRepo()`.
 *   **Verify:** `task test` passes for `internal/manager` mocks.
-*   **Status:** ⏳ In Progress (Missing AddRepo/RemoveRepo)
+*   **Status:** ✅ Completed
 
 **Task 4: Native Adapters (Write Operations)**
 *   **Description:** Implement `Install()`, `Remove()`, `Search()`, `AddRepo()`, and `RemoveRepo()` for `dnf`, `brew`, and `flatpak`.
 *   **Acceptance:** Adapters can execute system and repository modifications.
 *   **Verify:** Tests pass.
-*   **Status:** ⏳ In Progress (Missing AddRepo/RemoveRepo)
+*   **Status:** ✅ Completed
 
 **Task 5: Active CLI Commands**
-*   **Description:** Wire up `stamp install/add`, `stamp remove/uninstall/delete/del`, and `stamp search` in Cobra. Implement the `stamp repo` command group. Ensure aliases are properly registered using Cobra's `Aliases` array.
+*   **Description:** Wire up `stamp install/add`, `stamp remove/uninstall/delete/del`, and `stamp search` in Cobra. Implement the `stamp repo` command group. Ensure aliases are properly registered using Cobra's `Aliases` array, and the 3-tier resolution engine parses `config.toml` precedence and regex-based matching rules. Supports the global `--yes` / `-y` flag.
 *   **Acceptance:** Users can install packages and repositories via `stamp`, updating the manifest automatically.
 *   **Verify:** Manual test of `stamp install <test-pkg>`
 *   **Status:** ⏳ Pending
@@ -91,8 +91,8 @@ Build the read-only safety net: checking the system state and calculating the de
 *   **Status:** ⏳ Pending
 
 **Task 8: The `reconcile` Command (Cobra)**
-*   **Description:** Wire up `cmd/stamp/main.go` and `internal/cli/reconcile.go`.
-*   **Acceptance:** Running `stamp reconcile` fetches the state, calculates the delta, and prompts the user to add new packages to the manifest.
+*   **Description:** Wire up `cmd/stamp/main.go` and `internal/cli/reconcile.go`. Supports the `--yes` / `-y` flag to auto-track detected packages without prompting.
+*   **Acceptance:** Running `stamp reconcile` fetches the state, calculates the delta, and prompts the user (or auto-tracks) to add new packages to the manifest.
 *   **Verify:** Manual test: `go run cmd/stamp/main.go reconcile`
 *   **Status:** ⏳ Pending
 
@@ -100,14 +100,14 @@ Build the read-only safety net: checking the system state and calculating the de
 Build the environment reconstruction logic and final touches.
 
 **Task 9: The `restore` Command**
-*   **Description:** Implement the environment reconstruction logic.
+*   **Description:** Implement the environment reconstruction logic. Supports the `--yes` / `-y` flag to bypass safety confirmation prompts.
 *   **Acceptance:** `stamp restore` parses the manifest, restores all tracked repositories first, and then executes concurrent package installs.
 *   **Verify:** Manual test with `--dry-run` flag.
 *   **Status:** ⏳ Pending
 
-**Task 10: CLI Polish & GitHub Pages Documentation**
-*   **Description:** Implement `stamp completion` for shell autocompletion. Implement a hidden `stamp generate-docs` command (or hook it into Taskfile) to auto-generate markdown files using `cobra/doc` for GitHub Pages. Ensure `NO_COLOR` compliance and strict `stdout`/`stderr` separation.
-*   **Acceptance:** User can generate markdown docs and shell completions.
-*   **Verify:** `task docs` generates valid markdown files in `docs/usage/`.
+**Task 10: CLI Polish, Manpages, & GitHub Pages Documentation**
+*   **Description:** Implement `stamp completion` for shell autocompletion. Implement a documentation generation pipeline (invoked via `task docs` or a command) to auto-generate both Markdown files (for GitHub Pages) and troff `man` pages (for native UNIX documentation) using `cobra/doc`. Ensure `NO_COLOR` compliance and strict `stdout`/`stderr` separation.
+*   **Acceptance:** User can run diagnostics with `stamp doctor --json`, load shell completions, and run `man stamp` locally.
+*   **Verify:** `task docs` generates valid markdown files in `docs/usage/` and `.1` files in `docs/man/`.
 *   **Status:** ⏳ Pending
 
