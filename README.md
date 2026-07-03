@@ -15,6 +15,10 @@
 
 *Track your package installation intent across multiple package managers. Rebuild your environment anywhere.*
 
+<p align="center">
+[![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp)
+</p>
+
 ---
 
 ## ▪ Intro
