@@ -16,6 +16,7 @@ func mockExecutorHelper(output string, err error) Executor {
 }
 
 func TestDNF_Operations(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		operation   string // "list", "install", "remove", "search"
@@ -81,6 +82,7 @@ func TestDNF_Operations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			manager := NewDNF()
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
@@ -130,6 +132,7 @@ func TestDNF_Operations(t *testing.T) {
 }
 
 func TestBrew_Operations(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		operation   string
@@ -195,6 +198,7 @@ func TestBrew_Operations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			manager := NewBrew()
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
@@ -244,6 +248,7 @@ func TestBrew_Operations(t *testing.T) {
 }
 
 func TestFlatpak_Operations(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		operation   string
@@ -309,6 +314,7 @@ func TestFlatpak_Operations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			manager := NewFlatpak()
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
@@ -358,6 +364,7 @@ func TestFlatpak_Operations(t *testing.T) {
 }
 
 func TestParseLines(t *testing.T) {
+	t.Parallel()
 	input := []byte(" line1 \nline2\n\n  line3  \n")
 	expected := []string{"line1", "line2", "line3"}
 	actual := parseLines(input)
@@ -365,6 +372,7 @@ func TestParseLines(t *testing.T) {
 }
 
 func TestValidatePackageName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		pkg   string
 		valid bool
@@ -381,6 +389,7 @@ func TestValidatePackageName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.pkg, func(t *testing.T) {
+			t.Parallel()
 			err := ValidatePackageName(tt.pkg)
 			if tt.valid {
 				assert.NoError(t, err)

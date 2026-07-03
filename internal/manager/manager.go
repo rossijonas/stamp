@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"regexp"
@@ -43,10 +44,10 @@ type Adapter interface {
 
 // parseLines splits byte output by newline and removes empty strings.
 func parseLines(output []byte) []string {
-	lines := strings.Split(string(output), "\n")
-	result := make([]string, 0, len(lines))
+	var result []string
+	lines := bytes.Split(output, []byte("\n"))
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
+		trimmed := strings.TrimSpace(string(line))
 		if trimmed != "" {
 			result = append(result, trimmed)
 		}

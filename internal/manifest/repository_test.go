@@ -7,6 +7,7 @@ import (
 )
 
 func TestManifestAddAndRemoveRepository(t *testing.T) {
+	t.Parallel()
 	m := &Manifest{Version: 1}
 
 	repo1 := Repository{Name: "flathub", Manager: "flatpak", URL: "https://dl.flathub.org/repo/flathub.flatpakrepo"}

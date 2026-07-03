@@ -10,6 +10,7 @@ import (
 )
 
 func TestDefaultExecutor_Success(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	// Use a command that is virtually guaranteed to exist and succeed on Unix systems.
 	out, err := defaultExecutor(ctx, "echo", "hello", "world")
@@ -18,6 +19,7 @@ func TestDefaultExecutor_Success(t *testing.T) {
 }
 
 func TestDefaultExecutor_FailureWithoutStderr(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	// Use a command that will fail (exit status 1) but produces no stderr output.
 	// `false` command exits with 1.
@@ -30,6 +32,7 @@ func TestDefaultExecutor_FailureWithoutStderr(t *testing.T) {
 }
 
 func TestDefaultExecutor_FailureWithStderr(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	// Run a shell command that writes to stderr and exits with an error
 	out, err := defaultExecutor(ctx, "sh", "-c", "echo 'custom error' >&2; exit 1")

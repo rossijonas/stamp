@@ -79,9 +79,9 @@ func (m *Manifest) Save(path string) error {
 
 	var success bool
 	defer func() {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		if !success {
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 		}
 	}()
 

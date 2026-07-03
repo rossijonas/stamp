@@ -10,6 +10,7 @@ import (
 )
 
 func TestMock(t *testing.T) {
+	t.Parallel()
 	mock := &Mock{
 		ManagerName:   "mock",
 		InstalledPkgs: []string{"git", "curl"},
@@ -54,6 +55,7 @@ func TestMock(t *testing.T) {
 }
 
 func TestMockErrors(t *testing.T) {
+	t.Parallel()
 	expectedErr := errors.New("simulated error")
 	mock := &Mock{
 		ListErr:    expectedErr,

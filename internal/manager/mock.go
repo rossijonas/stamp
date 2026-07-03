@@ -28,9 +28,7 @@ func (m *Mock) ListInstalled(_ context.Context) ([]string, error) {
 		return nil, m.ListErr
 	}
 	// Return a copy to avoid accidental mutation
-	pkgs := make([]string, len(m.InstalledPkgs))
-	copy(pkgs, m.InstalledPkgs)
-	return pkgs, nil
+	return slices.Clone(m.InstalledPkgs), nil
 }
 
 // Install executes the native installation command.
