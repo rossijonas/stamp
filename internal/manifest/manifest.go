@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
@@ -70,11 +71,65 @@ func (m *Manifest) Save(path string) error {
 		return fmt.Errorf("failed to encode manifest: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0600); err != nil {
-		return fmt.Errorf("failed to write manifest to %s: %w", path, err)
+	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpName := tmpFile.Name()
+
+	var success bool
+	defer func() {
+		tmpFile.Close()
+		if !success {
+			os.Remove(tmpName)
+		}
+	}()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		return fmt.Errorf("failed to write manifest to %s: %w", tmpName, err)
 	}
 
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp manifest %s: %w", tmpName, err)
+	}
+
+	if err := os.Rename(tmpName, path); err != nil {
+		return fmt.Errorf("failed to rename temp manifest %s to %s: %w", tmpName, path, err)
+	}
+
+	success = true
 	return nil
+}
+
+// AddRepository appends a new repository to the manifest if it doesn't already exist.
+func (m *Manifest) AddRepository(repo Repository) bool {
+	if m.HasRepository(repo.Name, repo.Manager) {
+		return false
+	}
+	m.Repositories = append(m.Repositories, repo)
+	return true
+}
+
+// RemoveRepository removes a repository from the manifest.
+func (m *Manifest) RemoveRepository(name, manager string) bool {
+	for i, repo := range m.Repositories {
+		if repo.Name == name && repo.Manager == manager {
+			// Remove element efficiently
+			m.Repositories = slices.Delete(m.Repositories, i, i+1)
+			return true
+		}
+	}
+	return false
+}
+
+// HasRepository checks if a repository is already tracked.
+func (m *Manifest) HasRepository(name, manager string) bool {
+	for _, repo := range m.Repositories {
+		if repo.Name == name && repo.Manager == manager {
+			return true
+		}
+	}
+	return false
 }
 
 // AddPackage appends a new package to the manifest if it doesn't already exist.
@@ -91,7 +146,7 @@ func (m *Manifest) RemovePackage(name, manager string) bool {
 	for i, pkg := range m.Packages {
 		if pkg.Name == name && pkg.Manager == manager {
 			// Remove element efficiently
-			m.Packages = append(m.Packages[:i], m.Packages[i+1:]...)
+			m.Packages = slices.Delete(m.Packages, i, i+1)
 			return true
 		}
 	}
