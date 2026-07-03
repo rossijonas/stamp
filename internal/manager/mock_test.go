@@ -52,16 +52,28 @@ func TestMock(t *testing.T) {
 	results, err := mock.Search(ctx, "to")
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"htop"}, results)
+
+	// Test Add Repo
+	err = mock.AddRepo(ctx, "test-repo", "url")
+	require.NoError(t, err)
+	assert.Contains(t, mock.TrackedRepos, "test-repo")
+
+	// Test Remove Repo
+	err = mock.RemoveRepo(ctx, "test-repo")
+	require.NoError(t, err)
+	assert.NotContains(t, mock.TrackedRepos, "test-repo")
 }
 
 func TestMockErrors(t *testing.T) {
 	t.Parallel()
 	expectedErr := errors.New("simulated error")
 	mock := &Mock{
-		ListErr:    expectedErr,
-		InstallErr: expectedErr,
-		RemoveErr:  expectedErr,
-		SearchErr:  expectedErr,
+		ListErr:       expectedErr,
+		InstallErr:    expectedErr,
+		RemoveErr:     expectedErr,
+		SearchErr:     expectedErr,
+		AddRepoErr:    expectedErr,
+		RemoveRepoErr: expectedErr,
 	}
 
 	ctx := context.Background()
@@ -76,5 +88,11 @@ func TestMockErrors(t *testing.T) {
 	require.ErrorIs(t, err, expectedErr)
 
 	_, err = mock.Search(ctx, "htop")
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.AddRepo(ctx, "repo", "url")
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.RemoveRepo(ctx, "repo")
 	require.ErrorIs(t, err, expectedErr)
 }

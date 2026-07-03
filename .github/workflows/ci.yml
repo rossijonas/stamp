@@ -55,7 +55,5 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - id: govulncheck
-        uses: golang/govulncheck-action@v1
-        with:
-          go-version-input: '1.26'
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
