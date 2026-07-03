@@ -15,9 +15,7 @@
 
 *Track your package installation intent across multiple package managers. Rebuild your environment anywhere.*
 
-<div align="center">
 [![CI](https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp)
-</div>
 
 ---
 
