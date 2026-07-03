@@ -2,67 +2,69 @@ package manager
 
 import (
 	"context"
-	"strings"
+	"fmt"
 )
 
-// DnfManager implements the PackageManager interface for Fedora's DNF.
-type DnfManager struct {
+// DNF implements the Adapter interface for Fedora's DNF.
+type DNF struct {
 	exec Executor
 }
 
-// NewDnfManager creates a new DnfManager with the default system executor.
-func NewDnfManager() *DnfManager {
-	return &DnfManager{
+// NewDNF creates a new DNF with the default system executor.
+func NewDNF() *DNF {
+	return &DNF{
 		exec: defaultExecutor,
 	}
 }
 
 // Name returns the package manager identifier.
-func (m *DnfManager) Name() string {
+func (m *DNF) Name() string {
 	return "dnf"
 }
 
 // ListInstalled returns a list of packages currently installed.
-func (m *DnfManager) ListInstalled(ctx context.Context) ([]string, error) {
+func (m *DNF) ListInstalled(ctx context.Context) ([]string, error) {
 	// Query user-installed packages, formatted to only show the name.
 	out, err := m.exec(ctx, "dnf", "repoquery", "--userinstalled", "--qf", "%{name}")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
 
 	return parseLines(out), nil
 }
 
 // Install executes the native installation command.
-func (m *DnfManager) Install(ctx context.Context, pkg string) error {
-	_, err := m.exec(ctx, "sudo", "dnf", "install", "-y", pkg)
-	return err
+func (m *DNF) Install(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	_, err := m.exec(ctx, "sudo", "-n", "dnf", "install", "-y", pkg)
+	if err != nil {
+		return fmt.Errorf("failed to install %s: %w", pkg, err)
+	}
+	return nil
 }
 
 // Remove executes the native removal command.
-func (m *DnfManager) Remove(ctx context.Context, pkg string) error {
-	_, err := m.exec(ctx, "sudo", "dnf", "remove", "-y", pkg)
-	return err
+func (m *DNF) Remove(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	_, err := m.exec(ctx, "sudo", "-n", "dnf", "remove", "-y", pkg)
+	if err != nil {
+		return fmt.Errorf("failed to remove %s: %w", pkg, err)
+	}
+	return nil
 }
 
 // Search queries the native package manager for the given package name.
-func (m *DnfManager) Search(ctx context.Context, query string) ([]string, error) {
-	out, err := m.exec(ctx, "dnf", "search", "-q", query)
-	if err != nil {
+func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
+	if err := ValidatePackageName(query); err != nil {
 		return nil, err
 	}
-	return parseLines(out), nil
-}
-
-// parseLines splits byte output by newline and removes empty strings.
-func parseLines(output []byte) []string {
-	var result []string
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			result = append(result, trimmed)
-		}
+	out, err := m.exec(ctx, "dnf", "search", "-q", query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
 	}
-	return result
+	return parseLines(out), nil
 }

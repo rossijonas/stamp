@@ -15,7 +15,7 @@ func mockExecutorHelper(output string, err error) Executor {
 	}
 }
 
-func TestDnfManager_Operations(t *testing.T) {
+func TestDNF_Operations(t *testing.T) {
 	tests := []struct {
 		name        string
 		operation   string // "list", "install", "remove", "search"
@@ -32,10 +32,23 @@ func TestDnfManager_Operations(t *testing.T) {
 			expectedRes: []string{"htop", "ripgrep"},
 		},
 		{
+			name:        "list installed error",
+			operation:   "list",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:      "install success",
 			operation: "install",
 			pkgName:   "htop",
 			mockErr:   nil,
+		},
+		{
+			name:        "install error",
+			operation:   "install",
+			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
 		},
 		{
 			name:      "remove success",
@@ -44,17 +57,31 @@ func TestDnfManager_Operations(t *testing.T) {
 			mockErr:   nil,
 		},
 		{
+			name:        "remove error",
+			operation:   "remove",
+			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:        "search success",
 			operation:   "search",
 			pkgName:     "htop",
 			mockOutput:  "htop\nhtop-debuginfo\n",
 			expectedRes: []string{"htop", "htop-debuginfo"},
 		},
+		{
+			name:        "search error",
+			operation:   "search",
+			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager := NewDnfManager()
+			manager := NewDNF()
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
 			assert.Equal(t, "dnf", manager.Name()) // hit the name method
@@ -65,12 +92,18 @@ func TestDnfManager_Operations(t *testing.T) {
 			switch tt.operation {
 			case "list":
 				res, err := manager.ListInstalled(ctx)
-				require.NoError(t, err)
-				assert.ElementsMatch(t, tt.expectedRes, res)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
 			case "install":
 				err = manager.Install(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
 				} else {
 					require.NoError(t, err)
 				}
@@ -78,19 +111,25 @@ func TestDnfManager_Operations(t *testing.T) {
 				err = manager.Remove(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
 				} else {
 					require.NoError(t, err)
 				}
 			case "search":
 				res, err := manager.Search(ctx, tt.pkgName)
-				require.NoError(t, err)
-				assert.ElementsMatch(t, tt.expectedRes, res)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
 			}
 		})
 	}
 }
 
-func TestBrewManager_Operations(t *testing.T) {
+func TestBrew_Operations(t *testing.T) {
 	tests := []struct {
 		name        string
 		operation   string
@@ -107,10 +146,23 @@ func TestBrewManager_Operations(t *testing.T) {
 			expectedRes: []string{"jq", "fzf", "tmux"},
 		},
 		{
+			name:        "list installed error",
+			operation:   "list",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:      "install success",
 			operation: "install",
 			pkgName:   "jq",
 			mockErr:   nil,
+		},
+		{
+			name:        "install error",
+			operation:   "install",
+			pkgName:     "jq",
+			mockErr:     assert.AnError,
+			expectedErr: true,
 		},
 		{
 			name:      "remove success",
@@ -119,17 +171,31 @@ func TestBrewManager_Operations(t *testing.T) {
 			mockErr:   nil,
 		},
 		{
+			name:        "remove error",
+			operation:   "remove",
+			pkgName:     "jq",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:        "search success",
 			operation:   "search",
 			pkgName:     "jq",
 			mockOutput:  "jq\njq-debug\n",
 			expectedRes: []string{"jq", "jq-debug"},
 		},
+		{
+			name:        "search error",
+			operation:   "search",
+			pkgName:     "jq",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager := NewBrewManager()
+			manager := NewBrew()
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
 			assert.Equal(t, "brew", manager.Name())
@@ -140,24 +206,44 @@ func TestBrewManager_Operations(t *testing.T) {
 			switch tt.operation {
 			case "list":
 				res, err := manager.ListInstalled(ctx)
-				require.NoError(t, err)
-				assert.ElementsMatch(t, tt.expectedRes, res)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
 			case "install":
 				err = manager.Install(ctx, tt.pkgName)
-				require.NoError(t, err)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+				}
 			case "remove":
 				err = manager.Remove(ctx, tt.pkgName)
-				require.NoError(t, err)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+				}
 			case "search":
 				res, err := manager.Search(ctx, tt.pkgName)
-				require.NoError(t, err)
-				assert.ElementsMatch(t, tt.expectedRes, res)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
 			}
 		})
 	}
 }
 
-func TestFlatpakManager_Operations(t *testing.T) {
+func TestFlatpak_Operations(t *testing.T) {
 	tests := []struct {
 		name        string
 		operation   string
@@ -174,10 +260,23 @@ func TestFlatpakManager_Operations(t *testing.T) {
 			expectedRes: []string{"com.spotify.Client", "org.mozilla.firefox"},
 		},
 		{
+			name:        "list installed error",
+			operation:   "list",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:      "install success",
 			operation: "install",
 			pkgName:   "com.spotify.Client",
 			mockErr:   nil,
+		},
+		{
+			name:        "install error",
+			operation:   "install",
+			pkgName:     "com.spotify.Client",
+			mockErr:     assert.AnError,
+			expectedErr: true,
 		},
 		{
 			name:      "remove success",
@@ -186,17 +285,31 @@ func TestFlatpakManager_Operations(t *testing.T) {
 			mockErr:   nil,
 		},
 		{
+			name:        "remove error",
+			operation:   "remove",
+			pkgName:     "com.spotify.Client",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:        "search success",
 			operation:   "search",
 			pkgName:     "spotify",
 			mockOutput:  "com.spotify.Client\n",
 			expectedRes: []string{"com.spotify.Client"},
 		},
+		{
+			name:        "search error",
+			operation:   "search",
+			pkgName:     "spotify",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager := NewFlatpakManager()
+			manager := NewFlatpak()
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
 			assert.Equal(t, "flatpak", manager.Name())
@@ -207,18 +320,38 @@ func TestFlatpakManager_Operations(t *testing.T) {
 			switch tt.operation {
 			case "list":
 				res, err := manager.ListInstalled(ctx)
-				require.NoError(t, err)
-				assert.ElementsMatch(t, tt.expectedRes, res)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
 			case "install":
 				err = manager.Install(ctx, tt.pkgName)
-				require.NoError(t, err)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+				}
 			case "remove":
 				err = manager.Remove(ctx, tt.pkgName)
-				require.NoError(t, err)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+				}
 			case "search":
 				res, err := manager.Search(ctx, tt.pkgName)
-				require.NoError(t, err)
-				assert.ElementsMatch(t, tt.expectedRes, res)
+				if tt.expectedErr {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tt.mockErr)
+				} else {
+					require.NoError(t, err)
+					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
 			}
 		})
 	}
@@ -229,4 +362,31 @@ func TestParseLines(t *testing.T) {
 	expected := []string{"line1", "line2", "line3"}
 	actual := parseLines(input)
 	assert.ElementsMatch(t, expected, actual)
+}
+
+func TestValidatePackageName(t *testing.T) {
+	tests := []struct {
+		pkg   string
+		valid bool
+	}{
+		{"htop", true},
+		{"google-chrome", true},
+		{"foo_bar.baz+qux", true},
+		{"--remove-all", false},
+		{"-y", false},
+		{"foo;rm -rf /", false},
+		{"curl|bash", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pkg, func(t *testing.T) {
+			err := ValidatePackageName(tt.pkg)
+			if tt.valid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
 }

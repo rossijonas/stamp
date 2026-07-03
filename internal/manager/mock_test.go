@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMockManager(t *testing.T) {
-	mock := &MockManager{
+func TestMock(t *testing.T) {
+	mock := &Mock{
 		ManagerName:   "mock",
 		InstalledPkgs: []string{"git", "curl"},
 		AvailablePkgs: []string{"git", "curl", "htop", "jq", "docker"},
@@ -53,9 +53,9 @@ func TestMockManager(t *testing.T) {
 	assert.ElementsMatch(t, []string{"htop"}, results)
 }
 
-func TestMockManagerErrors(t *testing.T) {
+func TestMockErrors(t *testing.T) {
 	expectedErr := errors.New("simulated error")
-	mock := &MockManager{
+	mock := &Mock{
 		ListErr:    expectedErr,
 		InstallErr: expectedErr,
 		RemoveErr:  expectedErr,

@@ -111,5 +111,28 @@ func TestManifestSavePermissionError(t *testing.T) {
 
 	err = m.Save(manifestPath)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to write manifest")
+	assert.Contains(t, err.Error(), "failed to create temp manifest file")
+}
+
+func TestManifestSaveRenameError(t *testing.T) {
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+
+	// Create a directory exactly where the manifest should be.
+	// os.Rename will fail when trying to overwrite a directory with a file.
+	err := os.Mkdir(manifestPath, 0750)
+	require.NoError(t, err)
+
+	m := &Manifest{Version: 1}
+	err = m.Save(manifestPath)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to rename temp manifest")
+
+	// Verify temp file was cleaned up by looking for any .tmp files in the directory
+	files, err := os.ReadDir(tmpDir)
+	require.NoError(t, err)
+	for _, f := range files {
+		assert.NotContains(t, f.Name(), ".tmp", "temp file should have been cleaned up")
+	}
 }

@@ -1,10 +1,29 @@
 package manager
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"regexp"
+	"strings"
+)
 
-// PackageManager abstracts operations for different underlying package managers
+var validPkgNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\+]*$`)
+
+// ValidatePackageName ensures the package name is safe to pass to a shell command.
+// It prevents arguments that start with '-' and restricts characters to a safe set.
+func ValidatePackageName(pkg string) error {
+	if strings.HasPrefix(pkg, "-") {
+		return fmt.Errorf("invalid package name %q: cannot start with '-'", pkg)
+	}
+	if !validPkgNameRegex.MatchString(pkg) {
+		return fmt.Errorf("invalid package name %q: contains invalid characters", pkg)
+	}
+	return nil
+}
+
+// Adapter abstracts operations for different underlying package managers
 // like dnf, brew, and flatpak.
-type PackageManager interface {
+type Adapter interface {
 	// Name returns the identifier of the package manager (e.g., "dnf", "brew").
 	Name() string
 
@@ -20,4 +39,17 @@ type PackageManager interface {
 
 	// Search queries the native package manager for the given package name.
 	Search(ctx context.Context, query string) ([]string, error)
+}
+
+// parseLines splits byte output by newline and removes empty strings.
+func parseLines(output []byte) []string {
+	lines := strings.Split(string(output), "\n")
+	result := make([]string, 0, len(lines))
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
