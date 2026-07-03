@@ -71,30 +71,30 @@ func (m *Manifest) Save(path string) error {
 		return fmt.Errorf("failed to encode manifest: %w", err)
 	}
 
-	tmpFile, err := os.CreateTemp(filepath.Dir(path), "manifest-*.tmp")
+	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
 	if err != nil {
-		return fmt.Errorf("failed to create temp manifest file: %w", err)
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+	tmpName := tmpFile.Name()
 
-	success := false
+	var success bool
 	defer func() {
-		_ = tmpFile.Close()
+		tmpFile.Close()
 		if !success {
-			_ = os.Remove(tmpFile.Name())
+			os.Remove(tmpName)
 		}
 	}()
 
 	if _, err := tmpFile.Write(data); err != nil {
-		return fmt.Errorf("failed to write manifest to temp file %s: %w", tmpFile.Name(), err)
+		return fmt.Errorf("failed to write manifest to %s: %w", tmpName, err)
 	}
 
-	// Must close before renaming on Windows (safe on Unix too)
 	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("failed to close temp manifest file %s: %w", tmpFile.Name(), err)
+		return fmt.Errorf("failed to close temp manifest %s: %w", tmpName, err)
 	}
 
-	if err := os.Rename(tmpFile.Name(), path); err != nil {
-		return fmt.Errorf("failed to rename temp manifest %s to %s: %w", tmpFile.Name(), path, err)
+	if err := os.Rename(tmpName, path); err != nil {
+		return fmt.Errorf("failed to rename temp manifest %s to %s: %w", tmpName, path, err)
 	}
 
 	success = true
