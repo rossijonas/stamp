@@ -11,10 +11,13 @@ type Mock struct {
 	ManagerName   string
 	InstalledPkgs []string
 	AvailablePkgs []string
+	TrackedRepos  []string
 	ListErr       error
 	InstallErr    error
 	RemoveErr     error
 	SearchErr     error
+	AddRepoErr    error
+	RemoveRepoErr error
 }
 
 // Name returns the package manager identifier.
@@ -82,4 +85,27 @@ func (m *Mock) Search(_ context.Context, query string) ([]string, error) {
 		}
 	}
 	return results, nil
+}
+
+// AddRepo adds a repository to the mock.
+func (m *Mock) AddRepo(_ context.Context, name, _ string) error {
+	if m.AddRepoErr != nil {
+		return m.AddRepoErr
+	}
+	m.TrackedRepos = append(m.TrackedRepos, name)
+	return nil
+}
+
+// RemoveRepo removes a repository from the mock.
+func (m *Mock) RemoveRepo(_ context.Context, name string) error {
+	if m.RemoveRepoErr != nil {
+		return m.RemoveRepoErr
+	}
+	for i, r := range m.TrackedRepos {
+		if r == name {
+			m.TrackedRepos = slices.Delete(m.TrackedRepos, i, i+1)
+			return nil
+		}
+	}
+	return nil
 }

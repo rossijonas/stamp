@@ -90,6 +90,15 @@ func TestManifestLoadNotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "manifest not found")
 }
 
+func TestManifestLoadReadError(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	_, err := Load(tmpDir)
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "manifest not found")
+	assert.Contains(t, err.Error(), "failed to read manifest")
+}
+
 func TestManifestLoadInvalidTOML(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

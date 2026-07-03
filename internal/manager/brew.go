@@ -39,7 +39,7 @@ func (m *Brew) Install(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(ctx, "brew", "install", pkg)
+	_, err := m.exec(WithStreamIO(ctx), "brew", "install", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
 	}
@@ -51,7 +51,7 @@ func (m *Brew) Remove(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(ctx, "brew", "uninstall", pkg)
+	_, err := m.exec(WithStreamIO(ctx), "brew", "uninstall", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", pkg, err)
 	}
@@ -69,4 +69,27 @@ func (m *Brew) Search(ctx context.Context, query string) ([]string, error) {
 		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
 	}
 	return parseLines(out), nil
+}
+
+// AddRepo enables a third-party tap.
+func (m *Brew) AddRepo(ctx context.Context, name, url string) error {
+	var err error
+	if url != "" {
+		_, err = m.exec(WithStreamIO(ctx), "brew", "tap", name, url)
+	} else {
+		_, err = m.exec(WithStreamIO(ctx), "brew", "tap", name)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to tap %s: %w", name, err)
+	}
+	return nil
+}
+
+// RemoveRepo disables a third-party tap.
+func (m *Brew) RemoveRepo(ctx context.Context, name string) error {
+	_, err := m.exec(WithStreamIO(ctx), "brew", "untap", name)
+	if err != nil {
+		return fmt.Errorf("failed to untap %s: %w", name, err)
+	}
+	return nil
 }

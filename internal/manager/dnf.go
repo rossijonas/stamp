@@ -38,7 +38,7 @@ func (m *DNF) Install(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(ctx, "sudo", "-n", "dnf", "install", "-y", pkg)
+	_, err := m.exec(WithStreamIO(ctx), "sudo", "-n", "dnf", "install", "-y", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
 	}
@@ -50,7 +50,7 @@ func (m *DNF) Remove(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(ctx, "sudo", "-n", "dnf", "remove", "-y", pkg)
+	_, err := m.exec(WithStreamIO(ctx), "sudo", "-n", "dnf", "remove", "-y", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", pkg, err)
 	}
@@ -67,4 +67,29 @@ func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
 		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
 	}
 	return parseLines(out), nil
+}
+
+// AddRepo enables a third-party repository.
+func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
+	if url != "" {
+		_, err := m.exec(WithStreamIO(ctx), "sudo", "-n", "dnf", "config-manager", "--add-repo", url)
+		if err != nil {
+			return fmt.Errorf("failed to add repo %s: %w", url, err)
+		}
+		return nil
+	}
+	_, err := m.exec(WithStreamIO(ctx), "sudo", "-n", "dnf", "copr", "enable", "-y", name)
+	if err != nil {
+		return fmt.Errorf("failed to enable copr %s: %w", name, err)
+	}
+	return nil
+}
+
+// RemoveRepo disables a third-party repository.
+func (m *DNF) RemoveRepo(ctx context.Context, name string) error {
+	_, err := m.exec(WithStreamIO(ctx), "sudo", "-n", "dnf", "copr", "disable", "-y", name)
+	if err != nil {
+		return fmt.Errorf("failed to disable copr %s: %w", name, err)
+	}
+	return nil
 }

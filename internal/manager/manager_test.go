@@ -72,9 +72,55 @@ func TestDNF_Operations(t *testing.T) {
 			expectedRes: []string{"htop", "htop-debuginfo"},
 		},
 		{
+			name:        "search success",
+			operation:   "search",
+			pkgName:     "htop",
+			mockOutput:  "htop\nhtop-debuginfo\n",
+			expectedRes: []string{"htop", "htop-debuginfo"},
+		},
+		{
 			name:        "search error",
 			operation:   "search",
 			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "add repo success (copr)",
+			operation: "addrepo",
+			pkgName:   "petersen/cava",
+			mockErr:   nil,
+		},
+		{
+			name:        "add repo error",
+			operation:   "addrepo",
+			pkgName:     "petersen/cava",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "add repo success (url)",
+			operation: "addrepo_url",
+			pkgName:   "google-chrome",
+			mockErr:   nil,
+		},
+		{
+			name:        "add repo error (url)",
+			operation:   "addrepo_url",
+			pkgName:     "google-chrome",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "remove repo success",
+			operation: "removerepo",
+			pkgName:   "petersen/cava",
+			mockErr:   nil,
+		},
+		{
+			name:        "remove repo error",
+			operation:   "removerepo",
+			pkgName:     "petersen/cava",
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
@@ -96,7 +142,9 @@ func TestDNF_Operations(t *testing.T) {
 				res, err := manager.ListInstalled(ctx)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 					assert.ElementsMatch(t, tt.expectedRes, res)
@@ -105,7 +153,9 @@ func TestDNF_Operations(t *testing.T) {
 				err = manager.Install(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 				}
@@ -113,7 +163,9 @@ func TestDNF_Operations(t *testing.T) {
 				err = manager.Remove(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 				}
@@ -121,10 +173,42 @@ func TestDNF_Operations(t *testing.T) {
 				res, err := manager.Search(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
+			case "addrepo":
+				err = manager.AddRepo(ctx, tt.pkgName, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "addrepo_url":
+				err = manager.AddRepo(ctx, tt.pkgName, "http://example.com/repo")
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "removerepo":
+				err = manager.RemoveRepo(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
 				}
 			}
 		})
@@ -157,41 +241,98 @@ func TestBrew_Operations(t *testing.T) {
 		{
 			name:      "install success",
 			operation: "install",
-			pkgName:   "jq",
+			pkgName:   "htop",
 			mockErr:   nil,
 		},
 		{
 			name:        "install error",
 			operation:   "install",
-			pkgName:     "jq",
+			pkgName:     "htop",
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
 		{
 			name:      "remove success",
 			operation: "remove",
-			pkgName:   "jq",
+			pkgName:   "htop",
 			mockErr:   nil,
 		},
 		{
 			name:        "remove error",
 			operation:   "remove",
-			pkgName:     "jq",
+			pkgName:     "htop",
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
 		{
 			name:        "search success",
 			operation:   "search",
-			pkgName:     "jq",
-			mockOutput:  "jq\njq-debug\n",
-			expectedRes: []string{"jq", "jq-debug"},
+			pkgName:     "htop",
+			mockOutput:  "htop\nhtop-debuginfo\n",
+			expectedRes: []string{"htop", "htop-debuginfo"},
 		},
 		{
 			name:        "search error",
 			operation:   "search",
-			pkgName:     "jq",
+			pkgName:     "htop",
 			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "add repo success (copr)",
+			operation: "addrepo",
+			pkgName:   "petersen/cava",
+			mockErr:   nil,
+		},
+		{
+			name:        "add repo error",
+			operation:   "addrepo",
+			pkgName:     "petersen/cava",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "add repo success (url)",
+			operation: "addrepo_url",
+			pkgName:   "google-chrome",
+			mockErr:   nil,
+		},
+		{
+			name:        "add repo error (url)",
+			operation:   "addrepo_url",
+			pkgName:     "google-chrome",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "remove repo success",
+			operation: "removerepo",
+			pkgName:   "petersen/cava",
+			mockErr:   nil,
+		},
+		{
+			name:        "remove repo error",
+			operation:   "removerepo",
+			pkgName:     "petersen/cava",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:        "install validation error",
+			operation:   "install",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
+		{
+			name:        "remove validation error",
+			operation:   "remove",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
+		{
+			name:        "search validation error",
+			operation:   "search",
+			pkgName:     "-invalid",
 			expectedErr: true,
 		},
 	}
@@ -212,7 +353,9 @@ func TestBrew_Operations(t *testing.T) {
 				res, err := manager.ListInstalled(ctx)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 					assert.ElementsMatch(t, tt.expectedRes, res)
@@ -221,7 +364,9 @@ func TestBrew_Operations(t *testing.T) {
 				err = manager.Install(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 				}
@@ -229,7 +374,9 @@ func TestBrew_Operations(t *testing.T) {
 				err = manager.Remove(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 				}
@@ -237,10 +384,42 @@ func TestBrew_Operations(t *testing.T) {
 				res, err := manager.Search(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 					assert.ElementsMatch(t, tt.expectedRes, res)
+				}
+			case "addrepo":
+				err = manager.AddRepo(ctx, tt.pkgName, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "addrepo_url":
+				err = manager.AddRepo(ctx, tt.pkgName, "http://example.com/repo")
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "removerepo":
+				err = manager.RemoveRepo(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
 				}
 			}
 		})
@@ -310,6 +489,57 @@ func TestFlatpak_Operations(t *testing.T) {
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
+		{
+			name:        "add repo error (no url)",
+			operation:   "addrepo",
+			pkgName:     "flathub",
+			mockErr:     nil, // The method itself throws the error before calling exec
+			expectedErr: true,
+		},
+		{
+			name:      "add repo success (url)",
+			operation: "addrepo_url",
+			pkgName:   "flathub",
+			mockErr:   nil,
+		},
+		{
+			name:        "add repo error",
+			operation:   "addrepo_url",
+			pkgName:     "flathub",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "remove repo success",
+			operation: "removerepo",
+			pkgName:   "flathub",
+			mockErr:   nil,
+		},
+		{
+			name:        "remove repo error",
+			operation:   "removerepo",
+			pkgName:     "petersen/cava",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:        "install validation error",
+			operation:   "install",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
+		{
+			name:        "remove validation error",
+			operation:   "remove",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
+		{
+			name:        "search validation error",
+			operation:   "search",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -328,7 +558,9 @@ func TestFlatpak_Operations(t *testing.T) {
 				res, err := manager.ListInstalled(ctx)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 					assert.ElementsMatch(t, tt.expectedRes, res)
@@ -337,7 +569,9 @@ func TestFlatpak_Operations(t *testing.T) {
 				err = manager.Install(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 				}
@@ -345,7 +579,9 @@ func TestFlatpak_Operations(t *testing.T) {
 				err = manager.Remove(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 				}
@@ -353,14 +589,135 @@ func TestFlatpak_Operations(t *testing.T) {
 				res, err := manager.Search(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
-					require.ErrorIs(t, err, tt.mockErr)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
 				} else {
 					require.NoError(t, err)
 					assert.ElementsMatch(t, tt.expectedRes, res)
 				}
+			case "addrepo":
+				err = manager.AddRepo(ctx, tt.pkgName, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+					// We only check ErrorIs if we passed a mock error, flatpak throws a native error for empty URLs
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "addrepo_url":
+				err = manager.AddRepo(ctx, tt.pkgName, "https://dl.flathub.org/repo/flathub.flatpakrepo")
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "removerepo":
+				err = manager.RemoveRepo(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
 			}
 		})
 	}
+}
+
+func TestMockManager(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:   "mock",
+		InstalledPkgs: []string{"git", "curl"},
+		AvailablePkgs: []string{"git", "curl", "htop", "jq", "docker"},
+	}
+
+	ctx := context.Background()
+
+	// Test Name
+	assert.Equal(t, "mock", mock.Name())
+
+	// Test ListInstalled
+	installed, err := mock.ListInstalled(ctx)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"git", "curl"}, installed)
+
+	// Test Install
+	err = mock.Install(ctx, "jq")
+	require.NoError(t, err)
+	installed, _ = mock.ListInstalled(ctx)
+	assert.Contains(t, installed, "jq")
+
+	// Test Install Duplicate
+	err = mock.Install(ctx, "jq")
+	require.NoError(t, err)
+	installed, _ = mock.ListInstalled(ctx)
+	// should still be 3 items
+	assert.Len(t, installed, 3)
+
+	// Test Remove
+	err = mock.Remove(ctx, "curl")
+	require.NoError(t, err)
+	installed, _ = mock.ListInstalled(ctx)
+	assert.NotContains(t, installed, "curl")
+	assert.Contains(t, installed, "jq")
+	assert.Contains(t, installed, "git")
+
+	// Test Search
+	results, err := mock.Search(ctx, "to")
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop"}, results)
+
+	// Test Add Repo
+	err = mock.AddRepo(ctx, "test-repo", "url")
+	require.NoError(t, err)
+	assert.Contains(t, mock.TrackedRepos, "test-repo")
+
+	// Test Remove Repo
+	err = mock.RemoveRepo(ctx, "test-repo")
+	require.NoError(t, err)
+	assert.NotContains(t, mock.TrackedRepos, "test-repo")
+}
+
+func TestMockManagerErrors(t *testing.T) {
+	t.Parallel()
+	expectedErr := assert.AnError
+	mock := &Mock{
+		ListErr:       expectedErr,
+		InstallErr:    expectedErr,
+		RemoveErr:     expectedErr,
+		SearchErr:     expectedErr,
+		AddRepoErr:    expectedErr,
+		RemoveRepoErr: expectedErr,
+	}
+
+	ctx := context.Background()
+
+	_, err := mock.ListInstalled(ctx)
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.Install(ctx, "htop")
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.Remove(ctx, "htop")
+	require.ErrorIs(t, err, expectedErr)
+
+	_, err = mock.Search(ctx, "htop")
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.AddRepo(ctx, "repo", "url")
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.RemoveRepo(ctx, "repo")
+	require.ErrorIs(t, err, expectedErr)
 }
 
 func TestParseLines(t *testing.T) {
@@ -392,9 +749,9 @@ func TestValidatePackageName(t *testing.T) {
 			t.Parallel()
 			err := ValidatePackageName(tt.pkg)
 			if tt.valid {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.Error(t, err)
+				require.Error(t, err)
 			}
 		})
 	}

@@ -40,16 +40,22 @@ type Adapter interface {
 
 	// Search queries the native package manager for the given package name.
 	Search(ctx context.Context, query string) ([]string, error)
+
+	// AddRepo adds a third-party repository or tap.
+	AddRepo(ctx context.Context, name, url string) error
+
+	// RemoveRepo removes a tracked repository.
+	RemoveRepo(ctx context.Context, name string) error
 }
 
 // parseLines splits byte output by newline and removes empty strings.
 func parseLines(output []byte) []string {
-	var result []string
 	lines := bytes.Split(output, []byte("\n"))
+	result := make([]string, 0, len(lines))
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(string(line))
-		if trimmed != "" {
-			result = append(result, trimmed)
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) > 0 {
+			result = append(result, string(trimmed))
 		}
 	}
 	return result

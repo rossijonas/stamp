@@ -38,7 +38,7 @@ func (m *Flatpak) Install(ctx context.Context, pkg string) error {
 		return err
 	}
 	// -y auto-answers yes to prompts.
-	_, err := m.exec(ctx, "flatpak", "install", "-y", pkg)
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", "install", "-y", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
 	}
@@ -50,7 +50,7 @@ func (m *Flatpak) Remove(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(ctx, "flatpak", "uninstall", "-y", pkg)
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", "uninstall", "-y", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", pkg, err)
 	}
@@ -68,4 +68,25 @@ func (m *Flatpak) Search(ctx context.Context, query string) ([]string, error) {
 		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
 	}
 	return parseLines(out), nil
+}
+
+// AddRepo enables a third-party remote.
+func (m *Flatpak) AddRepo(ctx context.Context, name, url string) error {
+	if url == "" {
+		return fmt.Errorf("flatpak requires a url to add remote %s", name)
+	}
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", "remote-add", "--if-not-exists", name, url)
+	if err != nil {
+		return fmt.Errorf("failed to add remote %s: %w", name, err)
+	}
+	return nil
+}
+
+// RemoveRepo disables a third-party remote.
+func (m *Flatpak) RemoveRepo(ctx context.Context, name string) error {
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", "remote-delete", name)
+	if err != nil {
+		return fmt.Errorf("failed to remove remote %s: %w", name, err)
+	}
+	return nil
 }

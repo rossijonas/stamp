@@ -4,7 +4,7 @@
 Build a CLI tool that captures a solo developer's package installation intent across fragmented package managers (`dnf`, `brew`, `flatpak`) into a portable, version-controllable TOML manifest. The primary workflow is using `stamp install` as a unified wrapper to guarantee total traceability from day one. It also acts as a passive safety net, allowing developers to track changes retroactively via local snapshot diffing (`stamp reconcile`) if they bypass the tool. It fully supports tracking custom repositories (taps, remotes).
 
 ## Tech Stack
-- **Language:** Go 1.22+
+- **Language:** Go 1.26+
 - **CLI Framework:** `spf13/cobra` (industry standard for Go CLIs)
 - **Manifest Parsing:** `pelletier/go-toml/v2`
 - **Output/UI:** Standard `fmt` and `log` (keeping it simple for MVP)
