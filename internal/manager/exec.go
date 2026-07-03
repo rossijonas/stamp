@@ -2,6 +2,8 @@ package manager
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os/exec"
 )
 
@@ -13,5 +15,13 @@ type Executor func(ctx context.Context, name string, args ...string) ([]byte, er
 func defaultExecutor(ctx context.Context, name string, args ...string) ([]byte, error) {
 	//nolint:gosec // execution is restricted to hardcoded manager names
 	cmd := exec.CommandContext(ctx, name, args...)
-	return cmd.Output()
+	out, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+			return out, fmt.Errorf("%w: %s", err, string(exitErr.Stderr))
+		}
+		return out, err
+	}
+	return out, nil
 }

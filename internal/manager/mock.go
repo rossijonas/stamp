@@ -2,11 +2,12 @@ package manager
 
 import (
 	"context"
+	"slices"
 	"strings"
 )
 
-// MockManager is a dummy implementation of PackageManager for testing.
-type MockManager struct {
+// Mock is a dummy implementation of Adapter for testing.
+type Mock struct {
 	ManagerName   string
 	InstalledPkgs []string
 	AvailablePkgs []string
@@ -17,23 +18,24 @@ type MockManager struct {
 }
 
 // Name returns the package manager identifier.
-func (m *MockManager) Name() string {
+func (m *Mock) Name() string {
 	return m.ManagerName
 }
 
 // ListInstalled returns a list of packages currently installed.
-func (m *MockManager) ListInstalled(_ context.Context) ([]string, error) {
+func (m *Mock) ListInstalled(_ context.Context) ([]string, error) {
 	if m.ListErr != nil {
 		return nil, m.ListErr
 	}
 	// Return a copy to avoid accidental mutation
-	pkgs := make([]string, len(m.InstalledPkgs))
-	copy(pkgs, m.InstalledPkgs)
-	return pkgs, nil
+	return slices.Clone(m.InstalledPkgs), nil
 }
 
 // Install executes the native installation command.
-func (m *MockManager) Install(_ context.Context, pkg string) error {
+func (m *Mock) Install(_ context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
 	if m.InstallErr != nil {
 		return m.InstallErr
 	}
@@ -48,13 +50,16 @@ func (m *MockManager) Install(_ context.Context, pkg string) error {
 }
 
 // Remove executes the native removal command.
-func (m *MockManager) Remove(_ context.Context, pkg string) error {
+func (m *Mock) Remove(_ context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
 	if m.RemoveErr != nil {
 		return m.RemoveErr
 	}
 	for i, p := range m.InstalledPkgs {
 		if p == pkg {
-			m.InstalledPkgs = append(m.InstalledPkgs[:i], m.InstalledPkgs[i+1:]...)
+			m.InstalledPkgs = slices.Delete(m.InstalledPkgs, i, i+1)
 			return nil
 		}
 	}
@@ -62,7 +67,10 @@ func (m *MockManager) Remove(_ context.Context, pkg string) error {
 }
 
 // Search queries the native package manager for the given package name.
-func (m *MockManager) Search(_ context.Context, query string) ([]string, error) {
+func (m *Mock) Search(_ context.Context, query string) ([]string, error) {
+	if err := ValidatePackageName(query); err != nil {
+		return nil, err
+	}
 	if m.SearchErr != nil {
 		return nil, m.SearchErr
 	}

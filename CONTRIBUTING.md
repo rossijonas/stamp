@@ -3,7 +3,7 @@
 We welcome contributions to `stamp`! This document outlines our development standards.
 
 ## Prerequisites
-- [Go 1.22+](https://go.dev/doc/install)
+- [Go 1.26+](https://go.dev/doc/install)
 - [Taskfile](https://taskfile.dev/installation/) (`go install github.com/go-task/task/v3/cmd/task@latest` or `brew install go-task`)
 - [golangci-lint](https://golangci-lint.run/)
 
