@@ -17,7 +17,7 @@
 
 ---
 
-[![CI](https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp)
+[![CI](https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Go Report](https://goreportcard.com/badge/github.com/rossijonas/stamp)](https://goreportcard.com/report/github.com/rossijonas/stamp) [![Go Reference](https://pkg.go.dev/badge/github.com/rossijonas/stamp.svg)](https://pkg.go.dev/github.com/rossijonas/stamp) [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 ---
 
