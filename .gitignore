@@ -21,3 +21,4 @@ stamp
 .vscode/
 *.swp
 .DS_Store
+.tokensave

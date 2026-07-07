@@ -36,3 +36,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/), example:
 ## Branching Strategy
 
 We use [Trunk-Based Development with Short-Lived Feature Branches](https://trunkbaseddevelopment.com/short-lived-feature-branches/). Please branch off `main`, keep your branches short-lived (1-3 days), and submit Pull Requests frequently.
+
+## Code of Conduct
+
+We are committed to making participation in this project a harassment-free experience for everyone. We expect all contributors to adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) in all community interactions.
