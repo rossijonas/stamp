@@ -111,3 +111,12 @@ Build the environment reconstruction logic and final touches.
 *   **Verify:** `task docs` generates valid markdown files in `docs/usage/` and `.1` files in `docs/man/`.
 *   **Status:** ⏳ Pending
 
+### Phase 5: Project Licensing & Governance
+Ensure maximum community and enterprise reach.
+
+**Task 11: Relicense to Apache-2.0**
+*   **Description:** Transition project license from AGPL-3.0 to Apache-2.0 to simplify integration and adoption. Update files and documentation.
+*   **Acceptance:** LICENSE contains Apache-2.0 text, README links to correct license, and ADR-003 is merged.
+*   **Verify:** `task check` passes.
+*   **Status:** ✅ Completed
+

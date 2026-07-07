@@ -181,4 +181,4 @@ Read the [Project Vision](docs/VISION.md) to understand the "why" behind the pro
 
 ## ▪ License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPLv3) - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License, Version 2.0 (Apache-2.0) - see the [LICENSE](LICENSE) file for details.
