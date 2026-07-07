@@ -25,3 +25,10 @@ If you are an AI agent working in this repository, you **MUST** adhere to the fo
 ## Tools
 1. Use `task` instead of `make`.
 2. Validate code quality with `task check`.
+
+<!-- lean-ctx -->
+## lean-ctx
+
+lean-ctx is active — the MCP tools replace native equivalents.
+Full rules: LEAN-CTX.md (open on demand — do not auto-load).
+<!-- /lean-ctx -->
