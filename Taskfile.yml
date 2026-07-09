@@ -26,6 +26,7 @@ tasks:
   verify:
     desc: "Verifies module dependencies and checksums"
     cmds:
+      - go fmt ./...
       - go mod tidy
       - go mod verify
 
