@@ -164,6 +164,10 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 - **NO_COLOR:** Respect the `NO_COLOR=1` environment variable.
 - **Auto-Generated Docs:** Usage documentation for GitHub Pages must be auto-generated from the codebase using `github.com/spf13/cobra/doc` to ensure docs and code never drift.
 - **UNIX Man Pages:** System reference pages (Section 1) must be auto-generated to `docs/man/` using `cobra/doc` so users can run `man stamp` locally on Unix systems.
+- **Project Landing Page:** A custom landing page at `docs/index.html` served via GitHub Pages (`/docs` folder on main branch, `https://rossijonas.github.io/stamp/`). The page presents project identity (logo, tagline), quick install guide, usage examples with screenshots/GIFs (design details TBD), and links to full auto-generated CLI reference documentation.
+
+## Deferred Decisions
+- **Landing page design:** Visual style, screenshot/GIF format, and exact content layout for `docs/index.html` to be discussed before Task 10 implementation begins.
 
 ## Success Criteria
 1. **Init:** Running `stamp init` creates the correct XDG directories and an empty `manifest.toml`.
