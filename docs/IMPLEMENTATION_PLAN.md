@@ -105,10 +105,16 @@ Build the environment reconstruction logic and final touches.
 *   **Verify:** Manual test with `--dry-run` flag.
 *   **Status:** ⏳ Pending
 
-**Task 10: CLI Polish, Manpages, & GitHub Pages Documentation**
-*   **Description:** Implement `stamp completion` for shell autocompletion. Implement a documentation generation pipeline (invoked via `task docs` or a command) to auto-generate both Markdown files (for GitHub Pages) and troff `man` pages (for native UNIX documentation) using `cobra/doc`. Ensure `NO_COLOR` compliance and strict `stdout`/`stderr` separation.
-*   **Acceptance:** User can run diagnostics with `stamp doctor --json`, load shell completions, and run `man stamp` locally.
-*   **Verify:** `task docs` generates valid markdown files in `docs/usage/` and `.1` files in `docs/man/`.
+**Task 10: CLI Polish, Manpages, GitHub Pages & Landing Page**
+*   **Description:** Implement `stamp completion` for shell autocompletion. Implement a documentation generation pipeline (invoked via `task docs` or a command) to auto-generate both Markdown files (for GitHub Pages) and troff `man` pages (for native UNIX documentation) using `cobra/doc`. Create a landing page served via GitHub Pages (`/docs` folder on main branch) at `https://rossijonas.github.io/stamp/`. Ensure `NO_COLOR` compliance and strict `stdout`/`stderr` separation.
+*   **Landing page scope (to be detailed before implementation):**
+    - Custom `index.html` + `assets/style.css` in `docs/`
+    - Hero section with ASCII logo, tagline, install one-liner
+    - Selling paragraph + example workflow section
+    - Screenshots / animated GIFs of tool usage (format and content TBD)
+    - Links to auto-generated CLI reference (`docs/usage/`)
+*   **Acceptance:** User can run diagnostics with `stamp doctor --json`, load shell completions, and run `man stamp` locally. Landing page renders at project URL with links to usage docs.
+*   **Verify:** `task docs` generates valid markdown files in `docs/usage/` and `.1` files in `docs/man/`. GitHub Pages URL serves a styled landing page.
 *   **Status:** ⏳ Pending
 
 ### Phase 5: Project Licensing & Governance
