@@ -45,10 +45,16 @@ func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Bu
 	cPath := filepath.Join(tmpDir, "config.toml")
 	mPath := filepath.Join(tmpDir, "manifest.toml")
 	root := NewRootCmd(WithAdapters(adapters), WithConfigPath(cPath), WithManifestPath(mPath))
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	root.SetIn(r)
+	_ = w.Close() // stdin will read EOF immediately (non-interactive)
 	root.SetOut(buf)
 	root.SetErr(buf)
 	root.SetArgs(args)
-	err := root.Execute()
+	err = root.Execute()
 	return buf, err
 }
 

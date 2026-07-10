@@ -178,6 +178,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newRemoveCmd())
 	root.AddCommand(newSearchCmd())
 	root.AddCommand(newRepoCmd())
+	root.AddCommand(newReconcileCmd())
 
 	return root
 }
