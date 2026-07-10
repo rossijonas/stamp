@@ -28,6 +28,7 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp restore` | | `--dry-run` | Reinstalls repos and packages on a new machine. |
 | `stamp update` | `upgrade` | `--manager, -m <name>` | Runs system upgrades across all managers in parallel. |
 | `stamp list` | `ls` | `--json` | Lists all intentionally installed packages. |
+| `stamp self-update` | `self-upgrade` | `--check` | Checks for and installs the latest version of `stamp`. |
 | `stamp doctor` | | `--json` | Checks manager availability and manifest integrity. |
 
 **Repository Commands:**

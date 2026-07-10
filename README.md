@@ -23,6 +23,8 @@
 
 ## ▪ Intro
 
+> ⚠️ **Active Development:** `stamp` is currently in the MVP phase of active development. Features are being delivered incrementally. For a complete look at our progress, check the [Implementation Plan](docs/IMPLEMENTATION_PLAN.md).
+
 `stamp` is a CLI tool that tracks the software you *intentionally* install across fragmented package managers (`dnf`, `flatpak`, `brew`, etc.). It records your choices into a portable, version-controlled TOML manifest. When you move to a new machine,  run `stamp restore` to recreate your exact environment.
 
 **Current Scope:** The MVP of `stamp` is focused on the Red Hat ecosystem (e.g., Fedora), natively supporting the trio of package managers most commonly used on these systems: `dnf`, `flatpak`, and `brew`.
@@ -76,6 +78,21 @@ stamp reconcile -y
 ### ⚒ Rebuilding Your Environment
 
 When you get a new laptop, clone your dotfiles (containing your `manifest.toml`) and run:
+
+```bash
+stamp restore -y
+```
+`stamp` will read the manifest and execute the appropriate native install commands concurrently. The `-y` / `--yes` flag ensures any safety confirmations are auto-accepted.
+
+To keep everything fresh, run a unified update across all your managers at once:
+```bash
+stamp update
+```
+
+To update `stamp` itself to the latest released version:
+```bash
+stamp self-update
+```
 
 ```bash
 stamp restore -y

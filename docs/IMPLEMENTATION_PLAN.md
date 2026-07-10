@@ -73,7 +73,7 @@ Build the ability to actually modify the system (Install, Remove, Search) as the
 *   **Description:** Wire up `stamp install/add`, `stamp remove/uninstall/delete/del`, and `stamp search` in Cobra. Implement the `stamp repo` command group. Ensure aliases are properly registered using Cobra's `Aliases` array, and the 3-tier resolution engine parses `config.toml` precedence and regex-based matching rules. Supports the global `--yes` / `-y` flag.
 *   **Acceptance:** Users can install packages and repositories via `stamp`, updating the manifest automatically.
 *   **Verify:** Manual test of `stamp install <test-pkg>`
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 ### Phase 3: The Safety Net Flow
 Build the read-only safety net: checking the system state and calculating the delta.
@@ -118,6 +118,12 @@ Build the environment reconstruction logic and final touches.
     - Links to auto-generated CLI reference (`docs/usage/`)
 *   **Acceptance:** User can run diagnostics with `stamp doctor --json`, load shell completions, and run `man stamp` locally. Landing page renders at project URL with links to usage docs.
 *   **Verify:** `task docs` generates valid markdown files in `docs/usage/` and `.1` files in `docs/man/`. GitHub Pages URL serves a styled landing page.
+*   **Status:** ⏳ Pending
+
+**Task 11: Self-Update Subcommand**
+*   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports a `--check` flag to query without downloading.
+*   **Acceptance:** User can run `stamp self-update --check` to check, and `stamp self-update` to apply.
+*   **Verify:** Unit tests mock the release API and verify binary swap logic.
 *   **Status:** ⏳ Pending
 
 ### Phase 5: Project Licensing & Governance
