@@ -108,6 +108,9 @@ Build the environment reconstruction logic and final touches.
 **Task 10: CLI Polish, Manpages, GitHub Pages & Landing Page**
 *   **Description:** Implement `stamp completion` for shell autocompletion. Implement a documentation generation pipeline (invoked via `task docs` or a command) to auto-generate both Markdown files (for GitHub Pages) and troff `man` pages (for native UNIX documentation) using `cobra/doc`. Create a landing page served via GitHub Pages (`/docs` folder on main branch) at `https://rossijonas.github.io/stamp/`. Ensure `NO_COLOR` compliance and strict `stdout`/`stderr` separation.
 *   **Landing page scope (to be detailed before implementation):**
+    - **Jekyll theme:** `minimal-mistakes` — supports custom splash/home landing
+      page layout alongside documentation navigation, ideal for marketing + docs
+      hybrid sites
     - Custom `index.html` + `assets/style.css` in `docs/`
     - Hero section with ASCII logo, tagline, install one-liner
     - Selling paragraph + example workflow section

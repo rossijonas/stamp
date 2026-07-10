@@ -55,9 +55,9 @@ func (r *Resolver) Resolve(pkg string, override string) (manager.Adapter, error)
 		}
 	}
 
-	// Tier 3: Fallback — pick first available adapter
+	// Tier 3: Ambiguous — fail with instruction
 	if len(r.adapters) > 0 {
-		return r.adapters[0], nil
+		return nil, fmt.Errorf("package available in multiple managers; specify --manager")
 	}
 
 	return nil, fmt.Errorf("no package managers available")
