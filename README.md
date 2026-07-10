@@ -94,16 +94,6 @@ To update `stamp` itself to the latest released version:
 stamp self-update
 ```
 
-```bash
-stamp restore -y
-```
-`stamp` will read the manifest and execute the appropriate native install commands concurrently. The `-y` / `--yes` flag ensures any safety confirmations are auto-accepted.
-
-To keep everything fresh, run a unified update across all your managers at once:
-```bash
-stamp update
-```
-
 ### ✎ Adding Notes to Packages
 
 You can annotate why you installed a specific package directly in the CLI, which saves it to your manifest. This is incredibly useful for remembering why you needed an obscure tool 6 months later.
