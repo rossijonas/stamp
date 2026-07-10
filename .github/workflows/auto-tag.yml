@@ -1,0 +1,45 @@
+---
+name: Auto Tag & Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  auto-tag:
+    name: Auto Tag & Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: get-version
+        uses: thenativeweb/get-next-version@main
+        with:
+          prefix: 'v'
+
+      - uses: actions/setup-go@v6
+        if: steps.get-version.outputs.hasNextVersion == 'true'
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Run Tests
+        if: steps.get-version.outputs.hasNextVersion == 'true'
+        run: go test -v -race ./...
+
+      - name: Release
+        if: steps.get-version.outputs.hasNextVersion == 'true'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --skip=validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: v${{ steps.get-version.outputs.version }}
