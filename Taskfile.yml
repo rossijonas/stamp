@@ -10,13 +10,19 @@ tasks:
     desc: "Builds the stamp binary"
     cmds:
       - mkdir -p bin
-      - go build -o bin/stamp cmd/stamp/main.go
+      - go build -ldflags="-X github.com/rossijonas/stamp/internal/cli.Version=dev -X github.com/rossijonas/stamp/internal/cli.Commit=$(git rev-parse --short HEAD 2>/dev/null || echo none) -X github.com/rossijonas/stamp/internal/cli.Date=$(date -u +%Y-%m-%d)" -o bin/stamp ./cmd/stamp
+
+  build:all:
+    desc: "Cross-compile for all supported platforms (requires goreleaser)"
+    cmds:
+      - which goreleaser &>/dev/null || (echo "goreleaser not installed. Run: go install github.com/goreleaser/goreleaser/v2@latest" && exit 1)
+      - goreleaser build --snapshot --clean
 
   test:
     desc: "Runs all unit tests and enforces 90% coverage"
     cmds:
       - go test -v -race -coverprofile=coverage.out ./...
-      - go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}' | awk '{if ($1 < 90.0) {print "Error:\nCoverage is below 90% ("$1"%)"; exit 1} else {print "Coverage is good ("$1"%)"}}'
+      - go tool cover -func=coverage.out | awk '/total/ {cov=substr($3, 1, length($3)-1); if (cov+0 < 90.0) {printf "Error: Coverage below 90%% (%.1f%%)\n", cov; exit 1} else {printf "Coverage is good (%.1f%%)\n", cov}}'
 
   lint:
     desc: "Runs golangci-lint"

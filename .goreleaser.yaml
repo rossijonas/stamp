@@ -1,0 +1,36 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: stamp
+    main: ./cmd/stamp
+    binary: stamp
+    ldflags:
+      - -s -w -X github.com/rossijonas/stamp/internal/cli.Version={{.Version}} -X github.com/rossijonas/stamp/internal/cli.Commit={{.Commit}} -X github.com/rossijonas/stamp/internal/cli.Date={{.Date}}
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "stamp_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

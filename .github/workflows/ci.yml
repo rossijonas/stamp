@@ -19,11 +19,11 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26'
-          cache: false  # The golangci-lint action handles its own caching
+          cache: false
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v1.61.0
 
   test:
     name: Test
@@ -43,11 +43,38 @@ jobs:
 
       - name: Run Tests & Enforce Coverage
         run: |
-          go test -v -race -coverprofile=coverage.txt ./...
-          TOTAL_COVERAGE=$(go tool cover -func=coverage.txt | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          go test -v -race -coverprofile=coverage.out ./...
+          TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep '^total:' | awk '{print substr($3, 1, length($3)-1)}')
           echo "Total Coverage: $TOTAL_COVERAGE%"
           if (( $(echo "$TOTAL_COVERAGE < 90.0" | bc -l) )); then
             echo "Error: Test coverage ($TOTAL_COVERAGE%) is below the required 90% threshold."
+            exit 1
+          fi
+
+  lint-commits:
+    name: Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check commits follow Conventional Commits
+        run: |
+          FAILED=false
+
+          while read -r line; do
+            if echo "$line" | grep -qE '^(feat|fix|chore|docs|test|refactor|perf|ci|build|style)(\(.+\))?!?: .+'; then
+              echo "✅ Valid commit: $line"
+            else
+              echo "❌ Invalid commit: $line"
+              FAILED=true
+            fi
+          done < <(git log --format="%s" origin/${{ github.event.pull_request.base.ref }}..HEAD)
+
+          if [ "$FAILED" = true ]; then
+            echo "❌ All commits must follow Conventional Commits format (type(scope): description)"
+            echo "Valid types: feat, fix, chore, docs, test, refactor, perf, ci, build, style"
             exit 1
           fi
 

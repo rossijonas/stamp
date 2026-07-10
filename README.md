@@ -29,6 +29,17 @@
 
 **Current Scope:** The MVP of `stamp` is focused on the Red Hat ecosystem (e.g., Fedora), natively supporting the trio of package managers most commonly used on these systems: `dnf`, `flatpak`, and `brew`.
 
+## ▪ Installing
+
+| Method | Command |
+| :--- | :--- |
+| **Go install** | `go install github.com/rossijonas/stamp/cmd/stamp@latest` |
+| **Download binary** | `curl -sSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_{{VERSION}}_{{OS}}_{{ARCH}}.tar.gz \| tar xz && sudo mv stamp /usr/local/bin/` |
+| **From source** | `git clone https://github.com/rossijonas/stamp.git && cd stamp && go build -o bin/stamp ./cmd/stamp && sudo cp bin/stamp /usr/local/bin/` |
+| **Homebrew** (future) | `brew install rossijonas/tap/stamp` |
+
+*Replace `{{VERSION}}`, `{{OS}}`, and `{{ARCH}}` with the appropriate values for your system (e.g., `v0.1.0`, `linux`, `amd64`). The archive name uses the full tag (e.g. `stamp_v0.1.0_linux_amd64.tar.gz`).*
+
 ## ▪ Usage
 
 ### ⟲ The Two Workflows
