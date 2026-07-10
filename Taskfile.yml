@@ -15,14 +15,14 @@ tasks:
   build:all:
     desc: "Cross-compile for all supported platforms (requires goreleaser)"
     cmds:
-      - which goreleaser &>/dev/null || (echo "goreleaser not installed. Run: go install github.com/goreleaser/goreleaser/v2@latest" && exit 1)
+      - "sh -c 'which goreleaser 2>/dev/null || (echo \"goreleaser not installed. Run: go install github.com/goreleaser/goreleaser/v2@latest\" && exit 1)'"
       - goreleaser build --snapshot --clean
 
   test:
     desc: "Runs all unit tests and enforces 90% coverage"
     cmds:
       - go test -v -race -coverprofile=coverage.out ./...
-      - go tool cover -func=coverage.out | awk '/total/ {cov=substr($3, 1, length($3)-1); if (cov+0 < 90.0) {printf "Error: Coverage below 90%% (%.1f%%)\n", cov; exit 1} else {printf "Coverage is good (%.1f%%)\n", cov}}'
+      - "go tool cover -func=coverage.out | awk -v threshold=90.0 '/total/ {cov=substr($3,1,length($3)-1); if (cov+0 < threshold) {print \"Error: Coverage below \" threshold \"% (\" cov \"%)\"; exit 1} else {print \"Coverage is good (\" cov \"%)\"}}'"
 
   lint:
     desc: "Runs golangci-lint"
