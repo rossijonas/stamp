@@ -71,7 +71,7 @@ func WithManifestPath(p string) RootOption {
 }
 
 func detectAdapters() []manager.Adapter {
-	var adapters []manager.Adapter
+	adapters := make([]manager.Adapter, 0)
 	detect := func(bin string, fn func() manager.Adapter) {
 		if _, err := exec.LookPath(bin); err == nil {
 			adapters = append(adapters, fn())
