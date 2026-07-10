@@ -69,7 +69,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 2 | 4 | Native Adapters (Write Operations) | ✅ |
 | 2 | 5 | Active CLI Commands | ✅ |
 | 3 | 6 | Native Adapters (Read-Only) | ✅ |
-| 3 | 7 | State Engine (Snapshotting) | ⏳ |
+| 3 | 7 | State Engine (Snapshotting) | ✅ |
 | 3 | 8 | The `reconcile` Command | ⏳ |
 | 4 | 9 | The `restore` Command | ⏳ |
 | 4 | 10 | CLI Polish, Manpages, GitHub Pages & Landing Page | ⏳ |

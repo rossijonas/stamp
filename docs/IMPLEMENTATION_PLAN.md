@@ -88,7 +88,7 @@ Build the read-only safety net: checking the system state and calculating the de
 *   **Description:** Implement `internal/state` to save JSON snapshots and calculate deltas (Added/Removed) against the current `PackageManager` outputs.
 *   **Acceptance:** Engine can accurately report which packages were added since the last snapshot.
 *   **Verify:** `task test` passes with 100% coverage on diffing logic.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 8: The `reconcile` Command (Cobra)**
 *   **Description:** Wire up `cmd/stamp/main.go` and `internal/cli/reconcile.go`. Supports the `--yes` / `-y` flag to auto-track detected packages without prompting.
