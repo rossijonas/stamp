@@ -17,7 +17,7 @@
 
 ---
 
-[![CI](https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Go Reference](https://pkg.go.dev/badge/github.com/rossijonas/stamp.svg)](https://pkg.go.dev/github.com/rossijonas/stamp) [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+[![CI](https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/rossijonas/stamp)](https://github.com/rossijonas/stamp/releases/latest) [![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Go Reference](https://pkg.go.dev/badge/github.com/rossijonas/stamp.svg)](https://pkg.go.dev/github.com/rossijonas/stamp) [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 ---
 
@@ -28,6 +28,17 @@
 `stamp` is a CLI tool that tracks the software you *intentionally* install across fragmented package managers (`dnf`, `flatpak`, `brew`, etc.). It records your choices into a portable, version-controlled TOML manifest. When you move to a new machine,  run `stamp restore` to recreate your exact environment.
 
 **Current Scope:** The MVP of `stamp` is focused on the Red Hat ecosystem (e.g., Fedora), natively supporting the trio of package managers most commonly used on these systems: `dnf`, `flatpak`, and `brew`.
+
+## ▪ Installing
+
+| Method | Command |
+| :--- | :--- |
+| **Go install** | `go install github.com/rossijonas/stamp/cmd/stamp@latest` |
+| **Download binary** | `curl -sSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_{{VERSION}}_{{OS}}_{{ARCH}}.tar.gz \| tar xz && sudo mv stamp /usr/local/bin/` |
+| **From source** | `git clone https://github.com/rossijonas/stamp.git && cd stamp && go build -o bin/stamp ./cmd/stamp && sudo cp bin/stamp /usr/local/bin/` |
+| **Homebrew** (future) | `brew install rossijonas/tap/stamp` |
+
+*Replace `{{VERSION}}`, `{{OS}}`, and `{{ARCH}}` with the appropriate values for your system (e.g., `v0.1.0`, `linux`, `amd64`). The archive name uses the full tag (e.g. `stamp_v0.1.0_linux_amd64.tar.gz`).*
 
 ## ▪ Usage
 

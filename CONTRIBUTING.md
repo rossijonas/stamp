@@ -26,12 +26,28 @@ We use `task` instead of `make`. Here are the essential commands:
 
 ## Commit Messages
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/), example:
-- `feat:` for new features.
-- `fix:` for bug fixes.
-- `chore:` for maintenance, tooling, or dependency updates.
-- `docs:` for documentation changes.
-- `test:` for adding or updating tests.
+We follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+| Type | Description | Version bump |
+|:---|:---|---:|
+| `feat` | New feature | MINOR |
+| `fix` | Bug fix | PATCH |
+| `feat!:` or `fix!:` | Breaking change | MAJOR |
+| `chore`, `docs`, `test`, `refactor`, `perf`, `ci`, `build`, `style` | Maintenance | None |
+
+## Pull Request Process
+
+1. Ensure `task check` passes locally before opening a PR
+2. CI automatically runs: lint, tests (with race detector and ≥90% coverage), govulncheck, and validates that at least one commit follows the Conventional Commits format
+3. Once merged to `main`, a new version is automatically tagged and released
+
+## Release Process
+
+Releases are fully automated:
+- **Auto:** Merging to `main` triggers `thenativeweb/get-next-version` to calculate the next version from conventional commits, then goreleaser builds binaries and creates a GitHub Release with changelog
+- **Manual:** Push a `v*` tag to trigger `release.yml` directly
+
+No manual version tagging or changelog editing is required.
 
 ## Branching Strategy
 

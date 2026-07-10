@@ -169,6 +169,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 		},
 	}
 
+	root.Version = Version
 	root.PersistentFlags().BoolP("verbose", "v", false, "enable debug logging")
 	root.PersistentFlags().Bool("json", false, "output results in JSON format")
 	root.PersistentFlags().BoolP("yes", "y", false, "auto-accept all prompts")
