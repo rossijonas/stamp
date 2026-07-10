@@ -94,7 +94,7 @@ Build the read-only safety net: checking the system state and calculating the de
 *   **Description:** Wire up `cmd/stamp/main.go` and `internal/cli/reconcile.go`. Supports the `--yes` / `-y` flag to auto-track detected packages without prompting.
 *   **Acceptance:** Running `stamp reconcile` fetches the state, calculates the delta, and prompts the user (or auto-tracks) to add new packages to the manifest.
 *   **Verify:** Manual test: `go run cmd/stamp/main.go reconcile`
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 ### Phase 4: Restore & UNIX Compliance
 Build the environment reconstruction logic and final touches.
