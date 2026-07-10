@@ -43,11 +43,33 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Release Process
 
-Releases are fully automated:
-- **Auto:** Merging to `main` triggers `thenativeweb/get-next-version` to calculate the next version from conventional commits, then goreleaser builds binaries and creates a GitHub Release with changelog
-- **Manual:** Push a `v*` tag to trigger `release.yml` directly
+Releases are fully automated — no manual version bumping required.
 
-No manual version tagging or changelog editing is required.
+### Auto (default)
+
+Merging a PR to `main` triggers `.github/workflows/auto-tag.yml`:
+
+1. `thenativeweb/get-next-version` calculates the next version from conventional commits since the last tag
+2. goreleaser builds binaries for linux + darwin (amd64 + arm64)
+3. A GitHub Release is created with auto-generated changelog and release artifacts
+
+### Manual (fallback)
+
+For hotfix releases from a specific commit, push a `v*` tag to trigger `.github/workflows/release.yml`:
+
+```bash
+# Tag HEAD
+git tag v1.2.3
+git push origin v1.2.3
+
+# Or tag a specific commit (hotfix)
+git tag v1.2.3 <commit-sha>
+git push origin v1.2.3
+```
+
+The manual workflow runs tests, then goreleaser builds and publishes the release just like the auto path.
+
+> **Note:** The auto and manual workflows are independent. Auto-tag pushes (`GITHUB_TOKEN`) don't trigger the manual workflow, so there's no risk of duplicate releases.
 
 ## Branching Strategy
 
