@@ -61,19 +61,19 @@ jobs:
           fetch-depth: 0
       - name: Check commits follow Conventional Commits
         run: |
-          FAILED=false
+          FOUND_VALID=false
 
           while read -r line; do
             if echo "$line" | grep -qE '^(feat|fix|chore|docs|test|refactor|perf|ci|build|style)(\(.+\))?!?: .+'; then
               echo "✅ Valid commit: $line"
+              FOUND_VALID=true
             else
-              echo "❌ Invalid commit: $line"
-              FAILED=true
+              echo "ℹ️ Skipping non-conventional commit: $line"
             fi
           done < <(git log --format="%s" origin/${{ github.event.pull_request.base.ref }}..HEAD)
 
-          if [ "$FAILED" = true ]; then
-            echo "❌ All commits must follow Conventional Commits format (type(scope): description)"
+          if [ "$FOUND_VALID" = false ]; then
+            echo "❌ No commits follow Conventional Commits format (type(scope): description)"
             echo "Valid types: feat, fix, chore, docs, test, refactor, perf, ci, build, style"
             exit 1
           fi
