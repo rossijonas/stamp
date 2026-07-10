@@ -66,10 +66,10 @@ func TestResolver_Tier3Fallback(t *testing.T) {
 	adapters := []manager.Adapter{&testAdapter{"brew"}}
 	r := NewResolver(adapters, &Config{})
 
-	// No precedence or rules set → picks first available
-	a, err := r.Resolve("htop", "")
-	require.NoError(t, err)
-	assert.Equal(t, "brew", a.Name())
+	// No precedence or rules set → ambiguous, requires --manager
+	_, err := r.Resolve("htop", "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "specify --manager")
 }
 
 func TestResolver_NoAdapters(t *testing.T) {
@@ -79,4 +79,34 @@ func TestResolver_NoAdapters(t *testing.T) {
 	_, err := r.Resolve("htop", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no package managers available")
+}
+
+func TestResolver_SkipsInvalidRegex(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&testAdapter{"brew"}}
+	cfg := &Config{
+		Precedence: []string{"brew"},
+		Rules: []Rule{
+			{Pattern: "[", Prefer: "flatpak"}, // invalid regex, should be skipped
+		},
+	}
+	r := NewResolver(adapters, cfg)
+
+	// Invalid regex pattern is skipped, falls through to global precedence
+	a, err := r.Resolve("anything", "")
+	require.NoError(t, err)
+	assert.Equal(t, "brew", a.Name())
+}
+
+func TestResolver_SkipsMissingPrecedenceEntry(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&testAdapter{"brew"}, &testAdapter{"dnf"}}
+	cfg := &Config{
+		Precedence: []string{"apt", "brew"}, // apt not installed, should skip to brew
+	}
+	r := NewResolver(adapters, cfg)
+
+	a, err := r.Resolve("htop", "")
+	require.NoError(t, err)
+	assert.Equal(t, "brew", a.Name())
 }

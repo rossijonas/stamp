@@ -3,176 +3,476 @@ package cli
 
 import (
 	"bytes"
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/rossijonas/stamp/internal/manager"
 )
 
-func TestRootCmd(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name    string
-		args    []string
-		wantErr bool
-	}{
-		{"no args prints help", []string{}, false},
-		{"install without pkg fails", []string{"install"}, true},
-		{"remove without pkg fails", []string{"remove"}, true},
-		{"search without pkg fails", []string{"search"}, true},
-		{"repo no subcommand prints help", []string{"repo"}, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			buf := new(bytes.Buffer)
-			root := NewRootCmd()
-			root.SetOut(buf)
-			root.SetErr(buf)
-			root.SetArgs(tt.args)
-
-			err := root.Execute()
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.NotEmpty(t, buf.String())
-			}
-		})
-	}
+// mockAdapter is a test implementation of manager.Adapter.
+type mockAdapter struct {
+	name          string
+	err           error
+	searchResults []string // when nil, defaults to []string{q + "-found"}
 }
 
-func TestInstallAlias(t *testing.T) {
-	t.Parallel()
+func (m *mockAdapter) Name() string                                      { return m.name }
+func (m *mockAdapter) ListInstalled(_ context.Context) ([]string, error) { return nil, m.err }
+func (m *mockAdapter) Install(_ context.Context, _ string) error         { return m.err }
+func (m *mockAdapter) Remove(_ context.Context, _ string) error          { return m.err }
+func (m *mockAdapter) Search(_ context.Context, q string) ([]string, error) {
+	if m.searchResults != nil {
+		return m.searchResults, m.err
+	}
+	return []string{q + "-found"}, m.err
+}
+func (m *mockAdapter) AddRepo(_ context.Context, _, _ string) error { return m.err }
+func (m *mockAdapter) RemoveRepo(_ context.Context, _ string) error { return m.err }
+
+// execCmd builds a root with injected mock adapters and isolated temp paths, executes, returns output.
+func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Buffer, error) {
+	t.Helper()
 	buf := new(bytes.Buffer)
-	root := NewRootCmd()
+	tmpDir := t.TempDir()
+	cPath := filepath.Join(tmpDir, "config.toml")
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	root := NewRootCmd(WithAdapters(adapters), WithConfigPath(cPath), WithManifestPath(mPath))
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"add", "htop"})
-
+	root.SetArgs(args)
 	err := root.Execute()
-	require.NoError(t, err)
+	return buf, err
 }
 
-func TestRemoveAliases(t *testing.T) {
-	t.Parallel()
-	for _, alias := range []string{"uninstall", "rm", "delete", "del"} {
-		t.Run(alias, func(t *testing.T) {
-			t.Parallel()
-			buf := new(bytes.Buffer)
-			root := NewRootCmd()
-			root.SetOut(buf)
-			root.SetErr(buf)
-			root.SetArgs([]string{alias, "htop"})
-
-			err := root.Execute()
-			require.NoError(t, err)
-		})
+func lookupCmd(cmds []*cobra.Command, name string) *cobra.Command {
+	for _, c := range cmds {
+		if c.Name() == name {
+			return c
+		}
 	}
+	return nil
 }
 
-func TestRepoAddRequiresManager(t *testing.T) {
-	t.Parallel()
+func TestSaveManifestError(t *testing.T) {
+	readonlyDir := t.TempDir()
+	//nolint:gosec // intentionally restrictive permissions for test
+	if err := os.Chmod(readonlyDir, 0500); err != nil {
+		t.Skip("cannot change permissions:", err)
+	}
+	mPath := filepath.Join(readonlyDir, "manifest.toml")
+	cPath := filepath.Join(readonlyDir, "config.toml")
+
 	buf := new(bytes.Buffer)
-	root := NewRootCmd()
+	root := NewRootCmd(WithAdapters([]manager.Adapter{&mockAdapter{name: "dnf"}}), WithConfigPath(cPath), WithManifestPath(mPath))
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"repo", "add", "foo"})
-
+	root.SetArgs([]string{"install", "htop"})
 	err := root.Execute()
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to save manifest")
 }
 
-func TestRepoAddWithManager(t *testing.T) {
+func TestXDGConfigDir_Fallback(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+	dir := xdgConfigDir()
+	assert.Contains(t, dir, ".config")
+	assert.Contains(t, dir, "stamp")
+}
+
+func TestXDGConfigDir_FromEnv(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/custom/path")
+	dir := xdgConfigDir()
+	assert.Equal(t, "/custom/path/stamp", dir)
+}
+
+func TestManifestPath(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/test")
+	assert.Contains(t, manifestPath(), "/test/stamp/manifest.toml")
+}
+
+func TestConfigPath(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/test")
+	assert.Contains(t, configPath(), "/test/stamp/config.toml")
+}
+
+func TestAppFromCtx_Nil(t *testing.T) {
 	t.Parallel()
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	ctx := appFromCtx(cmd)
+	assert.Nil(t, ctx)
+}
+
+func TestWithAdapters(t *testing.T) {
+	t.Parallel()
+	a := []manager.Adapter{&mockAdapter{name: "test"}}
+	opt := WithAdapters(a)
+	cfg := &rootConfig{}
+	opt(cfg)
+	require.Len(t, cfg.adapters, 1)
+	assert.Equal(t, "test", cfg.adapters[0].Name())
+}
+
+func TestNewRootCmdWithoutOptions(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	buf := new(bytes.Buffer)
 	root := NewRootCmd()
 	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"repo", "add", "foo", "-m", "brew"})
-
+	root.SetArgs([]string{"--help"})
 	err := root.Execute()
 	require.NoError(t, err)
+	assert.NotEmpty(t, buf.String())
 }
 
-func TestRepoRemoveRequiresManager(t *testing.T) {
+func TestDetectAdapters_Runs(t *testing.T) {
 	t.Parallel()
-	buf := new(bytes.Buffer)
+	adapters := detectAdapters()
+	// Should return a slice (possibly empty) without error
+	assert.NotNil(t, adapters)
+}
+
+// --- Command structure tests ---
+
+func TestRootCmd_CommandRegistration(t *testing.T) {
+	t.Parallel()
 	root := NewRootCmd()
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"repo", "remove", "foo"})
-
-	err := root.Execute()
-	require.Error(t, err)
+	for _, name := range []string{"install", "remove", "search", "repo"} {
+		require.NotNil(t, lookupCmd(root.Commands(), name), "missing command: %s", name)
+	}
 }
 
-func TestRepoRemoveWithManager(t *testing.T) {
+func TestInstallCmd_Aliases(t *testing.T) {
 	t.Parallel()
-	buf := new(bytes.Buffer)
-	root := NewRootCmd()
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"repo", "remove", "foo", "-m", "brew"})
-
-	err := root.Execute()
-	require.NoError(t, err)
+	cmd := lookupCmd(NewRootCmd().Commands(), "install")
+	require.NotNil(t, cmd)
+	assert.Contains(t, cmd.Aliases, "add")
+	require.NoError(t, cmd.ValidateArgs([]string{"pkg"}))
+	require.Error(t, cmd.ValidateArgs([]string{}))
+	require.Error(t, cmd.ValidateArgs([]string{"a", "b"}))
 }
 
-func TestRepoAliases(t *testing.T) {
+func TestRemoveCmd_Aliases(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{"repo install alias", []string{"repo", "install", "foo", "-m", "brew"}},
-		{"repo uninstall alias", []string{"repo", "uninstall", "foo", "-m", "brew"}},
-		{"repo delete alias", []string{"repo", "delete", "foo", "-m", "brew"}},
-		{"repo del alias", []string{"repo", "del", "foo", "-m", "brew"}},
-		{"repo ls alias", []string{"repo", "ls"}},
-	}
+	cmd := lookupCmd(NewRootCmd().Commands(), "remove")
+	require.NotNil(t, cmd)
+	assert.Contains(t, cmd.Aliases, "uninstall", "rm", "delete", "del")
+	require.NoError(t, cmd.ValidateArgs([]string{"pkg"}))
+	require.Error(t, cmd.ValidateArgs([]string{}))
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			buf := new(bytes.Buffer)
-			root := NewRootCmd()
-			root.SetOut(buf)
-			root.SetErr(buf)
-			root.SetArgs(tt.args)
+func TestSearchCmd_Flags(t *testing.T) {
+	t.Parallel()
+	cmd := lookupCmd(NewRootCmd().Commands(), "search")
+	require.NotNil(t, cmd)
+	require.NoError(t, cmd.ValidateArgs([]string{"q"}))
+	require.Error(t, cmd.ValidateArgs([]string{}))
 
-			err := root.Execute()
-			require.NoError(t, err)
-		})
+	mFlag := cmd.Flag("manager")
+	require.NotNil(t, mFlag)
+	assert.Equal(t, "m", mFlag.Shorthand)
+}
+
+func TestRepoCmd_Subcommands(t *testing.T) {
+	t.Parallel()
+	repo := lookupCmd(NewRootCmd().Commands(), "repo")
+	require.NotNil(t, repo)
+	require.NoError(t, repo.ValidateArgs([]string{}))
+	require.Error(t, repo.ValidateArgs([]string{"x"}))
+
+	for _, name := range []string{"add", "remove", "list"} {
+		require.NotNil(t, lookupCmd(repo.Commands(), name), "missing repo subcommand: %s", name)
 	}
+}
+
+func TestRepoAddCmd_AliasesAndFlags(t *testing.T) {
+	t.Parallel()
+	repo := lookupCmd(NewRootCmd().Commands(), "repo")
+	require.NotNil(t, repo)
+	add := lookupCmd(repo.Commands(), "add")
+	require.NotNil(t, add)
+	assert.Contains(t, add.Aliases, "install")
+
+	mFlag := add.Flag("manager")
+	require.NotNil(t, mFlag)
+	assert.Equal(t, "m", mFlag.Shorthand)
+}
+
+func TestRepoRemoveCmd_Aliases(t *testing.T) {
+	t.Parallel()
+	repo := lookupCmd(NewRootCmd().Commands(), "repo")
+	rm := lookupCmd(repo.Commands(), "remove")
+	require.NotNil(t, rm)
+	assert.Contains(t, rm.Aliases, "uninstall", "delete", "del")
+}
+
+func TestRepoListCmd_Aliases(t *testing.T) {
+	t.Parallel()
+	repo := lookupCmd(NewRootCmd().Commands(), "repo")
+	ls := lookupCmd(repo.Commands(), "list")
+	require.NotNil(t, ls)
+	assert.Contains(t, ls.Aliases, "ls")
 }
 
 func TestGlobalFlags(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{"verbose flag", []string{"--verbose"}},
-		{"verbose short", []string{"-v"}},
-		{"yes flag", []string{"--yes"}},
-		{"yes short", []string{"-y"}},
-		{"json flag", []string{"--json"}},
+	root := NewRootCmd()
+	for _, tc := range []struct{ name, short string }{
+		{"verbose", "v"}, {"yes", "y"},
+	} {
+		f := root.PersistentFlags().Lookup(tc.name)
+		require.NotNil(t, f, "missing flag: %s", tc.name)
+		assert.Equal(t, tc.short, f.Shorthand)
 	}
+	f := root.PersistentFlags().Lookup("json")
+	require.NotNil(t, f)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			buf := new(bytes.Buffer)
-			root := NewRootCmd()
-			root.SetOut(buf)
-			root.SetErr(buf)
-			root.SetArgs(tt.args)
+// --- Execution tests with mock adapters ---
 
-			err := root.Execute()
+func TestInstallCmd_ExecutesInstall(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "installed htop via dnf")
+}
+
+func TestRemoveCmd_ExecutesRemove(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "removed htop via brew")
+}
+
+func TestRemoveCmd_WithManagerFlag(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"remove", "htop", "-m", "dnf"}, []manager.Adapter{
+		&mockAdapter{name: "dnf"}, &mockAdapter{name: "brew"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "removed htop via dnf")
+}
+
+func TestRemoveCmd_UnknownManager(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"remove", "htop", "-m", "nonexistent"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown manager")
+}
+
+func TestSearchCmd_FindsResults(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"search", "ripgrep"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "ripgrep-found (dnf)")
+}
+
+func TestSearchCmd_ScopedByManager(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"search", "jq", "-m", "brew"}, []manager.Adapter{
+		&mockAdapter{name: "dnf"}, &mockAdapter{name: "brew"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "jq-found (brew)")
+	assert.NotContains(t, buf.String(), "dnf")
+}
+
+func TestSearchCmd_UnknownManager(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"search", "foo", "-m", "nonexistent"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown manager")
+}
+
+func TestRemoveCmd_NoAdapters(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no package managers available")
+}
+
+func TestSearchCmd_NoResults(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"search", "foo"}, []manager.Adapter{&mockAdapter{name: "flatpak", err: errors.New("fail")}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "no results found")
+}
+
+func TestSearchCmd_NoResultsWithEmpty(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"search", "foo"}, []manager.Adapter{&mockAdapter{name: "flatpak", searchResults: []string{}}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "no results found")
+}
+
+func TestRepoAddCmd_Executes(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "added repo mytap via brew")
+}
+
+func TestRepoRemoveCmd_Executes(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak"}, []manager.Adapter{&mockAdapter{name: "flatpak"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "removed repo mytap via flatpak")
+}
+
+func TestInstallCmd_Error(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&mockAdapter{name: "dnf", err: errors.New("install failed")}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "install failed")
+}
+
+func TestRemoveCmd_Error(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{&mockAdapter{name: "brew", err: errors.New("remove failed")}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "remove failed")
+}
+
+func TestRepoAddCmd_Error(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew", err: errors.New("add repo failed")}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "add repo failed")
+}
+
+func TestRepoRemoveCmd_Error(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak"}, []manager.Adapter{&mockAdapter{name: "flatpak", err: errors.New("remove repo failed")}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "remove repo failed")
+}
+
+func TestRepoListCmd_Empty(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"repo", "list"}, []manager.Adapter{})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "no repositories tracked")
+}
+
+func TestRepoAddCmd_MissingManager(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "add", "mytap"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.Error(t, err)
+}
+
+func TestAliasesWork(t *testing.T) {
+	t.Parallel()
+	for _, alias := range []struct{ cmd, pkg string }{
+		{"add", "htop"}, {"uninstall", "htop"}, {"rm", "htop"}, {"delete", "htop"}, {"del", "htop"},
+	} {
+		t.Run(alias.cmd, func(t *testing.T) {
+			buf, err := execCmd(t, []string{alias.cmd, alias.pkg}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+			require.NoError(t, err)
+			assert.True(t, strings.Contains(buf.String(), "installed") || strings.Contains(buf.String(), "removed"),
+				"alias %s produced unexpected output: %s", alias.cmd, buf.String())
+		})
+	}
+}
+
+func TestRepoAliasesWork(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, args string }{
+		{"repo install", "install"},
+		{"repo uninstall", "uninstall"},
+		{"repo delete", "delete"},
+		{"repo del", "del"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			buf, err := execCmd(t, []string{"repo", tc.args, "mytap", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 			require.NoError(t, err)
 			assert.NotEmpty(t, buf.String())
 		})
 	}
+}
+
+func TestValidateRepoName(t *testing.T) {
+	t.Parallel()
+	assert.NoError(t, validateRepoName("mytap"))
+	assert.NoError(t, validateRepoName("hashicorp/tap"))
+	require.Error(t, validateRepoName("-invalid"))
+	require.Error(t, validateRepoName(""))
+}
+
+func TestValidateRepoURL(t *testing.T) {
+	t.Parallel()
+	assert.NoError(t, validateRepoURL(""))
+	assert.NoError(t, validateRepoURL("https://example.com/repo"))
+	assert.NoError(t, validateRepoURL("http://example.com/repo"))
+	require.Error(t, validateRepoURL("ftp://bad.com"))
+	assert.Error(t, validateRepoURL("not-a-url"))
+}
+
+func TestSearchResultsToStdout(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"search", "htop"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.NoError(t, err)
+	assert.NotEmpty(t, buf.String())
+}
+
+func TestInstallCmd_WithManagerFlag(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"install", "lazygit", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "installed lazygit via brew")
+}
+
+func TestInstallCmd_WithNote(t *testing.T) {
+	t.Parallel()
+	adapter := &mockAdapter{name: "dnf"}
+	buf, err := execCmd(t, []string{"install", "htop", "--note", "needed for work"}, []manager.Adapter{adapter})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "installed htop via dnf")
+}
+
+func TestRemoveCmd_WithManifestLookup(t *testing.T) {
+	t.Parallel()
+	// First install adds package to manifest with its manager
+	installBuf := new(bytes.Buffer)
+	tmpDir := t.TempDir()
+	cPath := filepath.Join(tmpDir, "config.toml")
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	adapters := []manager.Adapter{&mockAdapter{name: "dnf"}}
+
+	root1 := NewRootCmd(WithAdapters(adapters), WithConfigPath(cPath), WithManifestPath(mPath))
+	root1.SetOut(installBuf)
+	root1.SetErr(installBuf)
+	root1.SetArgs([]string{"install", "htop"})
+	require.NoError(t, root1.Execute())
+
+	// Now remove should find htop in manifest and use dnf
+	removeBuf := new(bytes.Buffer)
+	root2 := NewRootCmd(WithAdapters(adapters), WithConfigPath(cPath), WithManifestPath(mPath))
+	root2.SetOut(removeBuf)
+	root2.SetErr(removeBuf)
+	root2.SetArgs([]string{"remove", "htop"})
+	require.NoError(t, root2.Execute())
+	assert.Contains(t, removeBuf.String(), "removed htop via dnf")
+}
+
+func TestRepoAddCmd_WithURL(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"repo", "add", "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo", "-m", "flatpak"},
+		[]manager.Adapter{&mockAdapter{name: "flatpak"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "added repo flathub via flatpak")
+}
+
+func TestResolveAmbiguousInInstall(t *testing.T) {
+	t.Parallel()
+	// Adapter "apt" not in default precedence → Tier 3 returns "specify --manager"
+	_, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&mockAdapter{name: "apt"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "specify --manager")
 }
