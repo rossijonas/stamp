@@ -46,6 +46,19 @@ func TestDoctor_JSON(t *testing.T) {
 	assert.True(t, names["flatpak"])
 
 	assert.NotEmpty(t, report.Manifest.Path)
+	assert.False(t, report.NoColor) // NO_COLOR not set in tests
+}
+
+func TestDoctor_NOCOLOR_Set(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	buf, err := execCmd(t, []string{"doctor", "--json"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+
+	var report doctorReport
+	err = json.Unmarshal(buf.Bytes(), &report)
+	require.NoError(t, err)
+
+	assert.True(t, report.NoColor)
 }
 
 func TestDoctor_Manifest_Healthy(t *testing.T) {

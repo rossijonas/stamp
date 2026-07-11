@@ -28,6 +28,13 @@ type AppContext struct {
 	yes          bool
 	verbose      bool
 	json         bool
+	noColor      bool
+}
+
+// NoColor reports whether the NO_COLOR environment variable is set.
+// Used by any code that outputs ANSI escape sequences.
+func NoColor() bool {
+	return os.Getenv("NO_COLOR") != ""
 }
 
 func xdgConfigDir() string {
@@ -120,6 +127,8 @@ func newAppContext(yes, verbose, json bool, adapters []manager.Adapter, cfgPath,
 		}
 	}
 	ctx.manifest = m
+
+	ctx.noColor = NoColor()
 
 	return ctx, nil
 }

@@ -27,6 +27,7 @@ type doctorReport struct {
 	System          string          `json:"system"`
 	PackageManagers []managerStatus `json:"package_managers"`
 	Manifest        manifestStatus  `json:"manifest"`
+	NoColor         bool            `json:"no_color"`
 }
 
 func newDoctorCmd() *cobra.Command {
@@ -86,6 +87,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 					System:          runtime.GOOS,
 					PackageManagers: managers,
 					Manifest:        ms,
+					NoColor:         app.noColor,
 				}
 				data, err := json.MarshalIndent(report, "", "  ")
 				if err != nil {
@@ -119,6 +121,14 @@ Reports which managers are installed and whether the manifest is valid.`,
 				_, _ = fmt.Fprintf(out, "  Status: ✅ Healthy (%d package(s))\n", ms.PackagesCount)
 			} else {
 				_, _ = fmt.Fprintf(out, "  Status: ❌ %s\n", ms.Error)
+			}
+
+			_, _ = fmt.Fprintln(out)
+			_, _ = fmt.Fprintln(out, "UNIX Compliance:")
+			if app.noColor {
+				_, _ = fmt.Fprintln(out, "  NO_COLOR: ✅ Set")
+			} else {
+				_, _ = fmt.Fprintln(out, "  NO_COLOR: ❌ Not set")
 			}
 
 			return nil
