@@ -18,7 +18,7 @@ stamp man [flags]
 ```
   -h, --help            help for man
       --install         install man page to system directory
-      --prefix string   install prefix (default: /usr/local on Linux, Homebrew prefix on macOS)
+      --prefix string   install prefix (default: ~/.local)
 ```
 
 ### Options inherited from parent commands
