@@ -103,7 +103,7 @@ Build the environment reconstruction logic and final touches.
 *   **Description:** Implement the environment reconstruction logic. Supports the `--yes` / `-y` flag to bypass safety confirmation prompts.
 *   **Acceptance:** `stamp restore` parses the manifest, restores all tracked repositories first, and then executes concurrent package installs.
 *   **Verify:** Manual test with `--dry-run` flag.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 10: CLI Polish, Manpages, GitHub Pages & Landing Page**
 *   **Description:** Implement `stamp completion` for shell autocompletion. Implement a documentation generation pipeline (invoked via `task docs` or a command) to auto-generate both Markdown files (for GitHub Pages) and troff `man` pages (for native UNIX documentation) using `cobra/doc`. Create a landing page served via GitHub Pages (`/docs` folder on main branch) at `https://rossijonas.github.io/stamp/`. Ensure `NO_COLOR` compliance and strict `stdout`/`stderr` separation.
