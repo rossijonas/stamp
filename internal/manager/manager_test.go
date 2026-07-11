@@ -124,6 +124,24 @@ func TestDNF_Operations(t *testing.T) {
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
+		{
+			name:        "install validation error",
+			operation:   "install",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
+		{
+			name:        "remove validation error",
+			operation:   "remove",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
+		{
+			name:        "search validation error",
+			operation:   "search",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {

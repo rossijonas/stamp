@@ -58,3 +58,30 @@ func TestLoadConfig_ReadError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read config")
 }
+
+func TestNewAppContext_ConfigParseError(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	cPath := filepath.Join(tmpDir, "config.toml")
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+
+	require.NoError(t, os.WriteFile(cPath, []byte("invalid [[toml\n"), 0600))
+
+	_, err := newAppContext(false, false, false, nil, cPath, mPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid configuration")
+}
+
+func TestNewAppContext_ManifestParseError(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+
+	ctx, err := newAppContext(false, false, false, nil, "/nonexistent/config", mPath)
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.Error(t, ctx.manifestErr)
+	assert.Contains(t, ctx.manifestErr.Error(), "failed to parse manifest")
+}

@@ -138,6 +138,22 @@ func TestNewRootCmdWithoutOptions(t *testing.T) {
 	assert.NotEmpty(t, buf.String())
 }
 
+func TestNewRootCmd_CustomPaths(t *testing.T) {
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("version = 1\n[[packages]]\nname = \"htop\"\nmanager = \"dnf\"\n"), 0600))
+
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "packages_count\": 1")
+}
+
 func TestDetectAdapters_Runs(t *testing.T) {
 	t.Parallel()
 	adapters := detectAdapters()
@@ -367,10 +383,65 @@ func TestRepoListCmd_Empty(t *testing.T) {
 	assert.Contains(t, buf.String(), "no repositories tracked")
 }
 
+func TestRepoListCmd_WithEntries(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&mockAdapter{name: "dnf"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[repositories]]
+name = "hashicorp/tap"
+manager = "brew"
+url = "https://github.com/hashicorp/tap"
+
+[[repositories]]
+name = "flathub"
+manager = "flatpak"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"repo", "list"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "hashicorp/tap (brew) https://github.com/hashicorp/tap")
+	assert.Contains(t, output, "flathub (flatpak)")
+}
+
 func TestRepoAddCmd_MissingManager(t *testing.T) {
 	t.Parallel()
 	_, err := execCmd(t, []string{"repo", "add", "mytap"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.Error(t, err)
+}
+
+func TestRepoAddCmd_InvalidURL(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "add", "mytap", "invalid-url", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid repository URL")
+}
+
+func TestRepoRemoveCmd_InvalidName(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "remove", "-invalid", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.Error(t, err)
+}
+
+func TestInstallCmd_InvalidName(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"install", "foo;rm"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
 }
 
 func TestAliasesWork(t *testing.T) {

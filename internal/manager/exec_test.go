@@ -77,3 +77,12 @@ func TestDefaultExecutor_Cancel(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, context.Canceled) || strings.Contains(err.Error(), "signal: interrupt") || strings.Contains(err.Error(), "canceled"))
 }
+
+func TestDefaultExecutor_StreamCancel(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = WithStreamIO(ctx)
+	cancel()
+	_, err := defaultExecutor(ctx, "sleep", "10")
+	require.Error(t, err)
+}

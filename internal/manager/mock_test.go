@@ -96,3 +96,39 @@ func TestMockErrors(t *testing.T) {
 	err = mock.RemoveRepo(ctx, "repo")
 	require.ErrorIs(t, err, expectedErr)
 }
+
+func TestMockRemove_Nonexistent(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:   "test",
+		InstalledPkgs: []string{"git"},
+	}
+	ctx := context.Background()
+	err := mock.Remove(ctx, "nonexistent")
+	require.NoError(t, err) // removing uninstalled package doesn't fail
+	assert.Len(t, mock.InstalledPkgs, 1)
+}
+
+func TestMock_InstallInvalidName(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "test"}
+	ctx := context.Background()
+	err := mock.Install(ctx, "-invalid")
+	require.Error(t, err)
+}
+
+func TestMock_SearchInvalidName(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "test"}
+	ctx := context.Background()
+	_, err := mock.Search(ctx, "-invalid")
+	require.Error(t, err)
+}
+
+func TestMock_RemoveRepoNonexistent(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "test"}
+	ctx := context.Background()
+	err := mock.RemoveRepo(ctx, "nonexistent")
+	require.NoError(t, err) // removing uninstalled repo doesn't fail
+}
