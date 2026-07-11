@@ -43,8 +43,8 @@ jobs:
 
       - name: Verify docs are up to date
         run: |
-          task docs
-          git diff --exit-code docs/usage/ || (echo "error: docs out of date — run 'task docs' and commit changes" && exit 1)
+          go run ./tools/docgen/
+          git diff --exit-code docs/usage/ || (echo "error: docs out of date — run 'go run ./tools/docgen/' and commit changes" && exit 1)
 
       - name: Run Tests & Enforce Coverage
         run: |
