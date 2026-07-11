@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 
@@ -23,11 +24,30 @@ type manifestStatus struct {
 	Error         string `json:"error,omitempty"`
 }
 
+type manPageStatus struct {
+	Installed bool   `json:"installed"`
+	Path      string `json:"path,omitempty"`
+}
+
 type doctorReport struct {
 	System          string          `json:"system"`
 	PackageManagers []managerStatus `json:"package_managers"`
 	Manifest        manifestStatus  `json:"manifest"`
 	NoColor         bool            `json:"no_color"`
+	ManPage         manPageStatus   `json:"man_page"`
+}
+
+func installedManPagePath() string {
+	candidates := []string{
+		"/usr/local/share/man/man1/stamp.1",
+		"/usr/share/man/man1/stamp.1",
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
 }
 
 func newDoctorCmd() *cobra.Command {
@@ -83,11 +103,16 @@ Reports which managers are installed and whether the manifest is valid.`,
 			}
 
 			if app.json {
+				mp := installedManPagePath()
 				report := doctorReport{
 					System:          runtime.GOOS,
 					PackageManagers: managers,
 					Manifest:        ms,
 					NoColor:         app.noColor,
+					ManPage: manPageStatus{
+						Installed: mp != "",
+						Path:      mp,
+					},
 				}
 				data, err := json.MarshalIndent(report, "", "  ")
 				if err != nil {
@@ -129,6 +154,13 @@ Reports which managers are installed and whether the manifest is valid.`,
 				_, _ = fmt.Fprintln(out, "  NO_COLOR: ✅ Set")
 			} else {
 				_, _ = fmt.Fprintln(out, "  NO_COLOR: ❌ Not set")
+			}
+
+			mp := installedManPagePath()
+			if mp != "" {
+				_, _ = fmt.Fprintf(out, "  Man Page: ✅ Found at %s\n", mp)
+			} else {
+				_, _ = fmt.Fprintln(out, "  Man Page: ❌ Not found — run 'stamp man --install'")
 			}
 
 			return nil

@@ -295,6 +295,38 @@ func TestSave_WriteFileError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestDiff_SingleElementChanges(t *testing.T) {
+	oldS := Snapshot{Manager: "dnf", Packages: []string{"a"}}
+	newS := Snapshot{Manager: "dnf", Packages: []string{"b"}}
+	result := Diff(oldS, newS)
+	assert.ElementsMatch(t, []string{"b"}, result.Added)
+	assert.ElementsMatch(t, []string{"a"}, result.Removed)
+}
+
+func TestSave_InvalidManagerName(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "stamp-state-test-*")
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(tempDir) }()
+
+	snap := Snapshot{
+		Manager:  "../evil",
+		Packages: []string{},
+	}
+	err = Save(tempDir, snap)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid manager name")
+}
+
+func TestLoad_InvalidManagerName(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "stamp-state-test-*")
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(tempDir) }()
+
+	_, err = Load(tempDir, "../evil")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid manager name")
+}
+
 func TestLoad_UnmarshalError(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "stamp-state-test-*")
 	require.NoError(t, err)

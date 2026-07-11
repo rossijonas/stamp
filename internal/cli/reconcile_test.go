@@ -2,8 +2,10 @@ package cli
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -221,6 +223,56 @@ func TestReconcile_ListInstalledError(t *testing.T) {
 
 	_, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
 	require.Error(t, err)
+}
+
+func TestReconcile_CorruptedManifest(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile", "--yes"})
+
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
+}
+
+func TestReconcile_Cancel(t *testing.T) {
+	oldIsTerminal := isTerminal
+	isTerminal = func(_ io.Reader) bool { return true }
+	defer func() { isTerminal = oldIsTerminal }()
+
+	adapters := []manager.Adapter{&manager.Mock{
+		ManagerName:   "brew",
+		InstalledPkgs: []string{"lazygit", "ripgrep"},
+	}}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithConfigPath(filepath.Join(t.TempDir(), "config.toml")), WithManifestPath(filepath.Join(t.TempDir(), "manifest.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetIn(strings.NewReader("n\n"))
+	root.SetArgs([]string{"reconcile"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "Packages not tracked")
 }
 
 // setupSnapshots saves snapshots to {tmpDir}/stamp/snapshots/ and returns tmpDir.

@@ -49,6 +49,11 @@ tasks:
       - task: test
       - task: security
 
+  docs:
+    desc: "Generates CLI documentation (Markdown + man pages)"
+    cmds:
+      - go run ./tools/docgen/
+
   clean:
     desc: "Removes build artifacts"
     cmds:
