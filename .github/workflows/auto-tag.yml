@@ -33,6 +33,13 @@ jobs:
         if: steps.get-version.outputs.hasNextVersion == 'true'
         run: go test -v -race ./...
 
+      - id: get-prev-tag
+        name: Get previous tag
+        if: steps.get-version.outputs.hasNextVersion == 'true'
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
       - name: Release
         if: steps.get-version.outputs.hasNextVersion == 'true'
         uses: goreleaser/goreleaser-action@v7
@@ -43,3 +50,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ steps.get-version.outputs.version }}
+          GORELEASER_PREVIOUS_TAG: ${{ steps.get-prev-tag.outputs.prev_tag }}
