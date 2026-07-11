@@ -24,6 +24,9 @@ and can be added to the manifest.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
+			if app.manifestErr != nil {
+				return app.manifestErr
+			}
 
 			if len(app.adapters) == 0 {
 				return fmt.Errorf("no package managers available")

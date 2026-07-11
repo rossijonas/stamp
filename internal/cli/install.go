@@ -21,6 +21,9 @@ func newInstallCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
+			if app.manifestErr != nil {
+				return app.manifestErr
+			}
 			pkgName := args[0]
 
 			if err := manager.ValidatePackageName(pkgName); err != nil {
@@ -67,6 +70,9 @@ func newRemoveCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
+			if app.manifestErr != nil {
+				return app.manifestErr
+			}
 			pkgName := args[0]
 
 			var adapter manager.Adapter

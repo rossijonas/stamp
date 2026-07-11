@@ -23,6 +23,7 @@ type AppContext struct {
 	adapters     []manager.Adapter
 	manifest     *manifest.Manifest
 	manifestPath string
+	manifestErr  error
 	config       *Config
 	yes          bool
 	verbose      bool
@@ -102,13 +103,20 @@ func newAppContext(yes, verbose, json bool, adapters []manager.Adapter, cfgPath,
 	m, err := manifest.Load(mfPath)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("failed to load manifest: %w", err)
-		}
-		m = &manifest.Manifest{
-			Version:   1,
-			System:    runtime.GOOS,
-			Packages:  []manifest.Package{},
-			UpdatedAt: time.Now(),
+			ctx.manifestErr = fmt.Errorf("failed to load manifest: %w", err)
+			m = &manifest.Manifest{
+				Version:   1,
+				System:    runtime.GOOS,
+				Packages:  []manifest.Package{},
+				UpdatedAt: time.Now(),
+			}
+		} else {
+			m = &manifest.Manifest{
+				Version:   1,
+				System:    runtime.GOOS,
+				Packages:  []manifest.Package{},
+				UpdatedAt: time.Now(),
+			}
 		}
 	}
 	ctx.manifest = m
@@ -180,6 +188,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newRepoCmd())
 	root.AddCommand(newReconcileCmd())
 	root.AddCommand(newRestoreCmd())
+	root.AddCommand(newDoctorCmd())
 
 	return root
 }
