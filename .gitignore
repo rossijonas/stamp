@@ -22,3 +22,6 @@ bin/
 *.swp
 .DS_Store
 .tokensave
+
+# Generated documentation
+docs/man/

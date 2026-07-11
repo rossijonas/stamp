@@ -41,6 +41,11 @@ jobs:
           git diff --exit-code go.mod go.sum || (echo "go.mod/go.sum not tidy. Run 'go mod tidy' and commit the changes." && exit 1)
           go mod verify
 
+      - name: Verify docs are up to date
+        run: |
+          task docs
+          git diff --exit-code docs/usage/ || (echo "error: docs out of date — run 'task docs' and commit changes" && exit 1)
+
       - name: Run Tests & Enforce Coverage
         run: |
           go test -v -race -coverprofile=coverage.out ./...
