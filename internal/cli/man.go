@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -60,16 +59,14 @@ man page directory so 'man stamp' works.`,
 	}
 
 	cmd.Flags().BoolVar(&install, "install", false, "install man page to system directory")
-	cmd.Flags().StringVar(&prefix, "prefix", "", "install prefix (default: /usr/local on Linux, Homebrew prefix on macOS)")
+	cmd.Flags().StringVar(&prefix, "prefix", "", "install prefix (default: ~/.local)")
 	return cmd
 }
 
 func defaultManPrefix() string {
-	if runtime.GOOS == "darwin" {
-		// Apple Silicon Homebrew prefix
-		if _, err := os.Stat("/opt/homebrew"); err == nil {
-			return "/opt/homebrew"
-		}
+	home, err := os.UserHomeDir()
+	if err == nil {
+		return filepath.Join(home, ".local")
 	}
 	return "/usr/local"
 }

@@ -41,6 +41,7 @@ func installedManPagePath() string {
 	candidates := []string{
 		"/usr/local/share/man/man1/stamp.1",
 		"/usr/share/man/man1/stamp.1",
+		"/opt/homebrew/share/man/man1/stamp.1",
 	}
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
