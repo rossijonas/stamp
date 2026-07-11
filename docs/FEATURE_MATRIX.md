@@ -53,7 +53,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | XDG Base Directory | ✅ | ✅ | `xdgConfigDir()` in root.go | ✅ Complete |
 | Exit Codes (sysexits) | ✅ | ⚠️ Partial | Constants defined (`ExitUsage`, `ExitDataErr`, etc.) but `Execute()` always uses `os.Exit(1)` | ⚠️ Partial |
 | I/O Separation | ✅ | ✅ | Confirmations → `stderr`, search results/listings → `stdout` | ✅ Complete |
-| NO_COLOR support | ✅ | ❌ | Not implemented | ❌ Missing |
+| NO_COLOR support | ✅ | ✅ | Checks `NO_COLOR` env var, reports in `stamp doctor` | ✅ Complete |
 | Auto-Generated Docs | ✅ | ❌ | cobra/doc pipeline not wired (Task 10) | ❌ Missing |
 | UNIX Man Pages | ✅ | ❌ | Not generated (Task 10) | ❌ Missing |
 | Project Landing Page | ✅ | ❌ | Not created (Task 10) | ❌ Missing |
