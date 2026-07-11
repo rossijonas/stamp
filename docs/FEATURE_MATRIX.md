@@ -14,7 +14,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp repo list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
 | `stamp init` | | ✅ | ❌ | ❌ | ⏳ Pending (Phase 4) |
 | `stamp reconcile` | | ✅ | ❌ | ❌ | ⏳ Pending (Phase 3) |
-| `stamp restore` | | ✅ | ❌ | ❌ | ⏳ Pending (Phase 4) |
+| `stamp restore` | | ✅ | ✅ | ✅ Sequentially adds repos then concurrently installs packages | ✅ Complete |
 | `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp list` | `ls` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp doctor` | | ✅ | ❌ | ❌ | ⏳ Pending |
@@ -36,7 +36,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp install` | `--note <text>` | ✅ | ✅ | ✅ Complete |
 | `stamp remove` | `--manager, -m <name>` | ✅ | ✅ | ✅ Complete |
 | `stamp search` | `--manager, -m <name>` | ✅ | ✅ | ✅ Complete |
-| `stamp restore` | `--dry-run` | ✅ | ❌ | ⏳ Pending |
+| `stamp restore` | `--dry-run` | ✅ | ✅ | ✅ Complete |
 | `stamp repo add` | `--manager, -m <name>` | ✅ Required | ✅ MarkFlagRequired | ✅ Complete |
 | `stamp repo remove` | `--manager, -m <name>` | ✅ Required | ✅ MarkFlagRequired | ✅ Complete |
 | `stamp repo add` | `[url]` (positional) | ✅ Optional | ✅ Parsed from args | ✅ Complete |
@@ -71,7 +71,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 3 | 6 | Native Adapters (Read-Only) | ✅ |
 | 3 | 7 | State Engine (Snapshotting) | ✅ |
 | 3 | 8 | The `reconcile` Command | ✅ |
-| 4 | 9 | The `restore` Command | ⏳ |
+| 4 | 9 | The `restore` Command | ✅ |
 | 4 | 10 | CLI Polish, Manpages, GitHub Pages & Landing Page | ⏳ |
 | 4 | 11 | Self-Update Subcommand | ⏳ |
 | 5 | 11 | Relicense to Apache-2.0 | ✅ |

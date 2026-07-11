@@ -133,7 +133,8 @@ and can be added to the manifest.`,
 }
 
 // isTerminal reports whether the given reader is connected to a terminal.
-func isTerminal(r io.Reader) bool {
+// Declared as a variable so it can be overridden in tests.
+var isTerminal = func(r io.Reader) bool {
 	f, ok := r.(*os.File)
 	if !ok {
 		return false

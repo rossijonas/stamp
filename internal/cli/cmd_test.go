@@ -150,7 +150,7 @@ func TestDetectAdapters_Runs(t *testing.T) {
 func TestRootCmd_CommandRegistration(t *testing.T) {
 	t.Parallel()
 	root := NewRootCmd()
-	for _, name := range []string{"install", "remove", "search", "repo"} {
+	for _, name := range []string{"install", "remove", "search", "repo", "reconcile", "restore"} {
 		require.NotNil(t, lookupCmd(root.Commands(), name), "missing command: %s", name)
 	}
 }
@@ -169,7 +169,7 @@ func TestRemoveCmd_Aliases(t *testing.T) {
 	t.Parallel()
 	cmd := lookupCmd(NewRootCmd().Commands(), "remove")
 	require.NotNil(t, cmd)
-	assert.Contains(t, cmd.Aliases, "uninstall", "rm", "delete", "del")
+	assert.Subset(t, cmd.Aliases, []string{"uninstall", "rm", "delete", "del"})
 	require.NoError(t, cmd.ValidateArgs([]string{"pkg"}))
 	require.Error(t, cmd.ValidateArgs([]string{}))
 }
@@ -216,7 +216,7 @@ func TestRepoRemoveCmd_Aliases(t *testing.T) {
 	repo := lookupCmd(NewRootCmd().Commands(), "repo")
 	rm := lookupCmd(repo.Commands(), "remove")
 	require.NotNil(t, rm)
-	assert.Contains(t, rm.Aliases, "uninstall", "delete", "del")
+	assert.Subset(t, rm.Aliases, []string{"uninstall", "delete", "del"})
 }
 
 func TestRepoListCmd_Aliases(t *testing.T) {
