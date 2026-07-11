@@ -23,6 +23,9 @@ then installs all tracked packages concurrently across package managers.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
+			if app.manifestErr != nil {
+				return app.manifestErr
+			}
 
 			if len(app.manifest.Packages) == 0 && len(app.manifest.Repositories) == 0 {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Nothing to restore")

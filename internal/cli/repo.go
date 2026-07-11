@@ -62,6 +62,9 @@ func newRepoAddCmd() *cobra.Command {
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
+			if app.manifestErr != nil {
+				return app.manifestErr
+			}
 			name := args[0]
 			if err := validateRepoName(name); err != nil {
 				return err
@@ -119,6 +122,9 @@ func newRepoRemoveCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
+			if app.manifestErr != nil {
+				return app.manifestErr
+			}
 			name := args[0]
 			if err := validateRepoName(name); err != nil {
 				return err
