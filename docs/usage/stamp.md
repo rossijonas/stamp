@@ -16,6 +16,7 @@ Track package installation intent across multiple package managers
 * [stamp completion](stamp_completion.md)	 - Generate shell completion script
 * [stamp doctor](stamp_doctor.md)	 - Diagnose system configuration and manifest health
 * [stamp install](stamp_install.md)	 - Install a package and record intent
+* [stamp man](stamp_man.md)	 - Generate the stamp man page
 * [stamp reconcile](stamp_reconcile.md)	 - Detect packages installed outside stamp and add them to the manifest
 * [stamp remove](stamp_remove.md)	 - Remove a package and untrack it
 * [stamp repo](stamp_repo.md)	 - Manage third-party repositories
