@@ -43,11 +43,17 @@
 
 ✔️ **Self-Contained Documentation** - *Built-in man page generation (`stamp man install`), shell completions (`stamp completion bash|zsh|fish|powershell`), and auto-generated CLI reference docs.*
 
+✔️ **Agnostic & Unopinionated** - *Doesn't dictate how you configure your software (that's the job of `stow` or `chezmoi`). It solely ensures the software exists on your machine.*
+
+✔️ **Context Preservation (Notes)** - *Intent is easily forgotten. The `--note` flag on `stamp install` acts as a memory aid — you aren't just restoring `libfoo`, you're restoring why you needed it.*
+
 #### System & Compliance
 
 ✔️ **Built-in System Doctor** - *`stamp doctor` checks manager availability, manifest integrity, and UNIX compliance in a single command. JSON output for scripting.*
 
 ✔️ **UNIX Compliant** - *XDG Base Directory, POSIX syntax, NO_COLOR support, strict stdout/stderr separation, and BSD sysexits exit codes.*
+
+✔️ **Predictable & Scriptable** - *Global `--yes` / `-y` flag enables deterministic non-interactive execution in CI, bootstrap scripts, and automation pipelines. Never hangs waiting for user input in headless environments.*
 
 #### Technical
 

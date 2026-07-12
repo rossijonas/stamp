@@ -19,7 +19,7 @@ Existing tools fail to bridge this gap:
 
 ## The Solution: Stamp
 
-`stamp` occupies the unfulfilled space in the package management ecosystem: **A multi-manager intention tracking layer that operates without replacing your native tools or changing your habits.**
+`stamp` occupies the unfulfilled space in the package management ecosystem: **A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.**
 
 `stamp` offers the declarative benefits of Nix with the imperative ease of `dnf`. 
 
