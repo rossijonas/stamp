@@ -46,6 +46,9 @@ type Adapter interface {
 
 	// RemoveRepo removes a tracked repository.
 	RemoveRepo(ctx context.Context, name string) error
+
+	// Info queries the native package manager for details on the given package.
+	Info(ctx context.Context, pkg string) (string, error)
 }
 
 // parseLines splits byte output by newline and removes empty strings.

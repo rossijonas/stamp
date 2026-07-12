@@ -9,10 +9,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
+	"github.com/rossijonas/stamp/internal/manifest"
 )
 
 func newRestoreCmd() *cobra.Command {
 	var dryRun bool
+	var managerFlag string
 
 	cmd := &cobra.Command{
 		Use:   "restore",
@@ -27,22 +29,43 @@ then installs all tracked packages concurrently across package managers.`,
 				return app.manifestErr
 			}
 
-			if len(app.manifest.Packages) == 0 && len(app.manifest.Repositories) == 0 {
+			repos := app.manifest.Repositories
+			pkgs := app.manifest.Packages
+
+			if managerFlag != "" {
+				var filteredRepos []manifest.Repository
+				for _, r := range repos {
+					if r.Manager == managerFlag {
+						filteredRepos = append(filteredRepos, r)
+					}
+				}
+				repos = filteredRepos
+
+				var filteredPkgs []manifest.Package
+				for _, p := range pkgs {
+					if p.Manager == managerFlag {
+						filteredPkgs = append(filteredPkgs, p)
+					}
+				}
+				pkgs = filteredPkgs
+			}
+
+			if len(pkgs) == 0 && len(repos) == 0 {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Nothing to restore")
 				return nil
 			}
 
 			if dryRun {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "▪ Dry Run (Preview):")
-				if len(app.manifest.Repositories) > 0 {
+				if len(repos) > 0 {
 					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Repositories:")
-					for _, r := range app.manifest.Repositories {
+					for _, r := range repos {
 						_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  - %s (%s) %s\n", r.Name, r.Manager, r.URL)
 					}
 				}
-				if len(app.manifest.Packages) > 0 {
+				if len(pkgs) > 0 {
 					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Packages:")
-					for _, p := range app.manifest.Packages {
+					for _, p := range pkgs {
 						_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  - %s (%s)\n", p.Name, p.Manager)
 					}
 				}
@@ -54,7 +77,7 @@ then installs all tracked packages concurrently across package managers.`,
 				if !isTerminal(cmd.InOrStdin()) {
 					track = true
 				} else {
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Restore %d repository(ies) and %d package(s)? [Y/n]: ", len(app.manifest.Repositories), len(app.manifest.Packages))
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Restore %d repository(ies) and %d package(s)? [Y/n]: ", len(repos), len(pkgs))
 					reader := bufio.NewReader(cmd.InOrStdin())
 					response, err := reader.ReadString('\n')
 					if err != nil {
@@ -73,9 +96,9 @@ then installs all tracked packages concurrently across package managers.`,
 			}
 
 			// Phase 1: Restore Repositories (Sequentially)
-			if len(app.manifest.Repositories) > 0 {
+			if len(repos) > 0 {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Phase 1: Restoring Repositories...")
-				for _, r := range app.manifest.Repositories {
+				for _, r := range repos {
 					var adapter manager.Adapter
 					for _, a := range app.adapters {
 						if a.Name() == r.Manager {
@@ -96,12 +119,12 @@ then installs all tracked packages concurrently across package managers.`,
 			}
 
 			// Phase 2: Restore Packages (Concurrently by Manager)
-			if len(app.manifest.Packages) > 0 {
+			if len(pkgs) > 0 {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Phase 2: Restoring Packages...")
 
 				// Group packages by manager
 				byManager := make(map[string][]string)
-				for _, p := range app.manifest.Packages {
+				for _, p := range pkgs {
 					byManager[p.Manager] = append(byManager[p.Manager], p.Name)
 				}
 
@@ -164,6 +187,7 @@ then installs all tracked packages concurrently across package managers.`,
 		},
 	}
 
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "preview repositories and packages to restore")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "preview repositories and packages to restore")
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to restore")
 	return cmd
 }

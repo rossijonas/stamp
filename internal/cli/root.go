@@ -184,16 +184,25 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 			cmd.SetContext(context.WithValue(cmd.Context(), ctxKey{}, app))
 			return nil
 		},
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, _ = fmt.Fprint(cmd.ErrOrStderr(), "Don't know where to start? Try:\n\n")
+			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  stamp hello    — Learn about stamp and next steps")
+			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  stamp --help   — See all available commands")
+			return cmd.Help()
+		},
 	}
 
 	root.Version = Version
 	root.PersistentFlags().BoolP("verbose", "v", false, "enable debug logging")
-	root.PersistentFlags().Bool("json", false, "output results in JSON format")
+	root.PersistentFlags().BoolP("json", "j", false, "output results in JSON format")
 	root.PersistentFlags().BoolP("yes", "y", false, "auto-accept all prompts")
 
 	root.AddCommand(newInstallCmd())
 	root.AddCommand(newRemoveCmd())
+	root.AddCommand(newReinstallCmd())
 	root.AddCommand(newSearchCmd())
+	root.AddCommand(newInfoCmd())
+	root.AddCommand(newHelloCmd())
 	root.AddCommand(newRepoCmd())
 	root.AddCommand(newReconcileCmd())
 	root.AddCommand(newRestoreCmd())

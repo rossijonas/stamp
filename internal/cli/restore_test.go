@@ -311,3 +311,24 @@ manager = "brew"
 	assert.Contains(t, output, "Restore cancelled")
 	assert.NotContains(t, mockBrew.InstalledPkgs, "htop")
 }
+
+func TestRestore_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "--yes"})
+
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
+}

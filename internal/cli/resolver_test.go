@@ -22,6 +22,7 @@ func (t *testAdapter) Remove(_ context.Context, _ string) error             { re
 func (t *testAdapter) Search(_ context.Context, _ string) ([]string, error) { return nil, nil }
 func (t *testAdapter) AddRepo(_ context.Context, _, _ string) error         { return nil }
 func (t *testAdapter) RemoveRepo(_ context.Context, _ string) error         { return nil }
+func (t *testAdapter) Info(_ context.Context, _ string) (string, error)     { return "", nil }
 
 func TestResolver_Tier1ExplicitOverride(t *testing.T) {
 	t.Parallel()
