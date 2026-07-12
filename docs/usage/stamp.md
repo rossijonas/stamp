@@ -1,6 +1,6 @@
 ## stamp
 
-Track package installation intent across multiple package managers
+A lightweight yet powerful wrapper for your native package managers
 
 ### Options
 

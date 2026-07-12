@@ -155,7 +155,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 
 	root := &cobra.Command{
 		Use:           "stamp",
-		Short:         "Track package installation intent across multiple package managers",
+		Short:         "A lightweight yet powerful wrapper for your native package managers",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {

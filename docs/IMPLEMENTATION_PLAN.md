@@ -12,12 +12,13 @@ Based on standard Go project layout conventions:
     *   `internal/manager/` - Package manager adapters (dnf, brew, flatpak).
     *   `internal/state/` - Snapshotting and diffing logic.
     *   `internal/manifest/` - TOML parsing.
+*   `tools/docgen/` - Build-time documentation generation tool.
 *   `docs/` - Architecture Decision Records (ADRs), specs, and plans.
 *   `testdata/` - Static JSON/TOML fixtures for unit tests.
 
 ### Development Tools
 We will use modern, Go-centric tooling:
-*   **Taskfile (`task`)**: Replaces `Makefile`. YAML-based, self-documenting task runner (`task build`, `task test`, `task lint`).
+*   **Taskfile (`task`)**: Replaces `Makefile`. YAML-based, self-documenting task runner (`task build`, `task test`, `task lint`, `task docs`).
 *   **golangci-lint**: The standard Go linter. Configured via `.golangci.yml`.
 *   **stretchr/testify**: Used for all test assertions (`assert` and `require`) and mock generation.
 
@@ -105,26 +106,60 @@ Build the environment reconstruction logic and final touches.
 *   **Verify:** Manual test with `--dry-run` flag.
 *   **Status:** ✅ Completed
 
-**Task 10: CLI Polish, Manpages, GitHub Pages & Landing Page**
-*   **Description:** Implement `stamp completion` for shell autocompletion. Implement a documentation generation pipeline (invoked via `task docs` or a command) to auto-generate both Markdown files (for GitHub Pages) and troff `man` pages (for native UNIX documentation) using `cobra/doc`. Create a landing page served via GitHub Pages (`/docs` folder on main branch) at `https://rossijonas.github.io/stamp/`. Ensure `NO_COLOR` compliance and strict `stdout`/`stderr` separation.
-*   **Landing page scope (to be detailed before implementation):**
-    - **Jekyll theme:** `minimal-mistakes` — supports custom splash/home landing
-      page layout alongside documentation navigation, ideal for marketing + docs
-      hybrid sites
-    - Custom `index.html` + `assets/style.css` in `docs/`
-    - Hero section with ASCII logo, tagline, install one-liner
-    - Selling paragraph + example workflow section
-    - Screenshots / animated GIFs of tool usage (format and content TBD)
-    - Links to auto-generated CLI reference (`docs/usage/`)
-*   **Acceptance:** User can run diagnostics with `stamp doctor --json`, load shell completions, and run `man stamp` locally. Landing page renders at project URL with links to usage docs.
-*   **Verify:** `task docs` generates valid markdown files in `docs/usage/` and `.1` files in `docs/man/`. GitHub Pages URL serves a styled landing page.
-*   **Status:** ⏳ Pending
+**Task 10: CLI Polish and Documentation**
+*   **Description:** Implement `stamp doctor`, `stamp completion`, `stamp man`, NO_COLOR compliance, doc generation pipeline, landing page, and flag standardization.
+*   **Status:** ⏳ In Progress
+
+#### Task 10 Subtasks
+
+| Subtask | Description | Status |
+| :--- | :--- | :---: |
+| 10a | `stamp doctor` command with TTY/JSON output | ✅ |
+| 10b | `stamp completion` shell autocompletion (bash/zsh/fish/powershell) | ✅ |
+| 10c | `stamp man` man page generation and install | ✅ |
+| 10d | NO_COLOR compliance | ✅ |
+| 10e | Doc generation pipeline (`task docs` + CI enforcement) | ✅ |
+| 10f | Flag standardization (short forms, actions-as-subcommands) | ⏳ |
+| 10g | GitHub Pages landing page (`docs/index.html`) — content requirements defined in SPEC.md → Project Landing Page; source tagline and features from README.md | ⏳ |
+| 10h | Uninstall documentation in README.md (standard + hard uninstall) | 📝 |
 
 **Task 11: Self-Update Subcommand**
 *   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports a `--check` flag to query without downloading.
 *   **Acceptance:** User can run `stamp self-update --check` to check, and `stamp self-update` to apply.
 *   **Verify:** Unit tests mock the release API and verify binary swap logic.
 *   **Status:** ⏳ Pending
+
+**Task 12: `stamp hello` Welcome Command**
+*   **Description:** Implement a welcome command that prints the ASCII logo, a brief project description, and suggests next steps for new users.
+*   **Acceptance:** Running `stamp hello` displays logo, about text, and suggests `stamp init`, `stamp doctor`, `stamp man install`.
+*   **Status:** 📝 Planned
+
+**Task 13: `stamp info` Package Info Command**
+*   **Description:** Implement a command to show detailed package information across all package managers. Supports `--manager` flag to scope to a specific manager.
+*   **Acceptance:** Running `stamp info htop` shows package details from all managers that have it.
+*   **Status:** 📝 Planned
+
+**Task 14: `stamp man check` Version Verification**
+*   **Description:** Implement a subcommand within `stamp man` that verifies the installed man page version matches the stamp binary version.
+*   **Acceptance:** Running `stamp man check` reports whether man pages are current, outdated, or missing.
+*   **Status:** 📝 Planned
+
+**Task 15: Per-Manager Flag Support**
+*   **Description:** Add `--manager`, `-m` flag to `stamp list`, `stamp reconcile`, `stamp restore`, `stamp doctor`, and `stamp update` to scope operations to a single package manager.
+*   **Acceptance:** All applicable commands accept `-m` flag and limit operations to the specified manager.
+*   **Status:** 📝 Planned
+
+**Task 16: Multi-Platform Integration Testing**
+*   **Description:** Add CI matrix testing across Fedora, Ubuntu, Arch Linux, macOS, and Windows using Docker containers and parallel pipeline jobs. Each environment runs the full test suite against real package managers.
+*   **Acceptance:** CI passes on all target platforms for every PR.
+*   **Verify:** Green CI status on all matrix jobs.
+*   **Status:** 📝 Research needed
+
+**Task 17: Package Manager Feature Audit**
+*   **Description:** Audit each supported package manager for important features not yet covered by stamp. Specifically: Homebrew `cask` (GUI apps), `brew services`, `dnf groupinstall`, flatpak remotes management. Determine which are critical for adoption.
+*   **Acceptance:** Documented findings with recommendations for each manager.
+*   **Verify:** Report in docs/decisions/ or FEATURE_MATRIX.md.
+*   **Status:** 📝 Research needed
 
 ### Phase 5: Project Licensing & Governance
 Ensure maximum community and enterprise reach.
@@ -134,4 +169,3 @@ Ensure maximum community and enterprise reach.
 *   **Acceptance:** LICENSE contains Apache-2.0 text, README links to correct license, and ADR-003 is merged.
 *   **Verify:** `task check` passes.
 *   **Status:** ✅ Completed
-
