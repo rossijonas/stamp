@@ -3,6 +3,8 @@ package cli
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -96,4 +98,17 @@ func TestInfoCmd_Errors(t *testing.T) {
 	// Unknown manager
 	_, err = execCmd(t, []string{"info", "htop", "-m", "nonexistent"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.Error(t, err)
+}
+
+func TestInfoCmd_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	root.SetArgs([]string{"info", "htop"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
 }

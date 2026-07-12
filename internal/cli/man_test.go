@@ -46,6 +46,19 @@ func TestMan_Install_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestMan_Install_CreateFileError(t *testing.T) {
+	tmpDir := t.TempDir()
+	manDir := filepath.Join(tmpDir, "share", "man", "man1")
+	require.NoError(t, os.MkdirAll(manDir, 0750))
+	//nolint:gosec // restricting permissions for test isolation
+	require.NoError(t, os.Chmod(manDir, 0500))
+	//nolint:gosec // restoring permissions for test cleanup
+	defer func() { _ = os.Chmod(manDir, 0700) }()
+
+	_, err := execCmd(t, []string{"man", "install", "--prefix", tmpDir}, []manager.Adapter{})
+	require.Error(t, err)
+}
+
 func TestMan_Check_NotExist(t *testing.T) {
 	// Override candidates to point to isolated nonexistent files
 	oldCandidates := manPageCandidates
@@ -138,4 +151,56 @@ func TestDefaultManPrefix(t *testing.T) {
 	t.Parallel()
 	prefix := defaultManPrefix()
 	assert.NotEmpty(t, prefix)
+}
+
+func TestMan_Check_ReadError(t *testing.T) {
+	tmpDir := t.TempDir()
+	manFile := filepath.Join(tmpDir, "stamp.1")
+
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{manFile}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	require.NoError(t, os.WriteFile(manFile, []byte("garbage"), 0000))
+
+	buf, err := execCmd(t, []string{"man", "check"}, []manager.Adapter{})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "Error checking man page")
+}
+
+func TestMan_Check_JSON_ReadError(t *testing.T) {
+	tmpDir := t.TempDir()
+	manFile := filepath.Join(tmpDir, "stamp.1")
+
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{manFile}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	require.NoError(t, os.WriteFile(manFile, []byte("garbage"), 0000))
+
+	buf, err := execCmd(t, []string{"man", "check", "--json"}, []manager.Adapter{})
+	require.NoError(t, err)
+
+	var r struct {
+		Error string `json:"error"`
+	}
+	err = json.Unmarshal(buf.Bytes(), &r)
+	require.NoError(t, err)
+	assert.Contains(t, r.Error, "permission denied")
+}
+
+func TestMan_Check_JSON_NotFound(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	buf, err := execCmd(t, []string{"man", "check", "--json"}, []manager.Adapter{})
+	require.NoError(t, err)
+
+	var r struct {
+		Error string `json:"error"`
+	}
+	err = json.Unmarshal(buf.Bytes(), &r)
+	require.NoError(t, err)
+	assert.Equal(t, "not found", r.Error)
 }

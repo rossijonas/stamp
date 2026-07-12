@@ -312,6 +312,90 @@ manager = "brew"
 	assert.NotContains(t, mockBrew.InstalledPkgs, "htop")
 }
 
+func TestRestore_ManagerFlagNoMatch(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName: "brew",
+	}
+	adapters := []manager.Adapter{mockBrew}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	// Filter with non-existent manager — should say nothing to restore
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "--yes", "-m", "nonexistent"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "Nothing to restore")
+}
+
+func TestRestore_WithManagerFlag(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName: "brew",
+	}
+	mockDNF := &manager.Mock{
+		ManagerName: "dnf",
+	}
+	adapters := []manager.Adapter{mockBrew, mockDNF}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[repositories]]
+name = "my-tap"
+manager = "brew"
+url = "https://github.com/my-tap"
+
+[[repositories]]
+name = "fedora-copr"
+manager = "dnf"
+url = "https://copr.fedorainfracloud.org/coprs/user/repo"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+
+[[packages]]
+name = "tmux"
+manager = "dnf"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "--yes", "-m", "brew"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+
+	assert.Contains(t, output, "restored repository my-tap via brew")
+	assert.Contains(t, output, "installed htop via brew")
+	assert.NotContains(t, output, "fedora-copr")
+	assert.NotContains(t, output, "tmux")
+
+	// Verify only brew items were installed
+	assert.Contains(t, mockBrew.InstalledPkgs, "htop")
+	assert.Contains(t, mockBrew.TrackedRepos, "my-tap")
+	assert.NotContains(t, mockDNF.InstalledPkgs, "tmux")
+}
+
 func TestRestore_CorruptedManifest(t *testing.T) {
 	t.Parallel()
 	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}

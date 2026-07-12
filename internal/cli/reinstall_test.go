@@ -122,3 +122,20 @@ func TestReinstallCmd_InvalidName(t *testing.T) {
 	_, err := execCmd(t, []string{"reinstall", "-invalid"}, []manager.Adapter{})
 	require.Error(t, err)
 }
+
+func TestReinstallCmd_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	root.SetArgs([]string{"reinstall", "htop"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
+}

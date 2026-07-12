@@ -142,6 +142,25 @@ func TestDNF_Operations(t *testing.T) {
 			pkgName:     "-invalid",
 			expectedErr: true,
 		},
+		{
+			name:       "info success",
+			operation:  "info",
+			pkgName:    "htop",
+			mockOutput: "Name: htop\nVersion: 3.4.1\n",
+		},
+		{
+			name:        "info error",
+			operation:   "info",
+			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:        "info validation error",
+			operation:   "info",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -227,6 +246,17 @@ func TestDNF_Operations(t *testing.T) {
 					}
 				} else {
 					require.NoError(t, err)
+				}
+			case "info":
+				res, err := manager.Info(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+					assert.Equal(t, tt.mockOutput, res)
 				}
 			}
 		})
@@ -353,6 +383,25 @@ func TestBrew_Operations(t *testing.T) {
 			pkgName:     "-invalid",
 			expectedErr: true,
 		},
+		{
+			name:       "info success",
+			operation:  "info",
+			pkgName:    "htop",
+			mockOutput: "Name: htop\nVersion: 3.4.1\n",
+		},
+		{
+			name:        "info error",
+			operation:   "info",
+			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:        "info validation error",
+			operation:   "info",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -438,6 +487,17 @@ func TestBrew_Operations(t *testing.T) {
 					}
 				} else {
 					require.NoError(t, err)
+				}
+			case "info":
+				res, err := manager.Info(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+					assert.Equal(t, tt.mockOutput, res)
 				}
 			}
 		})
@@ -558,6 +618,25 @@ func TestFlatpak_Operations(t *testing.T) {
 			pkgName:     "-invalid",
 			expectedErr: true,
 		},
+		{
+			name:       "info success",
+			operation:  "info",
+			pkgName:    "com.spotify.Client",
+			mockOutput: "Name: com.spotify.Client\nVersion: 1.0.0\n",
+		},
+		{
+			name:        "info error",
+			operation:   "info",
+			pkgName:     "com.spotify.Client",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:        "info validation error",
+			operation:   "info",
+			pkgName:     "-invalid",
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -644,6 +723,17 @@ func TestFlatpak_Operations(t *testing.T) {
 					}
 				} else {
 					require.NoError(t, err)
+				}
+			case "info":
+				res, err := manager.Info(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+					assert.Equal(t, tt.mockOutput, res)
 				}
 			}
 		})

@@ -275,6 +275,48 @@ func TestReconcile_Cancel(t *testing.T) {
 	assert.Contains(t, output, "Packages not tracked")
 }
 
+func TestReconcile_ManagerFlag_Success(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "jq", "ripgrep"},
+		},
+		&manager.Mock{
+			ManagerName:   "dnf",
+			InstalledPkgs: []string{"htop"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+		{Manager: "dnf", Packages: []string{"htop"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	// Reconcile only brew — should discover ripgrep, ignore dnf changes
+	buf, err := execCmd(t, []string{"reconcile", "--yes", "-m", "brew"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 2 new package(s)")
+	assert.Contains(t, output, "jq")
+	assert.Contains(t, output, "ripgrep")
+}
+
+func TestReconcile_ManagerFlag_NotFound(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	_, err := execCmd(t, []string{"reconcile", "--yes", "-m", "nonexistent"}, adapters)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not available on this system")
+}
+
 // setupSnapshots saves snapshots to {tmpDir}/stamp/snapshots/ and returns tmpDir.
 func setupSnapshots(t *testing.T, snaps []state.Snapshot) string {
 	t.Helper()
