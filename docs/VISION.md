@@ -30,7 +30,7 @@ Existing tools fail to bridge this gap:
 
 2. **The Passive Safety Net (`reconcile`)**
    If you or a script accidentally bypass `stamp` and use `dnf install` directly, your intent tracking doesn't break. The `reconcile` command acts as a safety net, detecting the drift and prompting you to track the new package retroactively.
-   
+
 3. **Intent vs. State**
    `stamp` does not care about the thousands of dependencies on your system. It only cares about the tools you *intentionally* chose to install. It filters out the noise to create a clean, human-readable manifest.
 
@@ -51,6 +51,6 @@ Existing tools fail to bridge this gap:
 
 ## Who is this for?
 
-`stamp` is built primarily for the **solo developer, SRE, or DevOps engineer** who wants a reproducible local workstation without the cognitive overhead of maintaining local Ansible playbooks or Nix flakes. 
+`stamp` is built primarily for the **solo developer/engineer** who wants a reproducible local workstation without the cognitive overhead of maintaining local Ansible playbooks or Nix flakes. 
 
 Secondarily, it serves as an ultra-lightweight onboarding tool for small teams: share a `manifest.toml` and guarantee every new hire has the baseline tools required to work.
