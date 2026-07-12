@@ -29,7 +29,7 @@
 
 ### Features
 
-✔️ **Multi-Manager Wrapper**: Install, search, get info, and remove packages across multiple package managers through a single CLI. No conflicts, no ecosystem lock-in. [See supported package managers →](#-compatibility--support-tracker)
+✔️ **Multi-Manager Wrapper**: *Install, search, get info, and remove packages across multiple package managers through a single CLI. No conflicts, no ecosystem lock-in. [See supported package managers →](#-compatibility--support-tracker)*
 
 ✔️ **Automatic Intent Tracking**: Every intentional install is recorded in a portable `manifest.toml`. Dependency packages are automatically excluded — you only track what you chose.
 
