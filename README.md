@@ -74,6 +74,15 @@
 
 *Replace `{{VERSION}}`, `{{OS}}`, and `{{ARCH}}` with the appropriate values for your system (e.g., `v0.1.0`, `linux`, `amd64`). The archive name uses the full tag (e.g. `stamp_v0.1.0_linux_amd64.tar.gz`).*
 
+## ▪ Uninstalling
+
+| Method | Command |
+| :--- | :--- |
+| **Standard (binary only)** | `rm $(which stamp)` |
+| **Hard (remove all data)** | `rm -rf ~/.config/stamp ~/.local/share/stamp && rm -f $(which stamp) && sudo rm -f /usr/local/share/man/man1/stamp.1` |
+
+*Standard uninstall removes just the binary. Hard uninstall also removes configuration, manifest, snapshots, and man pages.*
+
 ## ▪ Usage
 
 ### ⟲ The Two Workflows

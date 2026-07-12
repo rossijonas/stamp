@@ -111,4 +111,6 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 13 | `stamp info` package info command | 📝 Spec ready |
 | 4 | 14 | `stamp man check` version verification | 📝 Spec ready |
 | 4 | 15 | Per-manager flags for reconcile/restore/doctor/list | 📝 |
+| 4 | 16 | Multi-platform integration testing (Fedora/Ubuntu/Arch/macOS/Windows) | 📝 |
+| 4 | 17 | Package manager feature audit (Homebrew cask, brew services, dnf groupinstall) | 📝 |
 | 5 | 11 | Relicense to Apache-2.0 | ✅ |

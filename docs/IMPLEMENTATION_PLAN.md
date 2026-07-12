@@ -121,6 +121,7 @@ Build the environment reconstruction logic and final touches.
 | 10e | Doc generation pipeline (`task docs` + CI enforcement) | ✅ |
 | 10f | Flag standardization (short forms, actions-as-subcommands) | ⏳ |
 | 10g | GitHub Pages landing page (`docs/index.html`) — content requirements defined in SPEC.md → Project Landing Page; source tagline and features from README.md | ⏳ |
+| 10h | Uninstall documentation in README.md (standard + hard uninstall) | 📝 |
 
 **Task 11: Self-Update Subcommand**
 *   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports a `--check` flag to query without downloading.
@@ -147,6 +148,18 @@ Build the environment reconstruction logic and final touches.
 *   **Description:** Add `--manager`, `-m` flag to `stamp list`, `stamp reconcile`, `stamp restore`, `stamp doctor`, and `stamp update` to scope operations to a single package manager.
 *   **Acceptance:** All applicable commands accept `-m` flag and limit operations to the specified manager.
 *   **Status:** 📝 Planned
+
+**Task 16: Multi-Platform Integration Testing**
+*   **Description:** Add CI matrix testing across Fedora, Ubuntu, Arch Linux, macOS, and Windows using Docker containers and parallel pipeline jobs. Each environment runs the full test suite against real package managers.
+*   **Acceptance:** CI passes on all target platforms for every PR.
+*   **Verify:** Green CI status on all matrix jobs.
+*   **Status:** 📝 Research needed
+
+**Task 17: Package Manager Feature Audit**
+*   **Description:** Audit each supported package manager for important features not yet covered by stamp. Specifically: Homebrew `cask` (GUI apps), `brew services`, `dnf groupinstall`, flatpak remotes management. Determine which are critical for adoption.
+*   **Acceptance:** Documented findings with recommendations for each manager.
+*   **Verify:** Report in docs/decisions/ or FEATURE_MATRIX.md.
+*   **Status:** 📝 Research needed
 
 ### Phase 5: Project Licensing & Governance
 Ensure maximum community and enterprise reach.
