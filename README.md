@@ -29,25 +29,39 @@
 
 ### Features
 
+#### Core Features
+
 ✔️ **Multi-Manager Wrapper** - *Install, search, get info, and remove packages across multiple package managers through a single CLI. No conflicts, no ecosystem lock-in. [See supported package managers →](#-compatibility--support-tracker)*
 
-✔️ **Automatic Intent Tracking** - *Every intentional install is recorded in a portable `manifest.toml`. Dependency packages are automatically excluded — you only track what you chose.*
+✔️ **Automatic Intent Tracking** - *Every intentional install is recorded in a portable `manifest.toml`. Dependency packages are not included — you only track what you chose.*
 
 ✔️ **One-Command Environment Rebuild** - *`stamp restore` reinstalls all repositories and packages on a new machine. Clone your dotfiles, run one command, done.*
 
-✔️ **Unified Repository Management** - *Add, remove, and list third-party repositories (taps, remotes) across all managers with the same interface.*
+✔️ **Unified Repository Management** - *Add, remove, and list third-party repositories (repos, taps, remotes) across all managers with the same interface.*
 
 ✔️ **Safety Net Reconciliation** - *Forgot to use stamp? `stamp reconcile` detects packages installed outside the tool and adds them to your manifest retroactively.*
 
-✔️ **Built-in System Doctor** - *`stamp doctor` checks manager availability, manifest integrity, and UNIX compliance in a single command. JSON output for scripting.*
-
 ✔️ **Self-Contained Documentation** - *Built-in man page generation (`stamp man install`), shell completions (`stamp completion bash|zsh|fish|powershell`), and auto-generated CLI reference docs.*
+
+#### System & Compliance
+
+✔️ **Built-in System Doctor** - *`stamp doctor` checks manager availability, manifest integrity, and UNIX compliance in a single command. JSON output for scripting.*
 
 ✔️ **UNIX Compliant** - *XDG Base Directory, POSIX syntax, NO_COLOR support, strict stdout/stderr separation, and BSD sysexits exit codes.*
 
+#### Technical
+
+✔️ **Lightweight Yet Powerful** - *Thin wrapper layer, no language lock-in, no philosophical shift. Works with your existing tools, not instead of them.*
+
 ✔️ **Built with Go** - *Single static binary, fast startup, no runtime dependencies. Linux and macOS support (amd64 + arm64). Windows on the roadmap.*
 
+✔️ **Extensible Architecture** - *Interface-driven adapter pattern. Adding a new package manager is implementing 7 methods.*
+
+#### Ecosystem
+
 ✔️ **Compatible with Popular Package Managers** - *Works with the package managers you already use on Linux and macOS, with more on the way. [See full compatibility table →](#-compatibility--support-tracker)*
+
+✔️ **Developer Toolchain Support (coming soon)** - *`cargo`, `pipx`, `go install`, and `npm`/`bun` for language-specific global tools. [See full compatibility table →](#-compatibility--support-tracker)*
 
 ## ▪ Installing
 
