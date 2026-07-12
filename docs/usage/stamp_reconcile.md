@@ -15,13 +15,14 @@ stamp reconcile [flags]
 ### Options
 
 ```
-  -h, --help   help for reconcile
+  -h, --help             help for reconcile
+  -m, --manager string   package manager to reconcile
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --json      output results in JSON format
+  -j, --json      output results in JSON format
   -v, --verbose   enable debug logging
   -y, --yes       auto-accept all prompts
 ```

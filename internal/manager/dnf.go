@@ -93,3 +93,15 @@ func (m *DNF) RemoveRepo(ctx context.Context, name string) error {
 	}
 	return nil
 }
+
+// Info queries dnf info metadata.
+func (m *DNF) Info(ctx context.Context, pkg string) (string, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return "", err
+	}
+	out, err := m.exec(ctx, "dnf", "info", pkg)
+	if err != nil {
+		return "", fmt.Errorf("failed to get info for %s: %w", pkg, err)
+	}
+	return string(out), nil
+}

@@ -2,11 +2,15 @@
 
 A lightweight yet powerful wrapper for your native package managers
 
+```
+stamp [flags]
+```
+
 ### Options
 
 ```
   -h, --help      help for stamp
-      --json      output results in JSON format
+  -j, --json      output results in JSON format
   -v, --verbose   enable debug logging
   -y, --yes       auto-accept all prompts
 ```
@@ -15,9 +19,12 @@ A lightweight yet powerful wrapper for your native package managers
 
 * [stamp completion](stamp_completion.md)	 - Generate shell completion script
 * [stamp doctor](stamp_doctor.md)	 - Diagnose system configuration and manifest health
+* [stamp hello](stamp_hello.md)	 - Print welcome message and recommended next steps
+* [stamp info](stamp_info.md)	 - Show package information across managers
 * [stamp install](stamp_install.md)	 - Install a package and record intent
-* [stamp man](stamp_man.md)	 - Generate the stamp man page
+* [stamp man](stamp_man.md)	 - Manage stamp troff man pages
 * [stamp reconcile](stamp_reconcile.md)	 - Detect packages installed outside stamp and add them to the manifest
+* [stamp reinstall](stamp_reinstall.md)	 - Reinstall a package currently tracked in the manifest
 * [stamp remove](stamp_remove.md)	 - Remove a package and untrack it
 * [stamp repo](stamp_repo.md)	 - Manage third-party repositories
 * [stamp restore](stamp_restore.md)	 - Restore all tracked repositories and packages from the manifest

@@ -36,6 +36,9 @@ func (m *mockAdapter) Search(_ context.Context, q string) ([]string, error) {
 }
 func (m *mockAdapter) AddRepo(_ context.Context, _, _ string) error { return m.err }
 func (m *mockAdapter) RemoveRepo(_ context.Context, _ string) error { return m.err }
+func (m *mockAdapter) Info(_ context.Context, q string) (string, error) {
+	return "Name: " + q + "\nVersion: 1.0.0", m.err
+}
 
 // execCmd builds a root with injected mock adapters and isolated temp paths, executes, returns output.
 func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Buffer, error) {
@@ -355,11 +358,37 @@ func TestInstallCmd_Error(t *testing.T) {
 	assert.Contains(t, err.Error(), "install failed")
 }
 
+func TestInstallCmd_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	root.SetArgs([]string{"install", "htop"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
+}
+
 func TestRemoveCmd_Error(t *testing.T) {
 	t.Parallel()
 	_, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{&mockAdapter{name: "brew", err: errors.New("remove failed")}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "remove failed")
+}
+
+func TestRemoveCmd_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	root.SetArgs([]string{"remove", "htop"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
 }
 
 func TestRepoAddCmd_Error(t *testing.T) {
@@ -369,11 +398,37 @@ func TestRepoAddCmd_Error(t *testing.T) {
 	assert.Contains(t, err.Error(), "add repo failed")
 }
 
+func TestRepoAddCmd_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&mockAdapter{name: "brew"}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	root.SetArgs([]string{"repo", "add", "mytap", "-m", "brew"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
+}
+
 func TestRepoRemoveCmd_Error(t *testing.T) {
 	t.Parallel()
 	_, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak"}, []manager.Adapter{&mockAdapter{name: "flatpak", err: errors.New("remove repo failed")}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "remove repo failed")
+}
+
+func TestRepoRemoveCmd_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&mockAdapter{name: "flatpak"}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	root.SetArgs([]string{"repo", "remove", "mytap", "-m", "flatpak"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
 }
 
 func TestRepoListCmd_Empty(t *testing.T) {
@@ -552,4 +607,59 @@ func TestResolveAmbiguousInInstall(t *testing.T) {
 	_, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&mockAdapter{name: "apt"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "specify --manager")
+}
+
+func TestRepoListCmd_WithFlags(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&mockAdapter{name: "brew"}, &mockAdapter{name: "dnf"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[repositories]]
+name = "my-tap"
+manager = "brew"
+url = "https://github.com/my-tap"
+
+[[repositories]]
+name = "flathub"
+manager = "flatpak"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	// Test filtering with -m dnf (nothing should be shown since dnf is not in manifest repos)
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"repo", "list", "-m", "dnf"})
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "no repositories tracked")
+
+	// Test filtering with -m brew
+	buf2 := new(bytes.Buffer)
+	root2 := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	root2.SetOut(buf2)
+	root2.SetErr(buf2)
+	root2.SetArgs([]string{"repo", "list", "-m", "brew"})
+	err2 := root2.Execute()
+	require.NoError(t, err2)
+	assert.Contains(t, buf2.String(), "my-tap (brew)")
+	assert.NotContains(t, buf2.String(), "flathub")
+
+	// Test JSON output
+	buf3 := new(bytes.Buffer)
+	root3 := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	root3.SetOut(buf3)
+	root3.SetErr(buf3)
+	root3.SetArgs([]string{"repo", "list", "--json"})
+	err3 := root3.Execute()
+	require.NoError(t, err3)
+	assert.Contains(t, buf3.String(), `"Name": "my-tap"`)
+	assert.Contains(t, buf3.String(), `"Manager": "brew"`)
 }

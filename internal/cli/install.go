@@ -56,7 +56,7 @@ func newInstallCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use")
-	cmd.Flags().StringVar(&note, "note", "", "annotation for this package")
+	cmd.Flags().StringVarP(&note, "note", "n", "", "annotation for this package")
 	return cmd
 }
 

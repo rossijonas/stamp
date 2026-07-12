@@ -128,6 +128,11 @@ func TestDiff(t *testing.T) {
 	}
 }
 
+func TestDiffAll_Empty(t *testing.T) {
+	deltas := DiffAll(nil, nil)
+	assert.Empty(t, deltas)
+}
+
 func TestDiffAll(t *testing.T) {
 	oldSnaps := []Snapshot{
 		{

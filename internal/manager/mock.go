@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 )
@@ -18,6 +19,8 @@ type Mock struct {
 	SearchErr     error
 	AddRepoErr    error
 	RemoveRepoErr error
+	InfoErr       error
+	InfoResult    string
 }
 
 // Name returns the package manager identifier.
@@ -108,4 +111,19 @@ func (m *Mock) RemoveRepo(_ context.Context, name string) error {
 		}
 	}
 	return nil
+}
+
+// Info queries mock info metadata.
+func (m *Mock) Info(_ context.Context, pkg string) (string, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return "", err
+	}
+	if m.InfoErr != nil {
+		return "", m.InfoErr
+	}
+	if m.InfoResult != "" {
+		return m.InfoResult, nil
+	}
+	// Fallback mock output
+	return fmt.Sprintf("Name: %s\nVersion: 1.0.0\nDescription: mock details", pkg), nil
 }

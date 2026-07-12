@@ -132,3 +132,56 @@ func TestMock_RemoveRepoNonexistent(t *testing.T) {
 	err := mock.RemoveRepo(ctx, "nonexistent")
 	require.NoError(t, err) // removing uninstalled repo doesn't fail
 }
+
+func TestMockInfo_Result(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "brew",
+		InfoResult:  "Name: htop\nVersion: 3.4.1\n",
+	}
+	res, err := mock.Info(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.Equal(t, "Name: htop\nVersion: 3.4.1\n", res)
+}
+
+func TestMockInfo_Error(t *testing.T) {
+	t.Parallel()
+	expectedErr := errors.New("not found")
+	mock := &Mock{
+		ManagerName: "brew",
+		InfoErr:     expectedErr,
+	}
+	_, err := mock.Info(context.Background(), "htop")
+	require.ErrorIs(t, err, expectedErr)
+}
+
+func TestMockInfo_Fallback(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew"}
+	res, err := mock.Info(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.Contains(t, res, "Name: htop")
+	assert.Contains(t, res, "Version: 1.0.0")
+	assert.Contains(t, res, "mock details")
+}
+
+func TestMockInfo_InvalidName(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew"}
+	_, err := mock.Info(context.Background(), "-invalid")
+	require.Error(t, err)
+}
+
+func TestMockRemove_Found(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:   "brew",
+		InstalledPkgs: []string{"htop", "git", "curl"},
+	}
+	ctx := context.Background()
+	err := mock.Remove(ctx, "htop")
+	require.NoError(t, err)
+	assert.NotContains(t, mock.InstalledPkgs, "htop")
+	assert.Contains(t, mock.InstalledPkgs, "git")
+	assert.Contains(t, mock.InstalledPkgs, "curl")
+}

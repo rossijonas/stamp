@@ -108,7 +108,7 @@ Build the environment reconstruction logic and final touches.
 
 **Task 10: CLI Polish and Documentation**
 *   **Description:** Implement `stamp doctor`, `stamp completion`, `stamp man`, NO_COLOR compliance, doc generation pipeline, landing page, and flag standardization.
-*   **Status:** ⏳ In Progress
+*   **Status:** ✅ Completed
 
 #### Task 10 Subtasks
 
@@ -119,9 +119,8 @@ Build the environment reconstruction logic and final touches.
 | 10c | `stamp man` man page generation and install | ✅ |
 | 10d | NO_COLOR compliance | ✅ |
 | 10e | Doc generation pipeline (`task docs` + CI enforcement) | ✅ |
-| 10f | Flag standardization (short forms, actions-as-subcommands) | ⏳ |
-| 10g | GitHub Pages landing page (`docs/index.html`) — content requirements defined in SPEC.md → Project Landing Page; source tagline and features from README.md | ⏳ |
-| 10h | Uninstall documentation in README.md (standard + hard uninstall) | 📝 |
+| 10f | Flag standardization (short forms, actions-as-subcommands) | ✅ |
+| 10h | Uninstall documentation in README.md (standard + hard uninstall) | ✅ |
 
 **Task 11: Self-Update Subcommand**
 *   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports a `--check` flag to query without downloading.
@@ -132,22 +131,22 @@ Build the environment reconstruction logic and final touches.
 **Task 12: `stamp hello` Welcome Command**
 *   **Description:** Implement a welcome command that prints the ASCII logo, a brief project description, and suggests next steps for new users.
 *   **Acceptance:** Running `stamp hello` displays logo, about text, and suggests `stamp init`, `stamp doctor`, `stamp man install`.
-*   **Status:** 📝 Planned
+*   **Status:** ✅ Completed
 
 **Task 13: `stamp info` Package Info Command**
 *   **Description:** Implement a command to show detailed package information across all package managers. Supports `--manager` flag to scope to a specific manager.
 *   **Acceptance:** Running `stamp info htop` shows package details from all managers that have it.
-*   **Status:** 📝 Planned
+*   **Status:** ✅ Completed
 
 **Task 14: `stamp man check` Version Verification**
 *   **Description:** Implement a subcommand within `stamp man` that verifies the installed man page version matches the stamp binary version.
 *   **Acceptance:** Running `stamp man check` reports whether man pages are current, outdated, or missing.
-*   **Status:** 📝 Planned
+*   **Status:** ✅ Completed
 
 **Task 15: Per-Manager Flag Support**
 *   **Description:** Add `--manager`, `-m` flag to `stamp list`, `stamp reconcile`, `stamp restore`, `stamp doctor`, and `stamp update` to scope operations to a single package manager.
 *   **Acceptance:** All applicable commands accept `-m` flag and limit operations to the specified manager.
-*   **Status:** 📝 Planned
+*   **Status:** ✅ Completed
 
 **Task 16: Multi-Platform Integration Testing**
 *   **Description:** Add CI matrix testing across Fedora, Ubuntu, Arch Linux, macOS, and Windows using Docker containers and parallel pipeline jobs. Each environment runs the full test suite against real package managers.
@@ -160,6 +159,36 @@ Build the environment reconstruction logic and final touches.
 *   **Acceptance:** Documented findings with recommendations for each manager.
 *   **Verify:** Report in docs/decisions/ or FEATURE_MATRIX.md.
 *   **Status:** 📝 Research needed
+
+**Task 18: `stamp reinstall` Command**
+*   **Description:** Implement a reinstall command that looks up a package in the manifest, resolves its recorded manager, and executes the native reinstallation. No `-m` flag needed — manager resolved from manifest.
+*   **Acceptance:** `stamp reinstall htop` reinstalls `htop` using the manager recorded in the manifest. Accepts global `-y`.
+*   **Status:** ✅ Completed
+
+**Task 19: Generate Missing Usage & Man Pages**
+*   **Description:** Run `task docs` to auto-generate missing `docs/usage/` pages (`stamp_hello.md`, `stamp_info.md`, `stamp_reinstall.md`) and populate `docs/man/` with system man page files.
+*   **Acceptance:** Every registered subcommand has a corresponding `docs/usage/*.md` page. `docs/man/stamp.1` exists and is up to date.
+*   **Status:** ✅ Completed
+
+**Task 20: Create GitHub Pages Landing Page**
+*   **Description:** Create `docs/index.html` as a custom landing page for GitHub Pages. Content requirements defined in SPEC.md → Project Landing Page. Source tagline and features from README.md.
+*   **Acceptance:** Navigating to `https://rossijonas.github.io/stamp/` displays the project landing page.
+*   **Status:** ⏳ Pending
+
+**Task 21: `stamp init` Command**
+*   **Description:** Initialize `manifest.toml` and take baseline snapshot of current system packages. Create XDG directories (`~/.config/stamp`, `~/.local/share/stamp/snapshots`). Suggested by `stamp hello` output.
+*   **Acceptance:** Running `stamp init` creates config dir, snapshot dir, empty manifest.toml, and baseline snapshot for each available manager.
+*   **Status:** ⏳ Pending
+
+**Task 22: `stamp list` Command (alias `ls`)**
+*   **Description:** List all intentionally installed packages from the manifest. Supports `--json, -j` and `--manager, -m` flags.
+*   **Acceptance:** Running `stamp list` prints tracked packages; `stamp list --json` outputs JSON; `stamp list -m brew` filters by manager.
+*   **Status:** ⏳ Pending
+
+**Task 23: `stamp update` Command (alias `upgrade`)**
+*   **Description:** Run system upgrades across all available managers in parallel. Supports `--manager, -m` flag to scope to a single manager.
+*   **Acceptance:** Running `stamp update` executes native update/upgrade commands concurrently per manager.
+*   **Status:** ⏳ Pending
 
 ### Phase 5: Project Licensing & Governance
 Ensure maximum community and enterprise reach.

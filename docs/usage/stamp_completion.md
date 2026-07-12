@@ -50,7 +50,7 @@ stamp completion [bash|zsh|fish|powershell]
 ### Options inherited from parent commands
 
 ```
-      --json      output results in JSON format
+  -j, --json      output results in JSON format
   -v, --verbose   enable debug logging
   -y, --yes       auto-accept all prompts
 ```

@@ -15,7 +15,10 @@ import (
 )
 
 func TestDoctor_TTY(t *testing.T) {
-	t.Parallel()
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
 	buf, err := execCmd(t, []string{"doctor"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.NoError(t, err)
 	output := buf.String()
@@ -23,10 +26,14 @@ func TestDoctor_TTY(t *testing.T) {
 	assert.Contains(t, output, "Package Managers:")
 	assert.Contains(t, output, "Manifest Integrity:")
 	assert.Contains(t, output, "Path:")
+	assert.Contains(t, output, "Man Page: ❌ Not found")
 }
 
 func TestDoctor_JSON(t *testing.T) {
-	t.Parallel()
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
 	buf, err := execCmd(t, []string{"doctor", "--json"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.NoError(t, err)
 
@@ -47,9 +54,14 @@ func TestDoctor_JSON(t *testing.T) {
 
 	assert.NotEmpty(t, report.Manifest.Path)
 	assert.False(t, report.NoColor) // NO_COLOR not set in tests
+	assert.False(t, report.ManPage.Installed)
 }
 
 func TestDoctor_NOCOLOR_Set(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
 	t.Setenv("NO_COLOR", "1")
 	buf, err := execCmd(t, []string{"doctor", "--json"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.NoError(t, err)
@@ -62,7 +74,10 @@ func TestDoctor_NOCOLOR_Set(t *testing.T) {
 }
 
 func TestDoctor_Manifest_Healthy(t *testing.T) {
-	t.Parallel()
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
 	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
 
 	tmpDir := t.TempDir()
@@ -96,7 +111,10 @@ manager = "brew"
 }
 
 func TestDoctor_Manifest_Corrupt(t *testing.T) {
-	t.Parallel()
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
 	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
 
 	tmpDir := t.TempDir()
@@ -120,4 +138,27 @@ func TestDoctor_Manifest_Corrupt(t *testing.T) {
 
 	assert.False(t, report.Manifest.Valid)
 	assert.Contains(t, report.Manifest.Error, "failed to parse manifest")
+}
+
+func TestDoctor_ManPage_Healthy(t *testing.T) {
+	tmpDir := t.TempDir()
+	manFile := filepath.Join(tmpDir, "stamp.1")
+
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{manFile}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	// Pre-create the man page with matching current version ("dev")
+	manContent := `.TH "STAMP" "1" "Jul 2026" "stamp dev" "Stamp Manual"`
+	require.NoError(t, os.WriteFile(manFile, []byte(manContent), 0600))
+
+	buf, err := execCmd(t, []string{"doctor", "--json"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+
+	var report doctorReport
+	err = json.Unmarshal(buf.Bytes(), &report)
+	require.NoError(t, err)
+
+	assert.True(t, report.ManPage.Installed)
+	assert.Equal(t, "dev", report.ManPage.Version)
 }

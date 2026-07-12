@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -18,7 +19,8 @@ func main() {
 	header := &doc.GenManHeader{
 		Title:   "STAMP",
 		Section: "1",
-		Source:  "stamp https://github.com/rossijonas/stamp",
+		Source:  fmt.Sprintf("stamp %s", cli.Version),
+		Manual:  "Stamp Manual",
 	}
 
 	if err := os.MkdirAll("docs/usage", 0750); err != nil {

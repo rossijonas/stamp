@@ -1,16 +1,15 @@
-## stamp repo list
+## stamp man check
 
-List all tracked repositories
+Verify installed man page version matches current stamp version
 
 ```
-stamp repo list [flags]
+stamp man check [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help             help for list
-  -m, --manager string   package manager to list
+  -h, --help   help for check
 ```
 
 ### Options inherited from parent commands
@@ -23,5 +22,5 @@ stamp repo list [flags]
 
 ### SEE ALSO
 
-* [stamp repo](stamp_repo.md)	 - Manage third-party repositories
+* [stamp man](stamp_man.md)	 - Manage stamp troff man pages
 

@@ -1,20 +1,15 @@
-## stamp doctor
+## stamp hello
 
-Diagnose system configuration and manifest health
-
-### Synopsis
-
-Check package manager availability and manifest integrity.
-Reports which managers are installed and whether the manifest is valid.
+Print welcome message and recommended next steps
 
 ```
-stamp doctor [flags]
+stamp hello [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for doctor
+  -h, --help   help for hello
 ```
 
 ### Options inherited from parent commands

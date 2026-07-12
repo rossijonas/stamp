@@ -53,8 +53,9 @@ PowerShell:
 				return cmd.Root().GenFishCompletion(cmd.OutOrStdout(), true)
 			case "powershell":
 				return cmd.Root().GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
+			default:
+				return nil
 			}
-			return nil
 		},
 	}
 

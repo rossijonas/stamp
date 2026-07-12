@@ -11,13 +11,13 @@ stamp install <package> [flags]
 ```
   -h, --help             help for install
   -m, --manager string   package manager to use
-      --note string      annotation for this package
+  -n, --note string      annotation for this package
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --json      output results in JSON format
+  -j, --json      output results in JSON format
   -v, --verbose   enable debug logging
   -y, --yes       auto-accept all prompts
 ```

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -161,6 +162,8 @@ func newRepoRemoveCmd() *cobra.Command {
 }
 
 func newRepoListCmd() *cobra.Command {
+	var managerFlag string
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -169,12 +172,36 @@ func newRepoListCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 
-			if len(app.manifest.Repositories) == 0 {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no repositories tracked")
+			repos := app.manifest.Repositories
+			if managerFlag != "" {
+				var filtered []manifest.Repository
+				for _, r := range repos {
+					if r.Manager == managerFlag {
+						filtered = append(filtered, r)
+					}
+				}
+				repos = filtered
+			}
+
+			if len(repos) == 0 {
+				if app.json {
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "[]")
+				} else {
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no repositories tracked")
+				}
 				return nil
 			}
 
-			for _, r := range app.manifest.Repositories {
+			if app.json {
+				data, err := json.MarshalIndent(repos, "", "  ")
+				if err != nil {
+					return fmt.Errorf("failed to marshal repositories: %w", err)
+				}
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				return nil
+			}
+
+			for _, r := range repos {
 				line := fmt.Sprintf("%s (%s)", r.Name, r.Manager)
 				if r.URL != "" {
 					line += " " + r.URL
@@ -184,5 +211,7 @@ func newRepoListCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to list")
 	return cmd
 }

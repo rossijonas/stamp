@@ -10,11 +10,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossijonas/stamp/internal/manager"
 	"github.com/rossijonas/stamp/internal/manifest"
 	"github.com/rossijonas/stamp/internal/state"
 )
 
 func newReconcileCmd() *cobra.Command {
+	var managerFlag string
+
 	cmd := &cobra.Command{
 		Use:   "reconcile",
 		Short: "Detect packages installed outside stamp and add them to the manifest",
@@ -28,7 +31,22 @@ and can be added to the manifest.`,
 				return app.manifestErr
 			}
 
-			if len(app.adapters) == 0 {
+			adapters := app.adapters
+			if managerFlag != "" {
+				var found manager.Adapter
+				for _, a := range app.adapters {
+					if a.Name() == managerFlag {
+						found = a
+						break
+					}
+				}
+				if found == nil {
+					return fmt.Errorf("manager %q not available on this system", managerFlag)
+				}
+				adapters = []manager.Adapter{found}
+			}
+
+			if len(adapters) == 0 {
 				return fmt.Errorf("no package managers available")
 			}
 
@@ -37,8 +55,8 @@ and can be added to the manifest.`,
 				return fmt.Errorf("failed to access snapshot directory: %w", err)
 			}
 
-			oldSnaps := make([]state.Snapshot, 0, len(app.adapters))
-			for _, a := range app.adapters {
+			oldSnaps := make([]state.Snapshot, 0, len(adapters))
+			for _, a := range adapters {
 				snap, err := state.Load(snapDir, a.Name())
 				if err != nil {
 					if errors.Is(err, os.ErrNotExist) {
@@ -49,7 +67,7 @@ and can be added to the manifest.`,
 				oldSnaps = append(oldSnaps, *snap)
 			}
 
-			currentSnaps, err := state.Current(cmd.Context(), app.adapters)
+			currentSnaps, err := state.Current(cmd.Context(), adapters)
 			if err != nil {
 				return fmt.Errorf("failed to fetch current package state: %w", err)
 			}
@@ -132,6 +150,7 @@ and can be added to the manifest.`,
 		},
 	}
 
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to reconcile")
 	return cmd
 }
 

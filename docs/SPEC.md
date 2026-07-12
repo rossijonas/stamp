@@ -14,13 +14,13 @@ The complete surface area of the CLI, including aliases and flags.
 
 **Global Flags:**
 *   `--verbose`, `-v`: Enable debug/verbose logging.
-*   `--json`: Output results in machine-readable JSON format.
+*   `--json`, `-j`: Output results in machine-readable JSON format.
 *   `--yes`, `-y`: Bypasses all interactive confirmation prompts (Auto-Accept).
 
 ### Flag Standardization Rules
-1. Every flag SHOULD have a single-character short form (`--manager`, `-m`).
+1. Every flag SHOULD have a single-character short form (e.g. `--manager`, `-m`).
 2. Actions MUST be subcommands, not flags. (e.g. `stamp man install`, not `stamp man --install`).
-3. Boolean flags for enabling/disabling features are acceptable (e.g. `--dry-run`, `--json`).
+3. Boolean flags for enabling/disabling behavior are acceptable (e.g. `--dry-run`, `--json`).
 
 **Core Commands:**
 | Command | Aliases | Flags | Description |
@@ -28,23 +28,24 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp` | | | Prints welcome message suggesting `stamp hello` or `stamp --help`. |
 | `stamp hello` | | | Prints ASCII logo, project about, and suggests next steps. |
 | `stamp init` | | | Initializes `manifest.toml` and takes baseline snapshot. |
-| `stamp install <pkg>` | `add` | `--manager, -m <name>`, `--note <text>` | Installs natively and records intent. |
+| `stamp install <pkg>` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. |
 | `stamp remove <pkg>` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes natively and untracks. |
+| `stamp reinstall <pkg>` | | | Reinstalls a package currently tracked in the manifest using its recorded manager. |
 | `stamp search <query>` | | `--manager, -m <name>` | Searches across managers. |
-| `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers. |
+| `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. |
 | `stamp reconcile` | | `--manager, -m <name>` | Detects drift, prompts user, records intent. |
-| `stamp restore` | | `--dry-run`, `--manager, -m <name>` | Reinstalls repos and packages on a new machine. |
+| `stamp restore` | | `--dry-run, -d`, `--manager, -m <name>` | Reinstalls repos and packages on a new machine. |
 | `stamp update` | `upgrade` | `--manager, -m <name>` | Runs system upgrades across all managers in parallel. |
-| `stamp list` | `ls` | `--json`, `--manager, -m <name>` | Lists all intentionally installed packages. |
-| `stamp doctor` | | `--json`, `--manager, -m <name>` | Checks manager availability, manifest integrity, and UNIX compliance. |
-| `stamp self-update` | `self-upgrade` | `--check` | Checks for and installs the latest version of `stamp`. |
+| `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>` | Lists all intentionally installed packages. |
+| `stamp doctor` | | `--json, -j`, `--manager, -m <name>` | Checks manager availability, manifest integrity, and UNIX compliance. |
+| `stamp self-update` | `self-upgrade` | `--check, -c` | Checks for and installs the latest version of `stamp`. |
 | `stamp completion <shell>` | | | Generates shell completion scripts (bash, zsh, fish, powershell). |
-| `stamp man` | | | Prints the stamp man page to stdout. |
+| `stamp man` | | | Command group for system reference page management. |
 
 **Man Subcommands:**
 | Command | Flags | Description |
 | :--- | :--- | :--- |
-| `stamp man` | | Prints the stamp man page to stdout. |
+| `stamp man` | | Shows help for `stamp man` command group. Same as `stamp man help`. |
 | `stamp man install` | `--prefix <path>` | Installs man page to system or user path. Default: `~/.local/share/man/man1/`. |
 | `stamp man check` | | Verifies installed man page version matches stamp version. |
 
@@ -53,7 +54,9 @@ The complete surface area of the CLI, including aliases and flags.
 | :--- | :--- | :--- | :--- |
 | `stamp repo add <name> [url]` | `install` | `--manager, -m <name> (Required)` | Adds custom repository and records it. |
 | `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name> (Required)` | Removes a repository and untracks it. |
-| `stamp repo list` | `ls` | `--json`, `--manager, -m <name>` | Lists all tracked repositories. |
+| `stamp repo list` | `ls` | `--json, -j`, `--manager, -m <name>` | Lists all tracked repositories. |
+
+---
 
 ## Package Manager Resolution Engine
 When a user runs a package or repository command (e.g., `stamp install htop`) without specifying `--manager`, the tool resolves ambiguity using a three-tier engine:
@@ -65,6 +68,8 @@ When a user runs a package or repository command (e.g., `stamp install htop`) wi
    ```
    If a match is found, `stamp` automatically selects the manager with the highest configured precedence.
 3. **Tier 3: Interactive Choice (Fallback):** If no precedence is defined (or there's a tie) and the process runs in an interactive terminal (TTY), `stamp` prompts the user to select the manager. In non-interactive environments (scripts/pipelines), the command fails with a clean error prompting the user to specify `--manager`.
+
+---
 
 ## Configuration
 The `stamp` configuration is stored securely at `~/.config/stamp/config.toml`. It allows users to define global precedence and regex-based routing rules.
@@ -93,50 +98,121 @@ prefer = "dnf"
 2.  **Global Precedence:** If no pattern rules match, the engine scans the global `precedence` array from left to right. The first manager in the list that reports the package as "available" is selected.
 3.  **Tie-Breaker:** If the package is not found in the precedence list (or the list is empty), the engine falls back to prompting the user (in an interactive TTY) or failing cleanly (in scripts).
 
-## System Diagnosis (Doctor)
-Running `stamp doctor` executes a complete diagnostic checklist checking host OS details, tracking availability of native package managers, verifying manifest integrity, and reporting UNIX compliance status (NO_COLOR, man pages).
+---
 
-### TTY Output Example:
-```text
-▪ System Diagnosis (Stamp Doctor)
+## Commands Specs
+Detailed specifications, execution behaviors, and business rules for every subcommand.
 
-Package Managers:
-  Name      Status          Path                  Details
-  dnf       ✅ Active       /usr/bin/dnf          Default system manager
-  brew      ✅ Active       /usr/local/bin/brew   User-space manager
-  flatpak   ❌ Not Found    -                     Executable not found in $PATH
+### `stamp` (root)
+- **Usage:** Suggests running `stamp hello` or `stamp --help` when executed with no arguments.
+- **Output:** Help reference to stderr.
 
-Manifest Integrity:
-  Path:     ~/.config/stamp/manifest.toml
-  Status:   ✅ Healthy (Valid TOML)
-  Packages: 3 tracked
+### `stamp hello` — Welcome Command (C1)
+- **Usage:** Prints welcome message containing ASCII logo, brief "about", and suggested next steps (init, doctor, man install).
+- **Flags:** None.
+- **TTY Output Example:**
+  ```text
+    stamp — A lightweight yet powerful wrapper for your native package managers.
 
-UNIX Compliance:
-  NO_COLOR: ❌ Not set
-  Man Page: ❌ Not found — run 'stamp man install'
-```
+    For a fresh installation, try:
+      stamp init          — Create manifest and take initial snapshot
+      stamp doctor        — Verify system configuration
+      stamp man install   — Install offline documentation
 
-### JSON Output Example (`stamp doctor --json`):
-```json
-{
-  "system": "fedora",
-  "package_managers": [
-    {"name": "dnf", "active": true, "path": "/usr/bin/dnf", "details": "Default system manager"},
-    {"name": "brew", "active": true, "path": "/usr/local/bin/brew", "details": "User-space manager"},
-    {"name": "flatpak", "active": false, "path": "", "details": "Executable not found in $PATH"}
-  ],
-  "manifest": {
-    "path": "/home/user/.config/stamp/manifest.toml",
-    "valid": true,
-    "packages_count": 3
-  },
-  "no_color": false,
-  "man_page": {
-    "installed": false,
-    "path": ""
-  }
-}
-```
+    Need help? Run:  stamp --help
+  ```
+
+### `stamp init`
+- **Usage:** Initializes `manifest.toml` and takes a baseline snapshot of current system packages.
+- **Flags:** None.
+- **Behavior:** Creates `~/.config/stamp` and `~/.local/share/stamp/snapshots` directories. Generates empty manifest.toml. Takes baseline snapshot for each available manager and saves them.
+- **Output:** `manifest initialized and system baseline snapshot taken` to stderr.
+
+### `stamp install <pkg>` (alias `add`)
+- **Usage:** Installs a package natively and records it in the manifest.
+- **Flags:** `--manager`, `-m`, `--note`, `-n`
+- **Behavior:** Validates name, resolves manager, runs native install, appends package to manifest, saves manifest.
+
+### `stamp remove <pkg>` (aliases `uninstall`, `rm`, `delete`, `del`)
+- **Usage:** Removes a package natively and untracks it.
+- **Flags:** `--manager`, `-m`
+- **Behavior:** Looks up recorded manager from manifest if not overridden by `-m`. Runs native remove, deletes package from manifest, saves manifest.
+
+### `stamp reinstall <pkg>` (C4)
+- **Usage:** Reinstalls a package currently tracked in the manifest using its recorded manager.
+- **Flags:** None (accepts global `-y` flag).
+- **Behavior:**
+  1. Looks up `<pkg>` in the manifest.toml. If not found, aborts with: `package "<package>" is not tracked in the manifest`.
+  2. Resolves its recorded manager (e.g. `brew`).
+  3. Calls `adapter.Install()` on the active manager.
+  4. Saves new system snapshots and saves manifest (updates `updated_at`).
+- **Output:** `reinstalled htop via brew` to stderr.
+
+### `stamp search <query>`
+- **Usage:** Searches for matching packages across all available managers.
+- **Flags:** `--manager`, `-m`
+- **Behavior:** Queries all adapters or the scoped manager and prints matching packages.
+
+### `stamp info <pkg>` (C2)
+- **Usage:** Queries detailed package information.
+- **Flags:** `--manager`, `-m`
+- **Behavior:**
+  - **No `-m`:** Queries all managers, prints a summary table of matching versions.
+  - **With `-m`:** Displays the raw info block from the specific package manager (e.g., `dnf info htop`, `brew info htop`).
+- **Raw TTY Output Example:**
+  ```text
+  $ stamp info htop -m dnf
+  htop via dnf:
+
+  Name           : htop
+  Version        : 3.4.1
+  Release        : 3.fc44
+  Architecture   : x86_64
+  Download size  : 203.6 KiB
+  Installed size : 464.3 KiB
+  Summary        : Interactive process viewer
+  URL            : https://htop.dev/
+  License        : GPL-2.0-or-later
+  Description    : htop is an interactive text-mode process viewer...
+  ```
+
+### `stamp reconcile`
+- **Usage:** Detects drift between the system state and the last snapshot, and prompts to track.
+- **Flags:** `--manager`, `-m` (Proposed)
+- **Behavior:** Fetches current state, diffs against snapshots, reports added packages, auto-tracks on `--yes` or prompts. Saves manifest and new snapshots.
+
+### `stamp restore`
+- **Usage:** Restores environment on a new machine from the manifest.
+- **Flags:** `--dry-run`, `-d`, `--manager`, `-m` (Proposed)
+- **Behavior:** Adds repositories sequentially in Phase 1, then installs packages concurrently in Phase 2.
+
+### `stamp doctor`
+- **Usage:** Checks manager availability, manifest health, and UNIX compliance.
+- **Flags:** `--json`, `-j`, `--manager`, `-m` (Proposed)
+- **Behavior:** Audits managers, parses manifest, checks `NO_COLOR` and `stamp man check` statuses.
+- **UNIX Compliance TTY section:**
+  ```text
+  UNIX Compliance:
+    NO_COLOR: ✅ Set
+    Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
+  ```
+
+### `stamp self-update` (alias `self-upgrade`)
+- **Usage:** Upgrades the stamp binary from the GitHub releases API.
+- **Flags:** `--check`, `-c`
+
+### `stamp completion <shell>`
+- **Usage:** Generates completion scripts for `bash`, `zsh`, `fish`, or `powershell`.
+
+### `stamp man`
+- **Usage:** Displays help output for man page subcommands.
+- **Subcommands:** `install` (install man pages to path), `check` (verify man page version vs binary version).
+
+### `stamp repo`
+- **Usage:** Command group managing custom package repositories.
+- **Subcommands:** `add` (install repo), `remove` (untrack repo), `list` (ls tracked repos).
+
+---
 
 ## Data Model
 The TOML manifest supports `notes` for user context and a `repositories` block.
@@ -175,12 +251,12 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 - **Test Locations:** Co-located with source (`state_test.go` next to `state.go`).
 - **Core Coverage:** 100% on `internal/state/` and `internal/manifest/`.
 - **Mocks:** Mock the `PackageManager` interface.
-- **Minimum:* * 90% overall project coverage.
+- **Minimum:** 90% overall project coverage.
 
 ## Boundaries
 - **Always:** Use `context.Context` for all shell executions (`os/exec`).
 - **Always:** Return meaningful delta states (added, removed, unchanged).
-- **Always:** Every flag SHOULD have a single-character short form.
+- **Always:** Every flag MUST have a single-character short form.
 - **Always:** Actions MUST be subcommands, not flags.
 - **Ask first:** Before adding any third-party dependencies beyond `cobra` and `go-toml`.
 - **Ask first:** Before changing the structure of the `manifest.toml`.
@@ -198,203 +274,6 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 - **UNIX Man Pages:** System reference pages (Section 1) must be self-contained via `stamp man` so users can run `man stamp` locally.
 - **Project Landing Page:** A custom landing page at `docs/index.html` served via GitHub Pages (`/docs` folder on main branch, `https://rossijonas.github.io/stamp/`).
 
-## `stamp hello` — Welcome Command (C1)
-
-### Objective
-Provide a friendly entry point for new users. When run without arguments, stamp should guide users toward useful first steps. `stamp hello` shows identity, purpose, and suggested next operations.
-
-### Trigger Behavior
-Running `stamp` with no arguments or subcommand prints:
-```
-Don't know where to start? Try:
-
-  stamp hello    — Learn about stamp and next steps
-  stamp --help   — See all available commands
-```
-
-### Command: `stamp hello`
-
-#### Flags
-None. No arguments.
-
-#### Behavior
-1. Prints ASCII logo (same as README header).
-2. Prints a short "about" paragraph.
-3. Suggests three initial operations:
-   ```
-   For a fresh installation:
-     stamp init          — Create manifest and baseline
-     stamp doctor        — Verify system is ready
-     stamp man install   — Install man pages for offline help
-   ```
-
-#### TTY Output Example
-```text
-
-                              
-         █▄
-        ▄██▄      ▄
-   ▄██▀█ ██ ▄▀▀█▄ ███▄███▄ ████▄
-   ▀███▄ ██ ▄█▀██ ██ ██ ██ ██ ██
-  █▄▄██▀▄██▄▀█▄██▄██ ██ ▀█▄████▀
-                           ██
-                           ▀
-
-  stamp — A lightweight yet powerful wrapper for your native package managers.
-
-  For a fresh installation, try:
-
-    stamp init          — Create manifest and take initial snapshot
-    stamp doctor        — Verify system configuration
-    stamp man install   — Install offline documentation
-
-  Need help? Run:  stamp --help
-```
-
-#### JSON Output
-Not applicable. `--json` flag not supported for this command.
-
-### Business Rules
-- No args expected (cobra.NoArgs).
-- Pure informational. No system state modification.
-- Must display ASCII logo exactly as in README header.
-
----
-
-## `stamp info <pkg>` — Package Info Command (C2)
-
-### Objective
-Allow users to query detailed information about a package across all available package managers. Useful for discovering which managers provide a package and getting version/description details.
-
-### Command: `stamp info <pkg>`
-
-#### Flags
-| Flag | Short | Required | Description |
-| :--- | :--- | :---: | :--- |
-| `--manager <name>` | `-m` | No | Scope info query to a single manager. |
-
-#### Behavior
-1. If `--manager` is specified: query only that manager.
-2. If no `--manager`: query all available adapters.
-3. Returns package information (description, version, repository, homepage) from each manager that provides the package.
-4. If no manager has the package: print "not found" message.
-
-#### TTY Output Example
-```
-$ stamp info ripgrep
-ripgrep
-  dnf:      v14.1.0  (updates)
-  brew:     v14.1.0  (core)
-  flatpak:  not available
-
-$ stamp info nonexistent
-nonexistent: not found in any package manager
-```
-
-#### JSON Output Example (`--json`)
-```json
-{
-  "package": "ripgrep",
-  "results": [
-    {"manager": "dnf", "found": true, "version": "14.1.0", "source": "updates"},
-    {"manager": "brew", "found": true, "version": "14.1.0", "source": "core"},
-    {"manager": "flatpak", "found": false}
-  ]
-}
-```
-
-### MVP Scope
-For MVP, `stamp info` shows whether a package is available in each manager and its version string (as reported by the manager's search/list output). Full metadata (description, homepage) is deferred.
-
-### Business Rules
-- Positional arg `pkg` is required (cobra.ExactArgs(1)).
-- Adapter.Search() result may contain version info depending on manager. Display what's available.
-- If `--manager` specified but manager not found: error "unknown manager".
-- If no adapters available: error "no package managers available".
-
----
-
-## `stamp man check` — Man Page Version Verification (C3)
-
-### Objective
-Verify that the installed stamp man page matches the current stamp binary version. If man pages are missing, outdated, or not installed, warn the user and recommend `stamp man install`.
-
-### Command: `stamp man check`
-
-#### Flags
-None.
-
-#### Behavior
-1. Read the installed man page at standard system paths (`/usr/local/share/man/man1/stamp.1`, `/usr/share/man/man1/stamp.1`, `/opt/homebrew/share/man/man1/stamp.1`).
-2. If not found at any path: print message and recommend `stamp man install`.
-3. Parse the man page header for the version string (embedded as `.TH STAMP 1 "vX.Y.Z"`).
-4. Compare against `cli.Version` (the built-in binary version).
-5. Match: print "✅ Man page is up to date (vX.Y.Z)".
-6. Mismatch: print "⚠️ Man page is outdated (installed vA.B.C, current vX.Y.Z). Run 'stamp man install' to update."
-7. Exit 0 (informational — outdated man page is a warning, not a failure).
-
-#### TTY Output Examples
-```
-$ stamp man check
-✅ Man page is up to date (v1.2.3)
-
-$ stamp man check
-⚠️ Man page is outdated (installed v1.1.0, current v1.2.3). Run 'stamp man install' to update.
-
-$ stamp man check
-❌ Man page not installed. Run 'stamp man install' to install.
-```
-
-#### JSON Output (`--json`)
-```json
-{"installed": true, "man_version": "1.2.3", "binary_version": "1.2.3", "match": true}
-```
-```json
-{"installed": false, "error": "not found"}
-```
-
-### Doctor Integration
-Add to `stamp doctor` UNIX Compliance section:
-```
-Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
-```
-Detection logic reused from `stamp man check`.
-
-### Business Rules
-- No args expected (cobra.NoArgs).
-- Version comparison uses semantic versioning (string equality, not semver comparison for MVP).
-- Non-zero exit only on actual errors (e.g. permission denied reading man path). Mismatch = exit 0.
-- Doctor integration reuses the same underlying detection function.
-
----
-
-## Project Landing Page
-
-The landing page at `docs/index.html` (served via GitHub Pages at `https://rossijonas.github.io/stamp/`) must include the following content. The canonical source for feature descriptions is the README.md Intro section.
-
-### Required Content
-
-1. **ASCII logo** — Same as README header.
-2. **Tagline** — "A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools."
-3. **Quick install** — One-liner install commands (Go install, download binary).
-4. **Feature cards** — The 10 feature descriptions from README.md Intro section, organized into groups:
-   - **Core Features:** Multi-manager wrapper, automatic intent tracking, one-command environment rebuild, unified repository management, safety net reconciliation, self-contained documentation.
-   - **System & Compliance:** Built-in system doctor, UNIX compliant.
-   - **Technical:** Built with Go, lightweight yet powerful, cross-platform, extensible architecture.
-   - **Ecosystem:** Compatible with popular package managers, developer toolchain support (coming soon).
-5. **Usage examples** — 2-3 common workflows (install, reconcile, restore).
-6. **Compatibility table** — Link to README.md support matrix.
-7. **Links** — GitHub repo, docs/SPEC.md, ADRs, VISION.md.
-
-### Design
-- **Theme:** Jekyll `minimal-mistakes` with custom splash/home landing page layout.
-- **Style:** Custom `docs/assets/style.css`.
-- **Visuals:** Hero section, screenshots or animated GIFs of tool usage (format TBD).
-- **Navigation:** Links to auto-generated CLI reference (`docs/usage/`).
-
-## Deferred Decisions
-- **Landing page design:** Visual style, screenshot/GIF format, and exact content layout for `docs/index.html` to be discussed before implementation begins.
-
 ## Success Criteria
 1. **Init:** Running `stamp init` creates the correct XDG directories and an empty `manifest.toml`.
 2. **Reconcile (No Drift):** If system state matches the last snapshot, `reconcile` exits cleanly.
@@ -402,5 +281,7 @@ The landing page at `docs/index.html` (served via GitHub Pages at `https://rossi
 4. **Restore:** Running `stamp restore` successfully adds repositories *before* executing the respective package manager install commands concurrently.
 5. **Notes:** A user can pass `--note "reason"` to `stamp install` or `stamp edit`, which will be correctly saved in the TOML manifest.
 6. **Doctor:** `stamp doctor` reports manager status, manifest health, and UNIX compliance in both TTY and JSON.
-7. **Man Pages:** `stamp man` generates a valid troff man page; `stamp man install` installs it to the system.
+7. **Man Pages:** `stamp man` displays help; `stamp man install` installs man pages; `stamp man check` verifies version matches binary.
 8. **Completions:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts.
+9. **Reinstall:** `stamp reinstall htop` successfully reinstalls a manifest-tracked package using its recorded manager.
+10. **Info:** `stamp info htop -m dnf` prints raw dnf info metadata directly.
