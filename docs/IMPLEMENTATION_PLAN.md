@@ -120,7 +120,6 @@ Build the environment reconstruction logic and final touches.
 | 10d | NO_COLOR compliance | ✅ |
 | 10e | Doc generation pipeline (`task docs` + CI enforcement) | ✅ |
 | 10f | Flag standardization (short forms, actions-as-subcommands) | ✅ |
-| 10g | GitHub Pages landing page (`docs/index.html`) — content requirements defined in SPEC.md → Project Landing Page; source tagline and features from README.md | ⏳ |
 | 10h | Uninstall documentation in README.md (standard + hard uninstall) | ✅ |
 
 **Task 11: Self-Update Subcommand**
@@ -169,11 +168,26 @@ Build the environment reconstruction logic and final touches.
 **Task 19: Generate Missing Usage & Man Pages**
 *   **Description:** Run `task docs` to auto-generate missing `docs/usage/` pages (`stamp_hello.md`, `stamp_info.md`, `stamp_reinstall.md`) and populate `docs/man/` with system man page files.
 *   **Acceptance:** Every registered subcommand has a corresponding `docs/usage/*.md` page. `docs/man/stamp.1` exists and is up to date.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 20: Create GitHub Pages Landing Page**
 *   **Description:** Create `docs/index.html` as a custom landing page for GitHub Pages. Content requirements defined in SPEC.md → Project Landing Page. Source tagline and features from README.md.
 *   **Acceptance:** Navigating to `https://rossijonas.github.io/stamp/` displays the project landing page.
+*   **Status:** ⏳ Pending
+
+**Task 21: `stamp init` Command**
+*   **Description:** Initialize `manifest.toml` and take baseline snapshot of current system packages. Create XDG directories (`~/.config/stamp`, `~/.local/share/stamp/snapshots`). Suggested by `stamp hello` output.
+*   **Acceptance:** Running `stamp init` creates config dir, snapshot dir, empty manifest.toml, and baseline snapshot for each available manager.
+*   **Status:** ⏳ Pending
+
+**Task 22: `stamp list` Command (alias `ls`)**
+*   **Description:** List all intentionally installed packages from the manifest. Supports `--json, -j` and `--manager, -m` flags.
+*   **Acceptance:** Running `stamp list` prints tracked packages; `stamp list --json` outputs JSON; `stamp list -m brew` filters by manager.
+*   **Status:** ⏳ Pending
+
+**Task 23: `stamp update` Command (alias `upgrade`)**
+*   **Description:** Run system upgrades across all available managers in parallel. Supports `--manager, -m` flag to scope to a single manager.
+*   **Acceptance:** Running `stamp update` executes native update/upgrade commands concurrently per manager.
 *   **Status:** ⏳ Pending
 
 ### Phase 5: Project Licensing & Governance
