@@ -1,13 +1,10 @@
 ## stamp man
 
-Generate the stamp man page
+Manage stamp troff man pages
 
 ### Synopsis
 
-Generate the troff man page for stamp.
-
-By default prints the man page to stdout. Use --install to copy to the system
-man page directory so 'man stamp' works.
+Command group to generate, install, and check stamp man pages.
 
 ```
 stamp man [flags]
@@ -16,15 +13,13 @@ stamp man [flags]
 ### Options
 
 ```
-  -h, --help            help for man
-      --install         install man page to system directory
-      --prefix string   install prefix (default: ~/.local)
+  -h, --help   help for man
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --json      output results in JSON format
+  -j, --json      output results in JSON format
   -v, --verbose   enable debug logging
   -y, --yes       auto-accept all prompts
 ```
@@ -32,4 +27,6 @@ stamp man [flags]
 ### SEE ALSO
 
 * [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp man check](stamp_man_check.md)	 - Verify installed man page version matches current stamp version
+* [stamp man install](stamp_man_install.md)	 - Install the stamp man page to system or user path
 

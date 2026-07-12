@@ -1,0 +1,33 @@
+## stamp info
+
+Show package information across managers
+
+### Synopsis
+
+Query detailed information about a package.
+By default, queries all available managers and outputs a summary table.
+If -m, --manager is specified, displays the native manager's full raw info block.
+
+```
+stamp info <package> [flags]
+```
+
+### Options
+
+```
+  -h, --help             help for info
+  -m, --manager string   package manager to query
+```
+
+### Options inherited from parent commands
+
+```
+  -j, --json      output results in JSON format
+  -v, --verbose   enable debug logging
+  -y, --yes       auto-accept all prompts
+```
+
+### SEE ALSO
+
+* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+

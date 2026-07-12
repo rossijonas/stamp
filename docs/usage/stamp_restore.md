@@ -15,14 +15,15 @@ stamp restore [flags]
 ### Options
 
 ```
-      --dry-run   preview repositories and packages to restore
-  -h, --help      help for restore
+  -d, --dry-run          preview repositories and packages to restore
+  -h, --help             help for restore
+  -m, --manager string   package manager to restore
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --json      output results in JSON format
+  -j, --json      output results in JSON format
   -v, --verbose   enable debug logging
   -y, --yes       auto-accept all prompts
 ```

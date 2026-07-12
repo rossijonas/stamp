@@ -1,20 +1,20 @@
-## stamp doctor
+## stamp reinstall
 
-Diagnose system configuration and manifest health
+Reinstall a package currently tracked in the manifest
 
 ### Synopsis
 
-Check package manager availability and manifest integrity.
-Reports which managers are installed and whether the manifest is valid.
+Look up the package in the manifest to find its recorded package manager,
+then execute the native reinstallation command for that package.
 
 ```
-stamp doctor [flags]
+stamp reinstall <package> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for doctor
+  -h, --help   help for reinstall
 ```
 
 ### Options inherited from parent commands

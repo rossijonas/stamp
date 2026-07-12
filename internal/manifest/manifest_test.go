@@ -149,3 +149,16 @@ func TestManifestSaveRenameError(t *testing.T) {
 	assert.Len(t, files, 1) // Only the "manifest.toml" directory should exist
 	assert.Equal(t, "manifest.toml", files[0].Name())
 }
+
+func TestManifestSaveMkdirError(t *testing.T) {
+	t.Parallel()
+	tmpFile, err := os.CreateTemp("", "manifest-mkdir-test-*")
+	require.NoError(t, err)
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	_ = tmpFile.Close()
+
+	m := &Manifest{Version: 1}
+	err = m.Save(filepath.Join(tmpFile.Name(), "subdir", "manifest.toml"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create manifest directory")
+}
