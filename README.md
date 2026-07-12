@@ -13,7 +13,7 @@
 
 ```
 
-*Track your package installation intent across multiple package managers. Rebuild your environment anywhere.*
+*A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.*
 
 ---
 
@@ -25,9 +25,39 @@
 
 > ⚠️ **Active Development:** `stamp` is currently in the MVP phase of active development. Features are being delivered incrementally. For a complete look at our progress, check the [Implementation Plan](docs/IMPLEMENTATION_PLAN.md).
 
-`stamp` is a CLI tool that tracks the software you *intentionally* install across fragmented package managers (`dnf`, `flatpak`, `brew`, etc.). It records your choices into a portable, version-controlled TOML manifest. When you move to a new machine,  run `stamp restore` to recreate your exact environment.
+`stamp` is a lightweight yet powerful wrapper for your native package managers. It lets you install, search, get info, and remove packages and repositories across multiple package managers through a single CLI — without conflicts, ecosystem lock-in, or changing your tools.
 
-**Current Scope:** The MVP of `stamp` is focused on the Red Hat ecosystem (e.g., Fedora), natively supporting the trio of package managers most commonly used on these systems: `dnf`, `flatpak`, and `brew`.
+### Features
+
+**Multi-Manager Wrapper**
+Install, search, get info, and remove packages across multiple package managers through a single CLI. No conflicts, no ecosystem lock-in. [See supported package managers →](#-compatibility--support-tracker)
+
+**Automatic Intent Tracking**
+Every intentional install is recorded in a portable `manifest.toml`. Dependency packages are automatically excluded — you only track what you chose.
+
+**One-Command Environment Rebuild**
+`stamp restore` reinstalls all repositories and packages on a new machine. Clone your dotfiles, run one command, done.
+
+**Unified Repository Management**
+Add, remove, and list third-party repositories (taps, remotes) across all managers with the same interface.
+
+**Safety Net Reconciliation**
+Forgot to use stamp? `stamp reconcile` detects packages installed outside the tool and adds them to your manifest retroactively.
+
+**Built-in System Doctor**
+`stamp doctor` checks manager availability, manifest integrity, and UNIX compliance in a single command. JSON output for scripting.
+
+**Self-Contained Documentation**
+Built-in man page generation (`stamp man install`), shell completions (`stamp completion bash|zsh|fish|powershell`), and auto-generated CLI reference docs.
+
+**UNIX Compliant**
+XDG Base Directory, POSIX syntax, NO_COLOR support, strict stdout/stderr separation, and BSD sysexits exit codes.
+
+**Built with Go**
+Single static binary, fast startup, no runtime dependencies. Linux and macOS support (amd64 + arm64). Windows on the roadmap.
+
+**Compatible with Popular Package Managers**
+Works with the package managers you already use on Linux and macOS, with more on the way. [See full compatibility table →](#-compatibility--support-tracker)
 
 ## ▪ Installing
 

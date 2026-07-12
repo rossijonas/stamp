@@ -57,5 +57,5 @@ stamp completion [bash|zsh|fish|powershell]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - Track package installation intent across multiple package managers
+* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
 

@@ -1,7 +1,7 @@
 # Spec: Stamp (Intent Tracker)
 
 ## Objective
-Build a CLI tool that captures a solo developer's package installation intent across fragmented package managers (`dnf`, `brew`, `flatpak`) into a portable, version-controllable TOML manifest. The primary workflow is using `stamp install` as a unified wrapper to guarantee total traceability from day one. It also acts as a passive safety net, allowing developers to track changes retroactively via local snapshot diffing (`stamp reconcile`) if they bypass the tool. It fully supports tracking custom repositories (taps, remotes).
+Build a lightweight yet powerful wrapper for native package managers. Stamp lets developers install, search, get info, and remove packages and repositories across multiple package managers through a single CLI — tracking every intentional choice into a portable, version-controllable TOML manifest. The primary workflow is using `stamp install` as a unified wrapper to guarantee total traceability from day one. It also acts as a passive safety net, allowing developers to track changes retroactively via local snapshot diffing (`stamp reconcile`) if they bypass the tool. It fully supports tracking custom repositories (taps, remotes) across all supported package managers.
 
 ## Tech Stack
 - **Language:** Go 1.26+
@@ -240,7 +240,7 @@ None. No arguments.
                            ██
                            ▀
 
-  stamp — Track package installation intent across package managers.
+  stamp — A lightweight yet powerful wrapper for your native package managers.
 
   For a fresh installation, try:
 
