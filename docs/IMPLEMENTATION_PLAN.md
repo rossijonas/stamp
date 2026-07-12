@@ -120,7 +120,7 @@ Build the environment reconstruction logic and final touches.
 | 10d | NO_COLOR compliance | ✅ |
 | 10e | Doc generation pipeline (`task docs` + CI enforcement) | ✅ |
 | 10f | Flag standardization (short forms, actions-as-subcommands) | ⏳ |
-| 10g | GitHub Pages landing page (`docs/index.html`) | ⏳ |
+| 10g | GitHub Pages landing page (`docs/index.html`) — content requirements defined in SPEC.md → Project Landing Page; source tagline and features from README.md | ⏳ |
 
 **Task 11: Self-Update Subcommand**
 *   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports a `--check` flag to query without downloading.

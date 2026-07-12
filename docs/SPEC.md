@@ -368,6 +368,30 @@ Detection logic reused from `stamp man check`.
 
 ---
 
+## Project Landing Page
+
+The landing page at `docs/index.html` (served via GitHub Pages at `https://rossijonas.github.io/stamp/`) must include the following content. The canonical source for feature descriptions is the README.md Intro section.
+
+### Required Content
+
+1. **ASCII logo** — Same as README header.
+2. **Tagline** — "A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools."
+3. **Quick install** — One-liner install commands (Go install, download binary).
+4. **Feature cards** — The 10 feature descriptions from README.md Intro section, organized into groups:
+   - **Core Features:** Multi-manager wrapper, automatic intent tracking, one-command environment rebuild, unified repository management, safety net reconciliation, self-contained documentation.
+   - **System & Compliance:** Built-in system doctor, UNIX compliant.
+   - **Technical:** Built with Go, lightweight yet powerful, cross-platform, extensible architecture.
+   - **Ecosystem:** Compatible with popular package managers, developer toolchain support (coming soon).
+5. **Usage examples** — 2-3 common workflows (install, reconcile, restore).
+6. **Compatibility table** — Link to README.md support matrix.
+7. **Links** — GitHub repo, docs/SPEC.md, ADRs, VISION.md.
+
+### Design
+- **Theme:** Jekyll `minimal-mistakes` with custom splash/home landing page layout.
+- **Style:** Custom `docs/assets/style.css`.
+- **Visuals:** Hero section, screenshots or animated GIFs of tool usage (format TBD).
+- **Navigation:** Links to auto-generated CLI reference (`docs/usage/`).
+
 ## Deferred Decisions
 - **Landing page design:** Visual style, screenshot/GIF format, and exact content layout for `docs/index.html` to be discussed before implementation begins.
 
