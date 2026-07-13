@@ -285,3 +285,11 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 8. **Completions:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts.
 9. **Reinstall:** `stamp reinstall htop` successfully reinstalls a manifest-tracked package using its recorded manager.
 10. **Info:** `stamp info htop -m dnf` prints raw dnf info metadata directly.
+11. **Install:** `stamp install htop` installs the package natively via the resolved manager and records it in `manifest.toml`.
+12. **Remove:** `stamp remove htop` removes the package natively and removes it from the manifest.
+13. **Search:** `stamp search ripgrep` returns matching packages from all available managers.
+14. **Repo Add:** `stamp repo add myrepo -m brew` adds the repository via the specified manager and records it.
+15. **Repo Remove:** `stamp repo remove myrepo -m brew` removes the repository and untracks it.
+16. **Repo List:** `stamp repo list` prints all tracked repositories; `--json` outputs machine-readable.
+17. **Hello:** `stamp hello` displays ASCII logo, project description, and suggested next steps.
+18. **Completion:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts for each shell.
