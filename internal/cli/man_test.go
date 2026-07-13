@@ -153,6 +153,27 @@ func TestDefaultManPrefix(t *testing.T) {
 	assert.NotEmpty(t, prefix)
 }
 
+func TestDefaultManPageCandidatesPath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	expected := filepath.Join(home, ".local", "share", "man", "man1", "stamp.1")
+	assert.Equal(t, expected, defaultManPageCandidates()[0])
+}
+
+func TestInstalledManPagePath_UserLocal(t *testing.T) {
+	home := t.TempDir()
+	manPath := filepath.Join(home, ".local", "share", "man", "man1", "stamp.1")
+
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{manPath}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(manPath), 0750))
+	require.NoError(t, os.WriteFile(manPath, []byte("garbage"), 0600))
+
+	assert.Equal(t, manPath, installedManPagePath())
+}
+
 func TestMan_Check_ReadError(t *testing.T) {
 	tmpDir := t.TempDir()
 	manFile := filepath.Join(tmpDir, "stamp.1")

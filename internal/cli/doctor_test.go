@@ -163,6 +163,28 @@ func TestDoctor_ManPage_Healthy(t *testing.T) {
 	assert.Equal(t, "dev", report.ManPage.Version)
 }
 
+func TestDoctor_ManPage_UserLocal_Detected(t *testing.T) {
+	home := t.TempDir()
+	manPath := filepath.Join(home, ".local", "share", "man", "man1", "stamp.1")
+
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{manPath}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(manPath), 0750))
+	manContent := `.TH "STAMP" "1" "Jul 2026" "stamp ` + Version + `" "Stamp Manual"`
+	require.NoError(t, os.WriteFile(manPath, []byte(manContent), 0600))
+
+	buf, err := execCmd(t, []string{"doctor", "--json"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+
+	var report doctorReport
+	err = json.Unmarshal(buf.Bytes(), &report)
+	require.NoError(t, err)
+	assert.True(t, report.ManPage.Installed)
+	assert.Equal(t, Version, report.ManPage.Version)
+}
+
 func TestDoctor_ManagerFlag_Active(t *testing.T) {
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
