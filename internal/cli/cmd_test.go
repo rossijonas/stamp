@@ -808,3 +808,15 @@ func TestListCmd_EmptyJSON(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "[]")
 }
+
+func TestListCmd_CorruptedManifest(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	root.SetArgs([]string{"list"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse manifest")
+}
