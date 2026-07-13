@@ -39,6 +39,9 @@ func (m *mockAdapter) RemoveRepo(_ context.Context, _ string) error { return m.e
 func (m *mockAdapter) Info(_ context.Context, q string) (string, error) {
 	return "Name: " + q + "\nVersion: 1.0.0", m.err
 }
+func (m *mockAdapter) Doctor(_ context.Context) (string, error) {
+	return "mock doctor: all good", m.err
+}
 
 // execCmd builds a root with injected mock adapters and isolated temp paths, executes, returns output.
 func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Buffer, error) {

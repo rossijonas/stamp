@@ -21,6 +21,8 @@ type Mock struct {
 	RemoveRepoErr error
 	InfoErr       error
 	InfoResult    string
+	DoctorResult  string
+	DoctorErr     error
 }
 
 // Name returns the package manager identifier.
@@ -126,4 +128,15 @@ func (m *Mock) Info(_ context.Context, pkg string) (string, error) {
 	}
 	// Fallback mock output
 	return fmt.Sprintf("Name: %s\nVersion: 1.0.0\nDescription: mock details", pkg), nil
+}
+
+// Doctor runs mock doctor diagnostic.
+func (m *Mock) Doctor(_ context.Context) (string, error) {
+	if m.DoctorErr != nil {
+		return "", m.DoctorErr
+	}
+	if m.DoctorResult != "" {
+		return m.DoctorResult, nil
+	}
+	return "mock doctor: all good", nil
 }

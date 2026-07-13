@@ -151,8 +151,8 @@ Build the environment reconstruction logic and final touches.
 | :--- | :--- | :---: |
 | 15a | `stamp reconcile -m` | ✅ |
 | 15b | `stamp restore -m` | ✅ |
-| 15c | `stamp doctor -m` | ⏳ Pending |
-| 15d | `stamp list -m` | ⏳ Pending (Task 22) |
+| 15c | `stamp doctor -m` | ✅ |
+| 15d | `stamp list -m` | ✅ (via Task 22) |
 | 15e | `stamp update -m` | ⏳ Pending (Task 23) |
 
 #### Phase 4c — Infrastructure

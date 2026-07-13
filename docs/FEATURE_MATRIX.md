@@ -22,7 +22,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp hello` | | ✅ | ✅ | ✅ Prints ASCII logo + suggested next steps | ✅ Complete |
 | `stamp init` | | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
-| `stamp list` | `ls` | ✅ | ❌ | ❌ | ⏳ Pending |
+| `stamp list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
 | `stamp self-update` | `self-upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 
 ## Repository Commands
@@ -62,14 +62,14 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp doctor` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
 | `stamp man install` | `--prefix` | | ✅ | ✅ | ✅ Complete |
 | `stamp self-update` | `--check` | | ✅ | ❌ | ⏳ Pending |
-| `stamp list` | `--json` | `-j` | ✅ | ❌ | ⏳ Pending |
+| `stamp list` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
 | `stamp repo list` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
 | `stamp reconcile` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp restore` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp repo list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
-| `stamp doctor` | `--manager <name>` | `-m` | ❌ | ❌ | 📝 Proposed |
+| `stamp doctor` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp update` | `--manager <name>` | `-m` | ✅ | ❌ | ⏳ Pending |
-| `stamp list` | `--manager <name>` | `-m` | ❌ | ❌ | 📝 Proposed |
+| `stamp list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 
 ## UNIX Compliance
 
@@ -104,13 +104,19 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 10c | `stamp man` generation and install | ✅ |
 | 4 | 10d | NO_COLOR compliance | ✅ |
 | 4 | 10e | Doc generation pipeline (task docs) | ✅ |
-| 4 | 10f | Flag standardization (short forms, subcommands) | ⏳ |
-| 4 | 10g | GitHub Pages landing page | ⏳ |
+| 4 | 10f | Flag standardization (short forms, subcommands) | ✅ |
+| 4 | 10h | Uninstall documentation in README.md (standard + hard uninstall) | ✅ |
 | 4 | 11 | Self-Update Subcommand | ⏳ |
-| 4 | 12 | `stamp hello` welcome command | 📝 Spec ready |
-| 4 | 13 | `stamp info` package info command | 📝 Spec ready |
-| 4 | 14 | `stamp man check` version verification | 📝 Spec ready |
-| 4 | 15 | Per-manager flags for reconcile/restore/doctor/list | 📝 |
+| 4 | 12 | `stamp hello` welcome command | ✅ |
+| 4 | 13 | `stamp info` package info command | ✅ |
+| 4 | 14 | `stamp man check` version verification | ✅ |
+| 4 | 15 | Per-manager flags for reconcile/restore/doctor/list | ⚠️ Partial |
 | 4 | 16 | Multi-platform integration testing (Fedora/Ubuntu/Arch/macOS/Windows) | 📝 |
 | 4 | 17 | Package manager feature audit (Homebrew cask, brew services, dnf groupinstall) | 📝 |
+| 4 | 18 | `stamp reinstall` command | ✅ |
+| 4 | 19 | Generate missing usage & man pages | ✅ |
+| 4 | 20 | Create GitHub Pages landing page (`docs/index.html`) | ⏳ |
+| 4 | 21 | `stamp init` command | ⏳ |
+| 4 | 22 | `stamp list` command (alias `ls`) | ✅ |
+| 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
 | 5 | 11 | Relicense to Apache-2.0 | ✅ |
