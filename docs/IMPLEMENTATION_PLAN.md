@@ -196,7 +196,7 @@ Build the environment reconstruction logic and final touches.
 **Task 22: `stamp list` Command (alias `ls`)**
 *   **Description:** List all intentionally installed packages from the manifest. Supports `--json, -j` and `--manager, -m` flags.
 *   **Acceptance:** Running `stamp list` prints tracked packages; `stamp list --json` outputs JSON; `stamp list -m brew` filters by manager.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 23: `stamp update` Command (alias `upgrade`)**
 *   **Description:** Run system upgrades across all available managers in parallel. Supports `--manager, -m` flag to scope to a single manager.
