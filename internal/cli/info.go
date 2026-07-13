@@ -3,12 +3,15 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
 )
+
+var brewDescriptorRegex = regexp.MustCompile(`^==> \S+: (.+)$`)
 
 type infoReportItem struct {
 	Manager string `json:"manager"`
@@ -133,6 +136,15 @@ If -m, --manager is specified, displays the native manager's full raw info block
 							parts := strings.Split(l, ":")
 							if len(parts) > 1 {
 								version = "v" + strings.TrimSpace(parts[1])
+								break
+							}
+						}
+					}
+					// Fallback for brew-style output: "==> htop: stable 3.4.1 (bottled), HEAD"
+					if version == "available" {
+						for _, l := range lines {
+							if m := brewDescriptorRegex.FindStringSubmatch(l); m != nil {
+								version = m[1]
 								break
 							}
 						}
