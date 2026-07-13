@@ -20,7 +20,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp completion [shell]` | | ✅ | ✅ | ✅ Cobra Gen*Completion | ✅ Complete |
 | `stamp man` | | ✅ | ✅ | ✅ Shows help for man command group | ✅ Complete |
 | `stamp hello` | | ✅ | ✅ | ✅ Prints ASCII logo + suggested next steps | ✅ Complete |
-| `stamp init` | | ✅ | ❌ | ❌ | ⏳ Pending |
+| `stamp init` | | ✅ | ✅ | ✅ Creates dirs + manifest + snapshots | ✅ Complete |
 | `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
 | `stamp self-update` | `self-upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
@@ -116,7 +116,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 18 | `stamp reinstall` command | ✅ |
 | 4 | 19 | Generate missing usage & man pages | ✅ |
 | 4 | 20 | Create GitHub Pages landing page (`docs/index.html`) | ⏳ |
-| 4 | 21 | `stamp init` command | ⏳ |
+| 4 | 21 | `stamp init` command | ✅ |
 | 4 | 22 | `stamp list` command (alias `ls`) | ✅ |
 | 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
 | 5 | 11 | Relicense to Apache-2.0 | ✅ |
