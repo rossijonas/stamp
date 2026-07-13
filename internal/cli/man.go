@@ -25,10 +25,19 @@ type manCheckResult struct {
 	matches bool
 }
 
-var manPageCandidates = []string{
-	"/usr/local/share/man/man1/stamp.1",
-	"/usr/share/man/man1/stamp.1",
-	"/opt/homebrew/share/man/man1/stamp.1",
+var manPageCandidates []string
+
+func init() {
+	manPageCandidates = defaultManPageCandidates()
+}
+
+func defaultManPageCandidates() []string {
+	return []string{
+		filepath.Join(os.Getenv("HOME"), ".local", "share", "man", "man1", "stamp.1"),
+		"/usr/local/share/man/man1/stamp.1",
+		"/usr/share/man/man1/stamp.1",
+		"/opt/homebrew/share/man/man1/stamp.1",
+	}
 }
 
 func installedManPagePath() string {
