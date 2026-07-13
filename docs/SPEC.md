@@ -110,6 +110,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
 ### `stamp hello` — Welcome Command (C1)
 - **Usage:** Prints welcome message containing ASCII logo, brief "about", and suggested next steps (init, doctor, man install).
 - **Flags:** None.
+- **Planned:** Migrate to `stamp setup` with interactive wizard (see issue #59). `stamp hello` will be kept as alias.
 - **TTY Output Example:**
   ```text
     stamp — A lightweight yet powerful wrapper for your native package managers.
@@ -131,7 +132,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
 ### `stamp install <pkg>` (alias `add`)
 - **Usage:** Installs a package natively and records it in the manifest.
 - **Flags:** `--manager`, `-m`, `--note`, `-n`
-- **Behavior:** Validates name, resolves manager, runs native install, appends package to manifest, saves manifest. For managers requiring root (e.g., DNF), write operations automatically wrap with `sudo` — TTY-aware, prompts for password when needed.
+- **Behavior:** Validates name, resolves manager, runs native install, appends package to manifest, saves manifest. For managers requiring root (e.g., DNF), write operations automatically wrap with `sudo` — TTY-aware, prompts for password when needed. On systems where `dnf` is unavailable, the adapter falls back to `yum` automatically.
 
 ### `stamp remove <pkg>` (aliases `uninstall`, `rm`, `delete`, `del`)
 - **Usage:** Removes a package natively and untracks it.
@@ -187,9 +188,16 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Behavior:** Adds repositories sequentially in Phase 1, then installs packages concurrently in Phase 2.
 
 ### `stamp doctor`
-- **Usage:** Checks manager availability, manifest health, and UNIX compliance.
+- **Usage:** Checks manager availability, manifest health, UNIX compliance, and shell completion installation status.
 - **Flags:** `--json`, `-j`, `--manager`, `-m` (Proposed)
-- **Behavior:** Audits managers, parses manifest, checks `NO_COLOR` and `stamp man check` statuses.
+- **Behavior:** Audits managers, parses manifest, checks `NO_COLOR`, `stamp man check` statuses, and shell completion installation.
+- **UNIX Compliance TTY section:**
+  ```text
+  UNIX Compliance:
+    NO_COLOR: ✅ Set
+    Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
+    Completions: ❌ Not installed — run 'stamp completion <shell>'
+  ```
 - **UNIX Compliance TTY section:**
   ```text
   UNIX Compliance:
@@ -234,7 +242,7 @@ stamp/
 ├── cmd/stamp/         → Main application entrypoint
 ├── internal/
 │   ├── cli/           → Cobra commands (init, reconcile, restore, install, etc.)
-│   ├── manager/       → Package manager adapters (dnf, brew, flatpak)
+│   ├── manager/       → Package manager adapters (dnf/yum, brew, flatpak)
 │   ├── state/         → Local JSON snapshotting and delta calculation
 │   ├── manifest/      → TOML parsing and writing
 │   └── config/        → XDG path resolution and user config

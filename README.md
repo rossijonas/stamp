@@ -105,7 +105,7 @@ stamp doctor        # Verify system configuration
 stamp man install   # Install offline man page documentation
 ```
 
-These steps are also suggested when you run `stamp hello`.
+These steps are also suggested when you run `stamp setup`.
 
 > **⚠️ Note on Privilege Escalation:** Package managers that require root (e.g., `dnf`) automatically wrap their write operations with `sudo` internally. Always run `stamp install htop` as your normal user — do **not** use `sudo stamp install`. Sudo prompts for your password in a terminal and fails gracefully in non-interactive environments (CI/pipelines).
 
