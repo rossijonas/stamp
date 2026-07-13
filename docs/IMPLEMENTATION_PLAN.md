@@ -134,6 +134,9 @@ Build the environment reconstruction logic and final touches.
 *   **Status:** ✅ Completed
 
 **Task 13: `stamp info` Package Info Command**
+*   **Status:** ✅ Completed
+
+**Task 13: `stamp info` Package Info Command**
 *   **Description:** Implement a command to show detailed package information across all package managers. Supports `--manager` flag to scope to a specific manager.
 *   **Acceptance:** Running `stamp info htop` shows package details from all managers that have it.
 *   **Status:** ✅ Completed
@@ -201,6 +204,21 @@ Build the environment reconstruction logic and final touches.
 **Task 23: `stamp update` Command (alias `upgrade`)**
 *   **Description:** Run system upgrades across all available managers in parallel. Supports `--manager, -m` flag to scope to a single manager.
 *   **Acceptance:** Running `stamp update` executes native update/upgrade commands concurrently per manager.
+*   **Status:** ⏳ Pending
+
+**Task 24: Migrate `stamp hello` to `stamp setup` Wizard**
+*   **Description:** Replace `stamp hello` with `stamp setup` interactive wizard. Keep `hello` as alias. Run completion, man install, init (with prompts, default Yes), then doctor (no prompt). Support `-y` flag for scripting.
+*   **Acceptance:** `stamp setup -y` runs all steps without prompts. `stamp hello` continues to work as alias.
+*   **Status:** ⏳ Pending
+
+**Task 25: Add Shell Completion Check to `stamp doctor`**
+*   **Description:** Check common shell completion paths (bash, zsh, fish) and report status in doctor TTY and JSON output.
+*   **Acceptance:** `stamp doctor` shows ✅ or ❌ for completions in both TTY and JSON modes.
+*   **Status:** ⏳ Pending
+
+**Task 26: Add `yum` as Alias to `dnf` Manager**
+*   **Description:** Automatically detect `yum` when `dnf` is unavailable (RHEL/CentOS 7). Use resolved command name for all exec calls.
+*   **Acceptance:** `stamp` works on systems with only `yum` installed.
 *   **Status:** ⏳ Pending
 
 ### Phase 5: Project Licensing & Governance
