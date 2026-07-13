@@ -8,7 +8,9 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | `stamp install <pkg>` | `add` | ✅ | ✅ | ✅ Resolver → adapter → manifest | ✅ Complete |
 | `stamp remove <pkg>` | `uninstall`, `rm`, `delete`, `del` | ✅ | ✅ | ✅ Manifest lookup + adapter | ✅ Complete |
+| `stamp reinstall <pkg>` | | ✅ | ✅ | ✅ Manifest lookup → adapter install | ✅ Complete |
 | `stamp search <query>` | | ✅ | ✅ | ✅ Queries adapters | ✅ Complete |
+| `stamp info <pkg>` | | ✅ | ✅ | ✅ Queries adapter Info() | ✅ Complete |
 | `stamp repo add <name> [url]` | `install` | ✅ | ✅ | ✅ Adapter + manifest (--manager required) | ✅ Complete |
 | `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✅ | ✅ | ✅ Adapter + manifest (--manager required) | ✅ Complete |
 | `stamp repo list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
@@ -16,13 +18,12 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp restore` | | ✅ | ✅ | ✅ Sequentially adds repos then concurrently installs packages | ✅ Complete |
 | `stamp doctor` | | ✅ | ✅ | ✅ Adapter check + manifest check + compliance report | ✅ Complete |
 | `stamp completion [shell]` | | ✅ | ✅ | ✅ Cobra Gen*Completion | ✅ Complete |
-| `stamp man` | | ✅ | ✅ | ✅ Cobra doc.GenMan | ✅ Complete |
+| `stamp man` | | ✅ | ✅ | ✅ Shows help for man command group | ✅ Complete |
+| `stamp hello` | | ✅ | ✅ | ✅ Prints ASCII logo + suggested next steps | ✅ Complete |
 | `stamp init` | | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp list` | `ls` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp self-update` | `self-upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
-| `stamp hello` | | ✅ | ❌ | ❌ | 📝 Spec ready (C1) |
-| `stamp info <pkg>` | | ✅ | ❌ | ❌ | 📝 Spec ready (C2) |
 
 ## Repository Commands
 
@@ -36,16 +37,16 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 
 | Command | Flags | SPEC.md | Implemented | Status |
 | :--- | :--- | :---: | :---: | :---: |
-| `stamp man` | | ✅ | ✅ Prints man page to stdout | ✅ Complete |
-| `stamp man install` | `--prefix` | ✅ | ❌ Currently `stamp man --install` | 🔄 Planned refactor |
-| `stamp man check` | | ✅ | ❌ | 📝 Spec ready (C3) |
+| `stamp man` | | ✅ | ✅ Shows help for man command group | ✅ Complete |
+| `stamp man install` | `--prefix` | ✅ | ✅ Installs stamp.1 to system path | ✅ Complete |
+| `stamp man check` | | ✅ | ✅ Verifies installed version matches binary | ✅ Complete |
 
 ## Global Flags
 
 | Flag | Short | SPEC.md | Implemented | Status |
 | :--- | :--- | :---: | :---: | :---: |
 | `--verbose` | `-v` | ✅ | ✅ Registered in root PersistentFlags | ✅ Complete |
-| `--json` | | ✅ | ✅ Registered in root PersistentFlags | ✅ Complete |
+| `--json` | `-j` | ✅ | ✅ Registered in root PersistentFlags | ✅ Complete |
 | `--yes` | `-y` | ✅ | ✅ Registered in root PersistentFlags | ✅ Complete |
 
 ## Per-Command Flags
@@ -53,23 +54,22 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | Command | Flag | Short | SPEC.md | Implemented | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | `stamp install` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
-| `stamp install` | `--note <text>` | | ✅ | ✅ | ✅ Complete |
+| `stamp install` | `--note <text>` | `-n` | ✅ | ✅ | ✅ Complete |
 | `stamp remove` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp search` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
-| `stamp restore` | `--dry-run` | | ✅ | ✅ | ✅ Complete |
-| `stamp doctor` | `--json` | | ✅ | ✅ | ✅ Complete |
-| `stamp man` | `--install` | | ✅ | ❌ | 🔄 Planned refactor |
-| `stamp man` | `--prefix` | | ✅ | ❌ | 🔄 Planned refactor |
-| `stamp man install` | `--prefix` | | ❌ | ❌ | 📝 Proposed |
+| `stamp info` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
+| `stamp restore` | `--dry-run` | `-d` | ✅ | ✅ | ✅ Complete |
+| `stamp doctor` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
+| `stamp man install` | `--prefix` | | ✅ | ✅ | ✅ Complete |
 | `stamp self-update` | `--check` | | ✅ | ❌ | ⏳ Pending |
-| `stamp list` | `--json` | | ✅ | ❌ | ⏳ Pending |
-| `stamp repo list` | `--json` | | ✅ | ✅ | ✅ Complete |
-| `stamp reconcile` | `--manager <name>` | `-m` | ❌ | ❌ | 📝 Proposed |
-| `stamp restore` | `--manager <name>` | `-m` | ❌ | ❌ | 📝 Proposed |
+| `stamp list` | `--json` | `-j` | ✅ | ❌ | ⏳ Pending |
+| `stamp repo list` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
+| `stamp reconcile` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
+| `stamp restore` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
+| `stamp repo list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp doctor` | `--manager <name>` | `-m` | ❌ | ❌ | 📝 Proposed |
 | `stamp update` | `--manager <name>` | `-m` | ✅ | ❌ | ⏳ Pending |
 | `stamp list` | `--manager <name>` | `-m` | ❌ | ❌ | 📝 Proposed |
-| `stamp repo list` | `--manager <name>` | `-m` | ❌ | ❌ | 📝 Proposed |
 
 ## UNIX Compliance
 

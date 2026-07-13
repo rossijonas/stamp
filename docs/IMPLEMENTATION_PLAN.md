@@ -123,7 +123,7 @@ Build the environment reconstruction logic and final touches.
 | 10h | Uninstall documentation in README.md (standard + hard uninstall) | ✅ |
 
 **Task 11: Self-Update Subcommand**
-*   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports a `--check` flag to query without downloading.
+*   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports `--check, -c` flag to query without downloading.
 *   **Acceptance:** User can run `stamp self-update --check` to check, and `stamp self-update` to apply.
 *   **Verify:** Unit tests mock the release API and verify binary swap logic.
 *   **Status:** ⏳ Pending
@@ -145,8 +145,17 @@ Build the environment reconstruction logic and final touches.
 
 **Task 15: Per-Manager Flag Support**
 *   **Description:** Add `--manager`, `-m` flag to `stamp list`, `stamp reconcile`, `stamp restore`, `stamp doctor`, and `stamp update` to scope operations to a single package manager.
-*   **Acceptance:** All applicable commands accept `-m` flag and limit operations to the specified manager.
-*   **Status:** ✅ Completed
+*   **Status:** ⚠️ Partial
+
+| Subtask | Description | Status |
+| :--- | :--- | :---: |
+| 15a | `stamp reconcile -m` | ✅ |
+| 15b | `stamp restore -m` | ✅ |
+| 15c | `stamp doctor -m` | ⏳ Pending |
+| 15d | `stamp list -m` | ⏳ Pending (Task 22) |
+| 15e | `stamp update -m` | ⏳ Pending (Task 23) |
+
+#### Phase 4c — Infrastructure
 
 **Task 16: Multi-Platform Integration Testing**
 *   **Description:** Add CI matrix testing across Fedora, Ubuntu, Arch Linux, macOS, and Windows using Docker containers and parallel pipeline jobs. Each environment runs the full test suite against real package managers.
@@ -170,10 +179,14 @@ Build the environment reconstruction logic and final touches.
 *   **Acceptance:** Every registered subcommand has a corresponding `docs/usage/*.md` page. `docs/man/stamp.1` exists and is up to date.
 *   **Status:** ✅ Completed
 
+#### Phase 4b — Medium Features
+
 **Task 20: Create GitHub Pages Landing Page**
 *   **Description:** Create `docs/index.html` as a custom landing page for GitHub Pages. Content requirements defined in SPEC.md → Project Landing Page. Source tagline and features from README.md.
 *   **Acceptance:** Navigating to `https://rossijonas.github.io/stamp/` displays the project landing page.
 *   **Status:** ⏳ Pending
+
+#### Phase 4a — Quick Wins
 
 **Task 21: `stamp init` Command**
 *   **Description:** Initialize `manifest.toml` and take baseline snapshot of current system packages. Create XDG directories (`~/.config/stamp`, `~/.local/share/stamp/snapshots`). Suggested by `stamp hello` output.
