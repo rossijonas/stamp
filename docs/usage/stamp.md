@@ -22,6 +22,7 @@ stamp [flags]
 * [stamp hello](stamp_hello.md)	 - Print welcome message and recommended next steps
 * [stamp info](stamp_info.md)	 - Show package information across managers
 * [stamp install](stamp_install.md)	 - Install a package and record intent
+* [stamp list](stamp_list.md)	 - List all intentionally installed packages
 * [stamp man](stamp_man.md)	 - Manage stamp troff man pages
 * [stamp reconcile](stamp_reconcile.md)	 - Detect packages installed outside stamp and add them to the manifest
 * [stamp reinstall](stamp_reinstall.md)	 - Reinstall a package currently tracked in the manifest

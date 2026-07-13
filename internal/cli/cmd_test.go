@@ -663,3 +663,145 @@ manager = "flatpak"
 	assert.Contains(t, buf3.String(), `"Name": "my-tap"`)
 	assert.Contains(t, buf3.String(), `"Manager": "brew"`)
 }
+
+func TestListCmd_Empty(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"list"}, []manager.Adapter{})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "no packages tracked")
+}
+
+func TestListCmd_WithEntries(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+`
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"list"})
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "htop (dnf)")
+	assert.Contains(t, output, "lazygit (brew)")
+}
+
+func TestListCmd_JSON(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+`
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"list", "--json"})
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), `"Name": "htop"`)
+	assert.Contains(t, buf.String(), `"Manager": "dnf"`)
+}
+
+func TestListCmd_ManagerFlag(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+`
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"list", "-m", "brew"})
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "lazygit (brew)")
+	assert.NotContains(t, output, "htop")
+}
+
+func TestListCmd_ManagerFlagNoMatch(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+`
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"list", "-m", "brew"})
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "no packages tracked")
+}
+
+func TestListCmd_Aliases(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+`
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"ls"})
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "htop (dnf)")
+}
+
+func TestListCmd_EmptyJSON(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"list", "--json"}, []manager.Adapter{})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "[]")
+}
