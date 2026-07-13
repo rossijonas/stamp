@@ -131,7 +131,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
 ### `stamp install <pkg>` (alias `add`)
 - **Usage:** Installs a package natively and records it in the manifest.
 - **Flags:** `--manager`, `-m`, `--note`, `-n`
-- **Behavior:** Validates name, resolves manager, runs native install, appends package to manifest, saves manifest.
+- **Behavior:** Validates name, resolves manager, runs native install, appends package to manifest, saves manifest. For managers requiring root (e.g., DNF), write operations automatically wrap with `sudo` — TTY-aware, prompts for password when needed.
 
 ### `stamp remove <pkg>` (aliases `uninstall`, `rm`, `delete`, `del`)
 - **Usage:** Removes a package natively and untracks it.

@@ -23,6 +23,9 @@ Use -m to filter by a specific package manager.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
+			if app.manifestErr != nil {
+				return app.manifestErr
+			}
 
 			pkgs := app.manifest.Packages
 			if managerFlag != "" {

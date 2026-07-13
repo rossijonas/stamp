@@ -107,6 +107,8 @@ stamp man install   # Install offline man page documentation
 
 These steps are also suggested when you run `stamp hello`.
 
+> **⚠️ Note on Privilege Escalation:** Package managers that require root (e.g., `dnf`) automatically wrap their write operations with `sudo` internally. Always run `stamp install htop` as your normal user — do **not** use `sudo stamp install`. Sudo prompts for your password in a terminal and fails gracefully in non-interactive environments (CI/pipelines).
+
 #### ⚙ Workflow A: Active Management (Recommended)
 
 Use `stamp` as your primary package installer. This guarantees 100% traceability of your intent instantly. It will auto-detect the best package manager or allow you to specify one.
