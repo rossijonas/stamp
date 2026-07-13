@@ -112,3 +112,19 @@ func TestInfoCmd_CorruptedManifest(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse manifest")
 }
+
+func TestInfoCmd_BrewVersion(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName: "brew",
+			InfoResult:  "==> htop: stable 3.4.1 (bottled), HEAD\nhttps://htop.dev/\n",
+		},
+	}
+
+	buf, err := execCmd(t, []string{"info", "htop"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "stable 3.4.1 (bottled), HEAD")
+	assert.NotContains(t, output, "available")
+}
