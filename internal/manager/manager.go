@@ -49,6 +49,9 @@ type Adapter interface {
 
 	// Info queries the native package manager for details on the given package.
 	Info(ctx context.Context, pkg string) (string, error)
+
+	// Doctor runs the native diagnostic command for the package manager.
+	Doctor(ctx context.Context) (string, error)
 }
 
 // parseLines splits byte output by newline and removes empty strings.

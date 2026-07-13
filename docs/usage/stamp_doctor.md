@@ -14,7 +14,8 @@ stamp doctor [flags]
 ### Options
 
 ```
-  -h, --help   help for doctor
+  -h, --help             help for doctor
+  -m, --manager string   package manager to check
 ```
 
 ### Options inherited from parent commands

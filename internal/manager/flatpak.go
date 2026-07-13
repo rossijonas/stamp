@@ -102,3 +102,8 @@ func (m *Flatpak) Info(ctx context.Context, pkg string) (string, error) {
 	}
 	return string(out), nil
 }
+
+// Doctor returns an error since flatpak has no native diagnostic command.
+func (m *Flatpak) Doctor(_ context.Context) (string, error) {
+	return "", fmt.Errorf("doctor not supported for flatpak")
+}

@@ -105,3 +105,8 @@ func (m *DNF) Info(ctx context.Context, pkg string) (string, error) {
 	}
 	return string(out), nil
 }
+
+// Doctor returns an error since dnf has no native diagnostic command.
+func (m *DNF) Doctor(_ context.Context) (string, error) {
+	return "", fmt.Errorf("doctor not supported for dnf")
+}

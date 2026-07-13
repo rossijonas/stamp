@@ -162,3 +162,34 @@ func TestDoctor_ManPage_Healthy(t *testing.T) {
 	assert.True(t, report.ManPage.Installed)
 	assert.Equal(t, "dev", report.ManPage.Version)
 }
+
+func TestDoctor_ManagerFlag_Active(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "brew"},
+		&manager.Mock{ManagerName: "dnf"},
+	}
+
+	buf, err := execCmd(t, []string{"doctor", "-m", "brew"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "brew")
+	assert.NotContains(t, output, "dnf")
+}
+
+func TestDoctor_ManagerFlag_NotFound(t *testing.T) {
+	_, err := execCmd(t, []string{"doctor", "-m", "nonexistent"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not available on this system")
+}
+
+func TestDoctor_ManagerFlag_NativeOutput(t *testing.T) {
+	buf, err := execCmd(t, []string{"doctor", "-m", "brew"}, []manager.Adapter{&manager.Mock{ManagerName: "brew", DoctorResult: "Your system is ready to brew."}})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "brew doctor:")
+	assert.Contains(t, output, "Your system is ready to brew.")
+}

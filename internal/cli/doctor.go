@@ -7,6 +7,8 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossijonas/stamp/internal/manager"
 )
 
 type managerStatus struct {
@@ -32,6 +34,8 @@ type doctorReport struct {
 }
 
 func newDoctorCmd() *cobra.Command {
+	var managerFlag string
+
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Diagnose system configuration and manifest health",
@@ -42,6 +46,25 @@ Reports which managers are installed and whether the manifest is valid.`,
 			app := appFromCtx(cmd)
 			if app == nil {
 				return fmt.Errorf("app context not initialized")
+			}
+
+			if managerFlag != "" {
+				var adapter manager.Adapter
+				for _, a := range app.adapters {
+					if a.Name() == managerFlag {
+						adapter = a
+						break
+					}
+				}
+				if adapter == nil {
+					return fmt.Errorf("manager %q not available on this system", managerFlag)
+				}
+				result, err := adapter.Doctor(cmd.Context())
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s doctor:\n\n%s\n", managerFlag, result)
+				return nil
 			}
 
 			adapterNames := make(map[string]bool)
@@ -164,5 +187,6 @@ Reports which managers are installed and whether the manifest is valid.`,
 		},
 	}
 
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to check")
 	return cmd
 }

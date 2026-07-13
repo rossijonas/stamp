@@ -105,3 +105,12 @@ func (m *Brew) Info(ctx context.Context, pkg string) (string, error) {
 	}
 	return string(out), nil
 }
+
+// Doctor runs brew doctor diagnostic.
+func (m *Brew) Doctor(ctx context.Context) (string, error) {
+	out, err := m.exec(ctx, "brew", "doctor")
+	if err != nil {
+		return "", fmt.Errorf("brew doctor failed: %w", err)
+	}
+	return string(out), nil
+}
