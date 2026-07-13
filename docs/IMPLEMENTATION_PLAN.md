@@ -191,7 +191,7 @@ Build the environment reconstruction logic and final touches.
 **Task 21: `stamp init` Command**
 *   **Description:** Initialize `manifest.toml` and take baseline snapshot of current system packages. Create XDG directories (`~/.config/stamp`, `~/.local/share/stamp/snapshots`). Suggested by `stamp hello` output.
 *   **Acceptance:** Running `stamp init` creates config dir, snapshot dir, empty manifest.toml, and baseline snapshot for each available manager.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 22: `stamp list` Command (alias `ls`)**
 *   **Description:** List all intentionally installed packages from the manifest. Supports `--json, -j` and `--manager, -m` flags.

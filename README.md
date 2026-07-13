@@ -95,6 +95,18 @@
 
 `stamp` is designed to be flexible. You can use it actively as a unified wrapper, or passively as a safety net.
 
+#### 🔰 First-Time Setup
+
+Before using `stamp`, initialize your environment to create the manifest and take a baseline snapshot of your system:
+
+```bash
+stamp init          # Creates manifest.toml + baseline snapshot
+stamp doctor        # Verify system configuration
+stamp man install   # Install offline man page documentation
+```
+
+These steps are also suggested when you run `stamp hello`.
+
 #### ⚙ Workflow A: Active Management (Recommended)
 
 Use `stamp` as your primary package installer. This guarantees 100% traceability of your intent instantly. It will auto-detect the best package manager or allow you to specify one.

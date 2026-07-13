@@ -21,6 +21,7 @@ stamp [flags]
 * [stamp doctor](stamp_doctor.md)	 - Diagnose system configuration and manifest health
 * [stamp hello](stamp_hello.md)	 - Print welcome message and recommended next steps
 * [stamp info](stamp_info.md)	 - Show package information across managers
+* [stamp init](stamp_init.md)	 - Initialize manifest.toml and take baseline snapshot
 * [stamp install](stamp_install.md)	 - Install a package and record intent
 * [stamp list](stamp_list.md)	 - List all intentionally installed packages
 * [stamp man](stamp_man.md)	 - Manage stamp troff man pages
