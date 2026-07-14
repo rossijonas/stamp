@@ -9,20 +9,23 @@ import (
 
 // Mock is a dummy implementation of Adapter for testing.
 type Mock struct {
-	ManagerName   string
-	InstalledPkgs []string
-	AvailablePkgs []string
-	TrackedRepos  []string
-	ListErr       error
-	InstallErr    error
-	RemoveErr     error
-	SearchErr     error
-	AddRepoErr    error
-	RemoveRepoErr error
-	InfoErr       error
-	InfoResult    string
-	DoctorResult  string
-	DoctorErr     error
+	ManagerName    string
+	InstalledPkgs  []string
+	InstalledRepos []string
+	AvailablePkgs  []string
+	TrackedRepos   []string
+	ListErr        error
+	ListReposErr   error
+	InstallErr     error
+	ReinstallErr   error
+	RemoveErr      error
+	SearchErr      error
+	AddRepoErr     error
+	RemoveRepoErr  error
+	InfoErr        error
+	InfoResult     string
+	DoctorResult   string
+	DoctorErr      error
 }
 
 // Name returns the package manager identifier.
@@ -39,6 +42,17 @@ func (m *Mock) ListInstalled(_ context.Context) ([]string, error) {
 	return slices.Clone(m.InstalledPkgs), nil
 }
 
+// ListRepos returns a list of repositories currently configured.
+func (m *Mock) ListRepos(_ context.Context) ([]string, error) {
+	if m.ListReposErr != nil {
+		return nil, m.ListReposErr
+	}
+	if m.InstalledRepos != nil {
+		return slices.Clone(m.InstalledRepos), nil
+	}
+	return slices.Clone(m.TrackedRepos), nil
+}
+
 // Install executes the native installation command.
 func (m *Mock) Install(_ context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
@@ -47,10 +61,28 @@ func (m *Mock) Install(_ context.Context, pkg string) error {
 	if m.InstallErr != nil {
 		return m.InstallErr
 	}
-	// Don't add if it's already there
 	for _, p := range m.InstalledPkgs {
 		if p == pkg {
 			return nil
+		}
+	}
+	m.InstalledPkgs = append(m.InstalledPkgs, pkg)
+	return nil
+}
+
+// Reinstall executes the native reinstallation command.
+func (m *Mock) Reinstall(_ context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	if m.ReinstallErr != nil {
+		return m.ReinstallErr
+	}
+	// Remove then re-add to simulate reinstall
+	for i, p := range m.InstalledPkgs {
+		if p == pkg {
+			m.InstalledPkgs = slices.Delete(m.InstalledPkgs, i, i+1)
+			break
 		}
 	}
 	m.InstalledPkgs = append(m.InstalledPkgs, pkg)

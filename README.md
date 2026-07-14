@@ -39,7 +39,7 @@
 
 ✔️ **Unified Repository Management** - *Add, remove, and list third-party repositories (repos, taps, remotes) across all managers with the same interface.*
 
-✔️ **Safety Net Reconciliation** - *Forgot to use stamp? `stamp reconcile` detects packages installed outside the tool and adds them to your manifest retroactively.*
+✔️ **Safety Net Reconciliation** - *Forgot to use stamp? `stamp reconcile` auto-detects packages installed outside the tool and adds them to your manifest without prompting. Preview with `--dry-run` first.*
 
 ✔️ **Self-Contained Documentation** - *Built-in man page generation (`stamp man install`), shell completions (`stamp completion bash|zsh|fish|powershell`), and auto-generated CLI reference docs.*
 
@@ -144,10 +144,13 @@ brew install jq
 ```
 
 **2. Reconcile:**
-Run `reconcile` periodically. `stamp` compares your current system against its snapshot, detects the newly installed `ripgrep` and `jq`, and prompts you to add them to your manifest. You can also pass the `-y` / `--yes` flag to automatically track all newly detected packages without interactive prompts (ideal for automated crontabs).
+Run `reconcile` periodically. `stamp` compares your current system against its snapshot, detects newly installed `ripgrep` and `jq`, and auto-tracks them to your manifest — no prompts, no decisions. Preview drift with `--dry-run` before committing:
 ```bash
-stamp reconcile -y
+stamp reconcile --dry-run   # preview only
+stamp reconcile             # auto-track detected changes
 ```
+
+> **Note:** Only packages installed *after* your last snapshot are detected. Pre-existing packages (installed before `stamp init`) are not visible to reconcile. To track a pre-existing package, use `stamp reinstall <pkg>` instead.
 
 ### ⚒ Rebuilding Your Environment
 

@@ -32,8 +32,14 @@ type Adapter interface {
 	// For MVP, this just returns the package names.
 	ListInstalled(ctx context.Context) ([]string, error)
 
+	// ListRepos returns a list of third-party repositories or taps currently configured.
+	ListRepos(ctx context.Context) ([]string, error)
+
 	// Install executes the native installation command for the given package.
 	Install(ctx context.Context, pkg string) error
+
+	// Reinstall executes the native reinstallation command for the given package.
+	Reinstall(ctx context.Context, pkg string) error
 
 	// Remove executes the native removal command for the given package.
 	Remove(ctx context.Context, pkg string) error

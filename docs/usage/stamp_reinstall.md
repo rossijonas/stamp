@@ -1,11 +1,12 @@
 ## stamp reinstall
 
-Reinstall a package currently tracked in the manifest
+Reinstall a package and record it in the manifest
 
 ### Synopsis
 
 Look up the package in the manifest to find its recorded package manager,
-then execute the native reinstallation command for that package.
+then execute the native reinstallation command. If the package is not
+tracked in the manifest, resolve the manager and track it.
 
 ```
 stamp reinstall <package> [flags]
@@ -14,7 +15,8 @@ stamp reinstall <package> [flags]
 ### Options
 
 ```
-  -h, --help   help for reinstall
+  -h, --help             help for reinstall
+  -m, --manager string   package manager to use (pre-existing packages only)
 ```
 
 ### Options inherited from parent commands

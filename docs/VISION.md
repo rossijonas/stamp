@@ -29,10 +29,10 @@ Existing tools fail to bridge this gap:
    Use `stamp install <pkg>` as your daily driver. `stamp` auto-detects the best native manager, executes the install, and instantly records your intent. This guarantees 100% traceability from day one.
 
 2. **The Passive Safety Net (`reconcile`)**
-   If you or a script accidentally bypass `stamp` and use `dnf install` directly, your intent tracking doesn't break. The `reconcile` command acts as a safety net, detecting the drift and prompting you to track the new package retroactively.
+   If you or a script accidentally bypass `stamp` and use `dnf install` directly, your intent tracking doesn't break. The `reconcile` command acts as a safety net, detecting the drift and auto-tracking the new package retroactively — no prompts, no decisions. Preview with `--dry-run` to inspect before committing.
 
 3. **Intent vs. State**
-   `stamp` does not care about the thousands of dependencies on your system. It only cares about the tools you *intentionally* chose to install. It filters out the noise to create a clean, human-readable manifest.
+   `stamp` does not care about the thousands of dependencies on your system. It only cares about the tools you *intentionally* chose to install. It filters out the noise to create a clean, human-readable manifest. Packages installed before `stamp init` (pre-existing) are not considered intentional — they are captured in the baseline snapshot. To intentionally track a pre-existing package, use `stamp reinstall <pkg>`.
 
 4. **Multi-Manager by Default**
    A developer's environment spans multiple ecosystems. `stamp` treats `dnf`, `flatpak`, and `brew` as first-class citizens, combining them into a single, unified state file.

@@ -26,7 +26,9 @@ type mockAdapter struct {
 
 func (m *mockAdapter) Name() string                                      { return m.name }
 func (m *mockAdapter) ListInstalled(_ context.Context) ([]string, error) { return nil, m.err }
+func (m *mockAdapter) ListRepos(_ context.Context) ([]string, error)     { return nil, m.err }
 func (m *mockAdapter) Install(_ context.Context, _ string) error         { return m.err }
+func (m *mockAdapter) Reinstall(_ context.Context, _ string) error       { return m.err }
 func (m *mockAdapter) Remove(_ context.Context, _ string) error          { return m.err }
 func (m *mockAdapter) Search(_ context.Context, q string) ([]string, error) {
 	if m.searchResults != nil {

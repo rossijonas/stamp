@@ -124,8 +124,65 @@ func TestDiff(t *testing.T) {
 			assert.Equal(t, tt.expected.Manager, result.Manager)
 			assert.ElementsMatch(t, tt.expected.Added, result.Added)
 			assert.ElementsMatch(t, tt.expected.Removed, result.Removed)
+			assert.Empty(t, result.AddedRepos)
+			assert.Empty(t, result.RemovedRepos)
 		})
 	}
+}
+
+func TestDiff_ReposAdded(t *testing.T) {
+	t.Parallel()
+	oldS := Snapshot{
+		Manager:      "brew",
+		Packages:     []string{"git"},
+		Repositories: []string{},
+	}
+	newS := Snapshot{
+		Manager:      "brew",
+		Packages:     []string{"git"},
+		Repositories: []string{"aovestdipaperino/tap", "yvgude/lean-ctx"},
+	}
+
+	result := Diff(oldS, newS)
+	assert.Equal(t, "brew", result.Manager)
+	assert.Empty(t, result.Added)
+	assert.Empty(t, result.Removed)
+	assert.ElementsMatch(t, []string{"aovestdipaperino/tap", "yvgude/lean-ctx"}, result.AddedRepos)
+	assert.Empty(t, result.RemovedRepos)
+}
+
+func TestDiff_ReposRemoved(t *testing.T) {
+	t.Parallel()
+	oldS := Snapshot{
+		Manager:      "brew",
+		Packages:     []string{"git"},
+		Repositories: []string{"old-tap"},
+	}
+	newS := Snapshot{
+		Manager:      "brew",
+		Packages:     []string{"git"},
+		Repositories: []string{},
+	}
+
+	result := Diff(oldS, newS)
+	assert.ElementsMatch(t, []string{"old-tap"}, result.RemovedRepos)
+	assert.Empty(t, result.AddedRepos)
+}
+
+func TestDiff_ReposMixed(t *testing.T) {
+	t.Parallel()
+	oldS := Snapshot{
+		Manager:      "brew",
+		Repositories: []string{"a", "b"},
+	}
+	newS := Snapshot{
+		Manager:      "brew",
+		Repositories: []string{"b", "c"},
+	}
+
+	result := Diff(oldS, newS)
+	assert.ElementsMatch(t, []string{"c"}, result.AddedRepos)
+	assert.ElementsMatch(t, []string{"a"}, result.RemovedRepos)
 }
 
 func TestDiffAll_Empty(t *testing.T) {
@@ -136,8 +193,9 @@ func TestDiffAll_Empty(t *testing.T) {
 func TestDiffAll(t *testing.T) {
 	oldSnaps := []Snapshot{
 		{
-			Manager:  "brew",
-			Packages: []string{"lazygit", "jq"},
+			Manager:      "brew",
+			Packages:     []string{"lazygit", "jq"},
+			Repositories: []string{"homebrew/core"},
 		},
 		{
 			Manager:  "dnf",
@@ -147,16 +205,17 @@ func TestDiffAll(t *testing.T) {
 
 	newSnaps := []Snapshot{
 		{
-			Manager:  "brew",
-			Packages: []string{"lazygit", "ripgrep"}, // jq removed, ripgrep added
+			Manager:      "brew",
+			Packages:     []string{"lazygit", "ripgrep"},
+			Repositories: []string{"homebrew/core", "aovestdipaperino/tap"},
 		},
 		{
 			Manager:  "dnf",
-			Packages: []string{"htop", "curl", "tmux"}, // htop, curl kept, tmux added
+			Packages: []string{"htop", "curl", "tmux"},
 		},
 		{
 			Manager:  "flatpak",
-			Packages: []string{"spotify"}, // new manager detected, all added
+			Packages: []string{"spotify"},
 		},
 	}
 
@@ -165,9 +224,11 @@ func TestDiffAll(t *testing.T) {
 
 	expectedMap := map[string]*Delta{
 		"brew": {
-			Manager: "brew",
-			Added:   []string{"ripgrep"},
-			Removed: []string{"jq"},
+			Manager:      "brew",
+			Added:        []string{"ripgrep"},
+			Removed:      []string{"jq"},
+			AddedRepos:   []string{"aovestdipaperino/tap"},
+			RemovedRepos: []string{},
 		},
 		"dnf": {
 			Manager: "dnf",
@@ -186,6 +247,8 @@ func TestDiffAll(t *testing.T) {
 		require.True(t, ok, "unexpected manager delta: %s", d.Manager)
 		assert.ElementsMatch(t, exp.Added, d.Added)
 		assert.ElementsMatch(t, exp.Removed, d.Removed)
+		assert.ElementsMatch(t, exp.AddedRepos, d.AddedRepos)
+		assert.ElementsMatch(t, exp.RemovedRepos, d.RemovedRepos)
 	}
 }
 

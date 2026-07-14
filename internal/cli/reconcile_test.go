@@ -2,10 +2,8 @@ package cli
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,31 +27,9 @@ func TestReconcile_NoDrift(t *testing.T) {
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	buf, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "No drift detected")
-}
-
-func TestReconcile_NonTTYAutoTrack(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit", "jq", "ripgrep"},
-		},
-	}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit", "jq"}},
-	})
-
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	// Do NOT pass --yes. In non-TTY (CI), reconcile should auto-track.
 	buf, err := execCmd(t, []string{"reconcile"}, adapters)
 	require.NoError(t, err)
-	output := buf.String()
-	assert.Contains(t, output, "Discovered 1 new package(s)")
-	assert.Contains(t, output, "Tracked 1 package(s)")
+	assert.Contains(t, buf.String(), "No drift detected")
 }
 
 func TestReconcile_DriftAndAutoTrack(t *testing.T) {
@@ -70,7 +46,7 @@ func TestReconcile_DriftAndAutoTrack(t *testing.T) {
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	buf, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
 	assert.Contains(t, output, "Discovered 1 new package(s)")
@@ -97,7 +73,7 @@ func TestReconcile_MultipleManagers(t *testing.T) {
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	buf, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
 	assert.Contains(t, output, "Discovered 3 new package(s)")
@@ -118,13 +94,30 @@ func TestReconcile_FirstRun(t *testing.T) {
 	snapDir := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	buf, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "initial baseline snapshot taken")
 }
 
+func TestReconcile_FirstRunDryRun(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "jq"},
+		},
+	}
+
+	snapDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile", "--dry-run"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "No baseline snapshot exists")
+}
+
 func TestReconcile_NoAdapters(t *testing.T) {
-	_, err := execCmd(t, []string{"reconcile", "--yes"}, []manager.Adapter{})
+	_, err := execCmd(t, []string{"reconcile"}, []manager.Adapter{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no package managers available")
 }
@@ -137,17 +130,14 @@ func TestReconcile_CorruptSnapshot(t *testing.T) {
 		},
 	}
 
-	// Simulate XDG dir and write invalid JSON into a snapshot
 	snapDir := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	// Write a corrupted snapshot to trigger error on Load
-	// The correct structure needs to be in {snapDir}/stamp/snapshots/brew.json
 	snapshotDir := filepath.Join(snapDir, "stamp", "snapshots")
 	require.NoError(t, os.MkdirAll(snapshotDir, 0700))
 	require.NoError(t, os.WriteFile(filepath.Join(snapshotDir, "brew.json"), []byte("{invalid"), 0600))
 
-	_, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
+	_, err := execCmd(t, []string{"reconcile"}, adapters)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to load snapshot for brew")
 }
@@ -166,10 +156,8 @@ func TestReconcile_AlreadyTracked(t *testing.T) {
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	// Pre-create the manifest path with ripgrep already tracked
 	manifestDir := t.TempDir()
 	manifestPath := filepath.Join(manifestDir, "manifest.toml")
-	// Write a manifest with ripgrep already present to test duplicate dedup
 	manifestContent := `version = 1
 system = "linux"
 
@@ -185,26 +173,13 @@ manager = "brew"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile", "--yes"})
+	root.SetArgs([]string{"reconcile"})
 
 	err := root.Execute()
 	require.NoError(t, err)
 	output := buf.String()
 	assert.Contains(t, output, "Discovered 1 new package(s)")
 	assert.Contains(t, output, "Tracked 0 package(s)")
-}
-
-func TestIsTerminal(t *testing.T) {
-	// Pipe is not a terminal
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	defer func() { _ = r.Close() }()
-	defer func() { _ = w.Close() }()
-
-	assert.False(t, isTerminal(r))
-	assert.False(t, isTerminal(w))
-	// nil reader is not a terminal
-	assert.False(t, isTerminal(nil))
 }
 
 func TestReconcile_ListInstalledError(t *testing.T) {
@@ -221,7 +196,7 @@ func TestReconcile_ListInstalledError(t *testing.T) {
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	_, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
+	_, err := execCmd(t, []string{"reconcile"}, adapters)
 	require.Error(t, err)
 }
 
@@ -238,41 +213,11 @@ func TestReconcile_CorruptedManifest(t *testing.T) {
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile", "--yes"})
+	root.SetArgs([]string{"reconcile"})
 
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse manifest")
-}
-
-func TestReconcile_Cancel(t *testing.T) {
-	oldIsTerminal := isTerminal
-	isTerminal = func(_ io.Reader) bool { return true }
-	defer func() { isTerminal = oldIsTerminal }()
-
-	adapters := []manager.Adapter{&manager.Mock{
-		ManagerName:   "brew",
-		InstalledPkgs: []string{"lazygit", "ripgrep"},
-	}}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit"}},
-	})
-
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	root := NewRootCmd(WithAdapters(adapters), WithConfigPath(filepath.Join(t.TempDir(), "config.toml")), WithManifestPath(filepath.Join(t.TempDir(), "manifest.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetIn(strings.NewReader("n\n"))
-	root.SetArgs([]string{"reconcile"})
-
-	err := root.Execute()
-	require.NoError(t, err)
-	output := buf.String()
-	assert.Contains(t, output, "Discovered 1 new package(s)")
-	assert.Contains(t, output, "Packages not tracked")
 }
 
 func TestReconcile_ManagerFlag_Success(t *testing.T) {
@@ -294,8 +239,7 @@ func TestReconcile_ManagerFlag_Success(t *testing.T) {
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	// Reconcile only brew — should discover ripgrep, ignore dnf changes
-	buf, err := execCmd(t, []string{"reconcile", "--yes", "-m", "brew"}, adapters)
+	buf, err := execCmd(t, []string{"reconcile", "-m", "brew"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
 	assert.Contains(t, output, "Discovered 2 new package(s)")
@@ -312,9 +256,140 @@ func TestReconcile_ManagerFlag_NotFound(t *testing.T) {
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	_, err := execCmd(t, []string{"reconcile", "--yes", "-m", "nonexistent"}, adapters)
+	_, err := execCmd(t, []string{"reconcile", "-m", "nonexistent"}, adapters)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not available on this system")
+}
+
+func TestReconcile_RepoDrift(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:    "brew",
+			InstalledPkgs:  []string{"lazygit"},
+			InstalledRepos: []string{"aovestdipaperino/tap", "yvgude/lean-ctx"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 2 new repository(ies)")
+	assert.Contains(t, output, "aovestdipaperino/tap (brew)")
+	assert.Contains(t, output, "yvgude/lean-ctx (brew)")
+	assert.Contains(t, output, "Tracked 0 package(s), 2 repository(ies)")
+}
+
+func TestReconcile_RepoAndPackageDrift(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:    "brew",
+			InstalledPkgs:  []string{"lazygit", "ripgrep"},
+			InstalledRepos: []string{"aovestdipaperino/tap"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "Discovered 1 new repository(ies)")
+	assert.Contains(t, output, "Tracked 1 package(s), 1 repository(ies)")
+}
+
+func TestReconcile_DryRun(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "jq", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "jq"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile", "--dry-run"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "Use `stamp reconcile` without --dry-run to track")
+	assert.NotContains(t, output, "Tracked")
+}
+
+func TestReconcile_DryRun_NoDrift(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "jq"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "jq"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile", "--dry-run"}, adapters)
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "No drift detected")
+}
+
+func TestReconcile_YFlag_Compatibility(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "jq", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "jq"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile", "--yes"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "Tracked 1 package(s)")
+}
+
+func TestReconcile_DryRun_ShortFlag(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "jq", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "jq"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile", "-d"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "Use `stamp reconcile` without --dry-run to track")
+	assert.NotContains(t, output, "Tracked")
 }
 
 // setupSnapshots saves snapshots to {tmpDir}/stamp/snapshots/ and returns tmpDir.

@@ -5,8 +5,8 @@ Detect packages installed outside stamp and add them to the manifest
 ### Synopsis
 
 Compare the current system package state against the last snapshot.
-Any new packages found are surfaced as potential intentional installs
-and can be added to the manifest.
+Any new packages found are auto-tracked to the manifest.
+Use --dry-run to preview drift without tracking.
 
 ```
 stamp reconcile [flags]
@@ -15,6 +15,7 @@ stamp reconcile [flags]
 ### Options
 
 ```
+  -d, --dry-run          preview drift without tracking
   -h, --help             help for reconcile
   -m, --manager string   package manager to reconcile
 ```

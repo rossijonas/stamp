@@ -15,19 +15,22 @@ import (
 	"github.com/rossijonas/stamp/internal/manager"
 )
 
-// Snapshot represents a point-in-time record of packages installed
+// Snapshot represents a point-in-time record of packages and repositories installed
 // by a single package manager.
 type Snapshot struct {
-	Manager   string    `json:"manager"`
-	Packages  []string  `json:"packages"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Manager      string    `json:"manager"`
+	Packages     []string  `json:"packages"`
+	Repositories []string  `json:"repositories,omitempty"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// Delta represents the difference (added and removed packages) between two snapshots.
+// Delta represents the difference (added and removed packages/repos) between two snapshots.
 type Delta struct {
-	Manager string   `json:"manager"`
-	Added   []string `json:"added"`
-	Removed []string `json:"removed"`
+	Manager      string   `json:"manager"`
+	Added        []string `json:"added"`
+	Removed      []string `json:"removed"`
+	AddedRepos   []string `json:"added_repos,omitempty"`
+	RemovedRepos []string `json:"removed_repos,omitempty"`
 }
 
 func xdgStateDir() string {
@@ -90,7 +93,7 @@ func Load(dir, managerName string) (*Snapshot, error) {
 	return &snap, nil
 }
 
-// Current fetches the live list of installed packages from all adapters concurrently.
+// Current fetches the live list of installed packages and repositories from all adapters concurrently.
 func Current(ctx context.Context, adapters []manager.Adapter) ([]Snapshot, error) {
 	type result struct {
 		snap Snapshot
@@ -109,11 +112,17 @@ func Current(ctx context.Context, adapters []manager.Adapter) ([]Snapshot, error
 				ch <- result{err: fmt.Errorf("failed to list installed for %s: %w", a.Name(), err)}
 				return
 			}
+			repos, err := a.ListRepos(ctx)
+			if err != nil {
+				ch <- result{err: fmt.Errorf("failed to list repositories for %s: %w", a.Name(), err)}
+				return
+			}
 			ch <- result{
 				snap: Snapshot{
-					Manager:   a.Name(),
-					Packages:  packages,
-					UpdatedAt: time.Now(),
+					Manager:      a.Name(),
+					Packages:     packages,
+					Repositories: repos,
+					UpdatedAt:    time.Now(),
 				},
 			}
 		}(adapter)
@@ -133,20 +142,11 @@ func Current(ctx context.Context, adapters []manager.Adapter) ([]Snapshot, error
 	return snapshots, nil
 }
 
-// Diff calculates the added and removed packages between an old and new snapshot.
-func Diff(oldSnap, newSnap Snapshot) *Delta {
-	oldPkgs := slices.Clone(oldSnap.Packages)
-	newPkgs := slices.Clone(newSnap.Packages)
-
-	slices.Sort(oldPkgs)
-	slices.Sort(newPkgs)
-
-	added := []string{}
-	removed := []string{}
-
+// diffSorted computes added/removed between two sorted slices.
+func diffSorted(a, b []string) (added, removed []string) {
 	i, j := 0, 0
-	for i < len(oldPkgs) && j < len(newPkgs) {
-		o, n := oldPkgs[i], newPkgs[j]
+	for i < len(a) && j < len(b) {
+		o, n := a[i], b[j]
 		switch {
 		case o < n:
 			removed = append(removed, o)
@@ -159,18 +159,37 @@ func Diff(oldSnap, newSnap Snapshot) *Delta {
 			j++
 		}
 	}
+	for ; i < len(a); i++ {
+		removed = append(removed, a[i])
+	}
+	for ; j < len(b); j++ {
+		added = append(added, b[j])
+	}
+	return added, removed
+}
 
-	for ; i < len(oldPkgs); i++ {
-		removed = append(removed, oldPkgs[i])
-	}
-	for ; j < len(newPkgs); j++ {
-		added = append(added, newPkgs[j])
-	}
+// Diff calculates the added and removed packages and repositories between an old and new snapshot.
+func Diff(oldSnap, newSnap Snapshot) *Delta {
+	oldPkgs := slices.Clone(oldSnap.Packages)
+	newPkgs := slices.Clone(newSnap.Packages)
+	slices.Sort(oldPkgs)
+	slices.Sort(newPkgs)
+
+	added, removed := diffSorted(oldPkgs, newPkgs)
+
+	oldRepos := slices.Clone(oldSnap.Repositories)
+	newRepos := slices.Clone(newSnap.Repositories)
+	slices.Sort(oldRepos)
+	slices.Sort(newRepos)
+
+	addedRepos, removedRepos := diffSorted(oldRepos, newRepos)
 
 	return &Delta{
-		Manager: newSnap.Manager,
-		Added:   added,
-		Removed: removed,
+		Manager:      newSnap.Manager,
+		Added:        added,
+		Removed:      removed,
+		AddedRepos:   addedRepos,
+		RemovedRepos: removedRepos,
 	}
 }
 
@@ -187,7 +206,7 @@ func DiffAll(oldSnaps, newSnaps []Snapshot) []Delta {
 		o, ok := oldMap[n.Manager]
 		if !ok {
 			// If no old snapshot exists for this manager, treat all as added
-			o = Snapshot{Manager: n.Manager, Packages: []string{}}
+			o = Snapshot{Manager: n.Manager, Packages: []string{}, Repositories: []string{}}
 		}
 		deltas = append(deltas, *Diff(o, n))
 	}

@@ -26,8 +26,8 @@ func (m *Brew) Name() string {
 
 // ListInstalled returns a list of packages currently installed.
 func (m *Brew) ListInstalled(ctx context.Context) ([]string, error) {
-	// 'brew leaves' returns packages that are not dependencies of another package.
-	out, err := m.exec(ctx, "brew", "leaves")
+	// 'brew leaves --installed-on-request' returns packages the user explicitly installed.
+	out, err := m.exec(ctx, "brew", "leaves", "--installed-on-request")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
@@ -42,6 +42,18 @@ func (m *Brew) Install(ctx context.Context, pkg string) error {
 	_, err := m.exec(WithStreamIO(ctx), "brew", "install", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
+	}
+	return nil
+}
+
+// Reinstall executes the native reinstallation command.
+func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	_, err := m.exec(WithStreamIO(ctx), "brew", "reinstall", pkg)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
 	}
 	return nil
 }
@@ -67,6 +79,15 @@ func (m *Brew) Search(ctx context.Context, query string) ([]string, error) {
 	out, err := m.exec(ctx, "brew", "search", query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
+	}
+	return parseLines(out), nil
+}
+
+// ListRepos returns a list of third-party taps currently configured.
+func (m *Brew) ListRepos(ctx context.Context) ([]string, error) {
+	out, err := m.exec(ctx, "brew", "tap")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list taps: %w", err)
 	}
 	return parseLines(out), nil
 }
