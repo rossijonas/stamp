@@ -97,7 +97,7 @@ func newRemoveCmd() *cobra.Command {
 				switch {
 				case managerFlag != "":
 					for _, a := range app.adapters {
-						if a.Name() == managerFlag {
+						if a.Name() == manager.ResolveManager(managerFlag) {
 							adapter = a
 							break
 						}
@@ -145,7 +145,7 @@ func newSearchCmd() *cobra.Command {
 			if managerFlag != "" {
 				var found bool
 				for _, a := range app.adapters {
-					if a.Name() == managerFlag {
+					if a.Name() == manager.ResolveManager(managerFlag) {
 						targets = []manager.Adapter{a}
 						found = true
 						break

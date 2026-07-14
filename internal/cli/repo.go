@@ -80,7 +80,7 @@ func newRepoAddCmd() *cobra.Command {
 
 			var adapter manager.Adapter
 			for _, a := range app.adapters {
-				if a.Name() == managerFlag {
+				if a.Name() == manager.ResolveManager(managerFlag) {
 					adapter = a
 					break
 				}
@@ -133,7 +133,7 @@ func newRepoRemoveCmd() *cobra.Command {
 
 			var adapter manager.Adapter
 			for _, a := range app.adapters {
-				if a.Name() == managerFlag {
+				if a.Name() == manager.ResolveManager(managerFlag) {
 					adapter = a
 					break
 				}

@@ -51,7 +51,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 			if managerFlag != "" {
 				var adapter manager.Adapter
 				for _, a := range app.adapters {
-					if a.Name() == managerFlag {
+					if a.Name() == manager.ResolveManager(managerFlag) {
 						adapter = a
 						break
 					}

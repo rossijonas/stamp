@@ -54,6 +54,22 @@ type Adapter interface {
 	Doctor(ctx context.Context) (string, error)
 }
 
+func init() {
+	managerAliases = map[string]string{
+		"yum": "dnf",
+	}
+}
+
+var managerAliases map[string]string
+
+// ResolveManager resolves the manager name, including aliases (e.g. "yum" → "dnf").
+func ResolveManager(name string) string {
+	if resolved, ok := managerAliases[name]; ok {
+		return resolved
+	}
+	return name
+}
+
 // parseLines splits byte output by newline and removes empty strings.
 func parseLines(output []byte) []string {
 	lines := bytes.Split(output, []byte("\n"))

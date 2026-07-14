@@ -49,7 +49,7 @@ If -m, --manager is specified, displays the native manager's full raw info block
 			if managerFlag != "" {
 				var found manager.Adapter
 				for _, a := range app.adapters {
-					if a.Name() == managerFlag {
+					if a.Name() == manager.ResolveManager(managerFlag) {
 						found = a
 						break
 					}

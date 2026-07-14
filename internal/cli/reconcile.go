@@ -35,7 +35,7 @@ and can be added to the manifest.`,
 			if managerFlag != "" {
 				var found manager.Adapter
 				for _, a := range app.adapters {
-					if a.Name() == managerFlag {
+					if a.Name() == manager.ResolveManager(managerFlag) {
 						found = a
 						break
 					}
