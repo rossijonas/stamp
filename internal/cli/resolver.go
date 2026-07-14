@@ -23,8 +23,9 @@ func NewResolver(adapters []manager.Adapter, config *Config) *Resolver {
 func (r *Resolver) Resolve(pkg string, override string) (manager.Adapter, error) {
 	// Tier 1: Explicit override
 	if override != "" {
+		resolved := manager.ResolveManager(override)
 		for _, a := range r.adapters {
-			if a.Name() == override {
+			if a.Name() == resolved {
 				return a, nil
 			}
 		}

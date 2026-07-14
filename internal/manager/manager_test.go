@@ -166,7 +166,7 @@ func TestDNF_Operations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			manager := NewDNF()
+			manager := NewDNF("dnf")
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
 			assert.Equal(t, "dnf", manager.Name()) // hit the name method

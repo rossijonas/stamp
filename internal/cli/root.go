@@ -86,7 +86,11 @@ func detectAdapters() []manager.Adapter {
 		}
 	}
 	if runtime.GOOS == "linux" {
-		detect("dnf", func() manager.Adapter { return manager.NewDNF() })
+		if _, err := exec.LookPath("dnf"); err == nil {
+			adapters = append(adapters, manager.NewDNF("dnf"))
+		} else if _, err := exec.LookPath("yum"); err == nil {
+			adapters = append(adapters, manager.NewDNF("yum"))
+		}
 		detect("flatpak", func() manager.Adapter { return manager.NewFlatpak() })
 	}
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })

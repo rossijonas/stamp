@@ -6,15 +6,17 @@ import (
 	"os"
 )
 
-// DNF implements the Adapter interface for Fedora's DNF.
+// DNF implements the Adapter interface for Fedora's DNF (or RHEL 7's yum).
 type DNF struct {
 	exec Executor
+	cmd  string
 }
 
-// NewDNF creates a new DNF with the default system executor.
-func NewDNF() *DNF {
+// NewDNF creates a new DNF adapter for the given command ("dnf" or "yum").
+func NewDNF(cmd string) *DNF {
 	return &DNF{
 		exec: defaultExecutor,
+		cmd:  cmd,
 	}
 }
 
@@ -37,8 +39,13 @@ func (m *DNF) Name() string {
 
 // ListInstalled returns a list of packages currently installed.
 func (m *DNF) ListInstalled(ctx context.Context) ([]string, error) {
-	// Query user-installed packages, formatted to only show the name.
-	out, err := m.exec(ctx, "dnf", "repoquery", "--userinstalled", "--qf", "%{name}")
+	var out []byte
+	var err error
+	if m.cmd == "yum" {
+		out, err = m.exec(ctx, "repoquery", "--userinstalled", "--qf", "%{name}")
+	} else {
+		out, err = m.exec(ctx, "dnf", "repoquery", "--userinstalled", "--qf", "%{name}")
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
@@ -51,7 +58,7 @@ func (m *DNF) Install(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd("dnf", "install", "-y", pkg)
+	args := sudoCmd(m.cmd, "install", "-y", pkg)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
@@ -64,7 +71,7 @@ func (m *DNF) Remove(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd("dnf", "remove", "-y", pkg)
+	args := sudoCmd(m.cmd, "remove", "-y", pkg)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", pkg, err)
@@ -77,7 +84,7 @@ func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
 	if err := ValidatePackageName(query); err != nil {
 		return nil, err
 	}
-	out, err := m.exec(ctx, "dnf", "search", "-q", query)
+	out, err := m.exec(ctx, m.cmd, "search", "-q", query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
 	}
@@ -87,14 +94,14 @@ func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
 // AddRepo enables a third-party repository.
 func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 	if url != "" {
-		args := sudoCmd("dnf", "config-manager", "--add-repo", url)
+		args := sudoCmd(m.cmd, "config-manager", "--add-repo", url)
 		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 		if err != nil {
 			return fmt.Errorf("failed to add repo %s: %w", url, err)
 		}
 		return nil
 	}
-	args := sudoCmd("dnf", "copr", "enable", "-y", name)
+	args := sudoCmd(m.cmd, "copr", "enable", "-y", name)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to enable copr %s: %w", name, err)
@@ -104,7 +111,7 @@ func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 
 // RemoveRepo disables a third-party repository.
 func (m *DNF) RemoveRepo(ctx context.Context, name string) error {
-	args := sudoCmd("dnf", "copr", "disable", "-y", name)
+	args := sudoCmd(m.cmd, "copr", "disable", "-y", name)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to disable copr %s: %w", name, err)
@@ -117,7 +124,7 @@ func (m *DNF) Info(ctx context.Context, pkg string) (string, error) {
 	if err := ValidatePackageName(pkg); err != nil {
 		return "", err
 	}
-	out, err := m.exec(ctx, "dnf", "info", pkg)
+	out, err := m.exec(ctx, m.cmd, "info", pkg)
 	if err != nil {
 		return "", fmt.Errorf("failed to get info for %s: %w", pkg, err)
 	}
