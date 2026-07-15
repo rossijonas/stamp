@@ -156,7 +156,7 @@ stamp reconcile             # auto-track detected changes
 
 #### Reinstall Gap
 
-`stamp reconcile` uses snapshot diffing: it compares the current system state against the last saved snapshot. If a package is **removed and then reinstalled** between two reconcile runs, the snapshot shows no net change — the package is present in both old and new snapshots, so reconcile reports no drift.
+`stamp reconcile` uses snapshot diffing: it compares the current system state against the last saved snapshot. This edge case only applies when you **bypass stamp and use native package manager commands (dnf, brew, flatpak) directly**, then rely on reconcile as a safety net. If a package is **removed and then reinstalled** between two reconcile runs, the snapshot shows no net change — the package is present in both old and new snapshots, so reconcile reports no drift.
 
 ```
 1. Snapshot: [htop, gcc, systemd, …]
@@ -167,18 +167,27 @@ stamp reconcile             # auto-track detected changes
                               → identical → "No drift detected"
 ```
 
-**Mitigation — Option 1: Regular Reconciliation**
+**Mitigation — Option A: Always Use Stamp (Recommended)**
 
-Run `stamp reconcile` after any native package operation:
+The edge case never occurs if you manage packages through stamp:
+
+```bash
+stamp install htop     # tracks automatically
+stamp remove htop      # untracks automatically
+```
+
+Use Workflow A (`stamp install`/`stamp remove`) as your primary package manager. Stamp records every install and removal in the manifest instantly — no snapshot diffing needed. Only packages installed outside stamp via native tools are subject to the reinstall gap.
+
+**Mitigation — Option B: Regular Reconciliation**
+
+If you do use native package manager commands directly, remember to run `stamp reconcile` after each uninstall operation to keep snapshots in sync:
 
 ```bash
 sudo dnf remove htop && stamp reconcile
 sudo dnf install htop
 ```
 
-Or periodically as part of system maintenance.
-
-**Mitigation — Option 2: Automated Timer**
+**Mitigation — Option C: Automated Timer**
 
 Set up a daily timer to run `stamp reconcile` automatically. The `stamp auto-reconcile` command (planned) will handle this setup. In the meantime, timer files are available in `contrib/`:
 
