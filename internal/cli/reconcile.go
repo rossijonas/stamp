@@ -106,6 +106,13 @@ Use --dry-run to preview drift without tracking.`,
 
 			if len(discovered) == 0 && len(discoveredRepos) == 0 {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "No drift detected")
+				if !dryRun {
+					for _, s := range currentSnaps {
+						if err := state.Save(snapDir, s); err != nil {
+							_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to save snapshot for %s: %v\n", s.Manager, err)
+						}
+					}
+				}
 				return nil
 			}
 

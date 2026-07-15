@@ -256,6 +256,14 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 *   **Verify:** `task docs` generates correct usage pages.
 *   **Files:** `docs/usage/stamp_reconcile.md`, `internal/cli/reconcile.go` (after code done)
 *   **Depends on:** Task 27
+*   **Status:** ✅ Completed
+
+**Task 30: `stamp auto-reconcile` Command**
+*   **Description:** Implement a subcommand to install or remove automated reconcile timers. On Linux, creates systemd user service + timer files in `~/.config/systemd/user/`. On macOS, creates launchd plist in `~/Library/LaunchAgents/`. Supports `--period`, `-p` flag (hourly/daily/weekly, default daily).
+*   **Acceptance:** `stamp auto-reconcile on` installs the timer. `stamp auto-reconcile off` removes it. Timer runs `stamp reconcile` at the configured interval. Pre-configured timer files available in `contrib/`.
+*   **Verify:** Manual test: `stamp auto-reconcile on --period daily` creates timer, `stamp auto-reconcile off` removes it.
+*   **Files:** `internal/cli/autoreconcile.go`, `internal/cli/autoreconcile_test.go`, `contrib/systemd/stamp-reconcile.service`, `contrib/systemd/stamp-reconcile.timer`, `contrib/launchd/com.rossijonas.stamp.reconcile.plist`
+*   **Depends on:** Task 27
 *   **Status:** ⏳ Pending
 
 ### Phase & Task Progress Summary
@@ -300,3 +308,4 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ⏳ Pending |
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ⏳ Pending |
 | 6 | 29 | Flag and Compliance Updates | ⏳ Pending |
+| 6 | 30 | `stamp auto-reconcile` Command | ⏳ Pending |

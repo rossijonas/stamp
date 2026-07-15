@@ -58,3 +58,29 @@ Users who installed packages before `stamp` was initialized can track them expli
 4. Saves the snapshot so future reconcile does not re-detect it.
 
 This is the **Explicit Tracking via Reinstall** pattern: instead of reconcile deciding what is intentional, the user consciously declares intent by running `stamp reinstall`.
+
+---
+
+## Appendix B: Reinstall Gap (2026-07-15)
+
+### Context
+Snapshot diffing has an inherent limitation: intermediate state changes between reconcile
+runs are invisible. If a package is removed and reinstalled without a reconcile in between,
+the net change is zero — both old and new snapshots contain the package.
+
+```
+1. Snapshot: [htop, gcc, systemd, …]
+2. dnf remove htop           → system: [gcc, systemd, …]
+3. dnf install htop          → system: [htop, gcc, systemd, …]
+   (reconcile NOT run between remove and install)
+4. stamp reconcile           → snapshot [htop,…] vs system [htop,…]
+                              → identical → "No drift detected"
+```
+
+### Decision
+No architectural change. This is an accepted limitation of point-in-time snapshot diffing.
+
+### Mitigation
+- **User workflow:** Run `stamp reconcile` after any native package operation.
+- **Automated timer:** `stamp auto-reconcile on` (planned) installs a daily systemd/launchd timer.
+- **Manual timer files:** Pre-configured service/timer files available in `contrib/`.

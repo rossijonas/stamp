@@ -44,9 +44,9 @@ func (m *DNF) ListInstalled(ctx context.Context) ([]string, error) {
 	var out []byte
 	var err error
 	if m.cmd == "yum" {
-		out, err = m.exec(ctx, "repoquery", "--userinstalled", "--qf", "%{name}")
+		out, err = m.exec(ctx, "repoquery", "--userinstalled", "--qf", "%{name}\n")
 	} else {
-		out, err = m.exec(ctx, "dnf", "repoquery", "--userinstalled", "--qf", "%{name}")
+		out, err = m.exec(ctx, "dnf", "repoquery", "--userinstalled", "--qf", "%{name}\n")
 	}
 	if err != nil {
 		// Fallback: try dnf history userinstalled on repoquery failure.

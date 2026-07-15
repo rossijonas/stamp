@@ -370,6 +370,44 @@ func TestReconcile_YFlag_Compatibility(t *testing.T) {
 	assert.Contains(t, output, "Tracked 1 package(s)")
 }
 
+func TestReconcile_SnapshotsUpdatedOnNoDrift(t *testing.T) {
+	// Simulate: package in baseline → removed externally → reconcile (no drift, save snapshot without it) → reinstalled → reconcile detects drift
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{},
+		},
+	}
+
+	// Old snapshot has lazygit (which was externally removed)
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	// First reconcile: no drift (lazygit removed, nothing added), snapshot saved without lazygit
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "No drift detected")
+
+	// Manually verify snapshot no longer has lazygit
+	loaded, err := state.Load(filepath.Join(snapDir, "stamp", "snapshots"), "brew")
+	require.NoError(t, err)
+	assert.NotContains(t, loaded.Packages, "lazygit")
+
+	// Simulate: lazygit reinstalled externally
+	adapters[0].(*manager.Mock).InstalledPkgs = []string{"lazygit"}
+
+	// Second reconcile: should now detect lazygit as added
+	buf2, err := execCmd(t, []string{"reconcile"}, adapters)
+	require.NoError(t, err)
+	output := buf2.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "lazygit (brew)")
+	assert.Contains(t, output, "Tracked 1 package(s)")
+}
+
 func TestReconcile_DryRun_ShortFlag(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{

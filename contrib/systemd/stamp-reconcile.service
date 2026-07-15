@@ -1,0 +1,6 @@
+[Unit]
+Description=Stamp package drift reconciliation
+
+[Service]
+ExecStart=%h/.local/bin/stamp reconcile
+Type=oneshot

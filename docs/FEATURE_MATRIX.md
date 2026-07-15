@@ -25,6 +25,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
 | `stamp self-update` | `self-upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
+| `stamp auto-reconcile on\|off` | | ✅ | ❌ | ❌ | ⏳ Pending |
 
 ## Repository Commands
 
@@ -71,6 +72,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp repo list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp doctor` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp update` | `--manager <name>` | `-m` | ✅ | ❌ | ⏳ Pending |
+| `stamp auto-reconcile` | `--period <interval>` | `-p` | ✅ | ❌ | ⏳ Pending |
 | `stamp list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 
 ## UNIX Compliance
@@ -128,3 +130,4 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✅ |
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✅ |
 | 6 | 29 | Flag and Compliance Updates | ✅ |
+| 6 | 30 | `stamp auto-reconcile` Command | ⏳ Pending |

@@ -41,6 +41,7 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp self-update` | `self-upgrade` | `--check, -c` | Checks for and installs the latest version of `stamp`. |
 | `stamp completion <shell>` | | | Generates shell completion scripts (bash, zsh, fish, powershell). |
 | `stamp man` | | | Command group for system reference page management. |
+| `stamp auto-reconcile on\|off` | | `--period, -p hourly\|daily(default)\|weekly` | Installs or removes automated reconcile timer (systemd/launchd). |
 
 **Man Subcommands:**
 | Command | Flags | Description |
@@ -284,6 +285,19 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 - **Never:** Mutate the actual system state (run native installs) during a `reconcile` or `list` command.
 - **Never:** Use flags to represent actions (e.g. `--install`). Use subcommands instead.
 - **Never:** Present interactive prompts during `stamp reconcile`. The command is fully deterministic.
+
+## Edge Cases
+
+### Reinstall Gap
+
+**Scenario:** A package is removed and reinstalled between two `stamp reconcile` runs. Snapshot diffing sees no net change and reports no drift.
+
+**Root Cause:** Snapshot diffing is a point-in-time comparison. If the removed package is reinstalled before the next reconcile, the baseline and current snapshots are identical. Stamp has no event monitoring — it cannot observe intermediate states.
+
+**Mitigation:**
+- Run `stamp reconcile` after native package operations.
+- Enable automated timer via `stamp auto-reconcile on` (planned feature).
+- Manual timer configuration files are available in `contrib/`.
 
 ## UNIX Compliance & Documentation Strategy
 To be a "good UNIX citizen", `stamp` must adhere to:
