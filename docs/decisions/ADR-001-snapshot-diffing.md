@@ -65,7 +65,11 @@ This is the **Explicit Tracking via Reinstall** pattern: instead of reconcile de
 
 ### Context
 Snapshot diffing has an inherent limitation: intermediate state changes between reconcile
-runs are invisible. If a package is removed and reinstalled without a reconcile in between,
+runs are invisible. This edge case only applies when the user **bypasses stamp and uses
+native package manager commands (dnf, brew, flatpak) directly**, then relies on reconcile
+as a safety net.
+
+If a package is removed and reinstalled without a reconcile in between,
 the net change is zero — both old and new snapshots contain the package.
 
 ```
@@ -81,6 +85,10 @@ the net change is zero — both old and new snapshots contain the package.
 No architectural change. This is an accepted limitation of point-in-time snapshot diffing.
 
 ### Mitigation
-- **User workflow:** Run `stamp reconcile` after any native package operation.
+- **Always use stamp (recommended):** The edge case never occurs if packages are managed
+  through stamp (`stamp install`/`stamp remove`). Stamp records every install and removal
+  in the manifest instantly — no snapshot diffing is involved.
+- **Regular reconciliation:** If using native commands directly, remember to run
+  `stamp reconcile` after each uninstall operation to keep snapshots in sync.
 - **Automated timer:** `stamp auto-reconcile on` (planned) installs a daily systemd/launchd timer.
 - **Manual timer files:** Pre-configured service/timer files available in `contrib/`.
