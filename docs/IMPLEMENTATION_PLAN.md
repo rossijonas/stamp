@@ -219,7 +219,7 @@ Build the environment reconstruction logic and final touches.
 **Task 26: Add `yum` as Alias to `dnf` Manager**
 *   **Description:** Automatically detect `yum` when `dnf` is unavailable (RHEL/CentOS 7). Use resolved command name for all exec calls.
 *   **Acceptance:** `stamp` works on systems with only `yum` installed.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 ### Phase 5: Project Licensing & Governance
 Ensure maximum community and enterprise reach.
@@ -235,20 +235,20 @@ Ensure maximum community and enterprise reach.
 Deliver the final design for `stamp reconcile` and `stamp reinstall` based on real-world testing feedback.
 
 **Task 27: Reconcile — Auto-Track and `--dry-run`**
-*   **Description:** Remove interactive prompt from reconcile. Auto-track all discovered drift. Add `--dry-run` / `-d` flag for preview mode without saving manifest or snapshots.
-*   **Acceptance:** `stamp reconcile` auto-tracks without prompting. `stamp reconcile --dry-run` shows drift but does not save. `-y` accepted for backward compatibility (no-op).
+*   **Description:** Remove interactive prompt from reconcile. Auto-track all discovered drift. Add `--dry-run` / `-d` flag for preview mode without saving manifest or snapshots. Fix snapshot save timing to persist on no-drift.
+*   **Acceptance:** `stamp reconcile` auto-tracks without prompting. `stamp reconcile --dry-run` shows drift but does not save. `-y` accepted for backward compatibility (no-op). Snapshot updated on no-drift to accurately track subsequent removals.
 *   **Verify:** `task test` passes, manual test of `--dry-run` flag.
 *   **Files:** `internal/cli/reconcile.go`, `internal/cli/reconcile_test.go`
 *   **Depends on:** Task 7 (state engine), Task 8 (reconcile command), Issue #39 (adapter fixes)
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 28: Reinstall — Support Pre-Existing Packages**
-*   **Description:** Extend `stamp reinstall <pkg>` to handle packages NOT in the manifest. Resolve manager via resolution engine, run native reinstall, append to manifest, save snapshot.
+*   **Description:** Extend `stamp reinstall <pkg>` to handle packages NOT in the manifest. Resolve manager via resolution engine, run native reinstall, append to manifest, save snapshot. Add `Reinstall()` to `Adapter` interface.
 *   **Acceptance:** `stamp reinstall htop` works for both manifest-tracked and pre-existing (manifest-absent) packages. Pre-existing packages are recorded in manifest.
 *   **Verify:** `task test` passes, manual test: install package outside stamp → `stamp init` → `stamp reinstall pkg` → `stamp list` shows it.
 *   **Files:** `internal/cli/reinstall.go`, `internal/cli/reinstall_test.go`
 *   **Depends on:** Task 27 (reconcile spec), Issue #39 (adapter fixes)
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 29: Flag and Compliance Updates**
 *   **Description:** Update global flag documentation to reflect reconcile's deterministic behavior. Ensure `--dry-run` is registered on reconcile and restore. Ensure docs are up to date.
@@ -278,7 +278,7 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 2 | 5 | Active CLI Commands | ✅ |
 | 3 | 6 | Native Adapters (Read-Only) | ✅ |
 | 3 | 7 | State Engine (Snapshotting) | ✅ |
-| 3 | 8 | The `reconcile` Command | ✅ (spec updated pending code) |
+| 3 | 8 | The `reconcile` Command | ✅ |
 | 4 | 9 | The `restore` Command | ✅ |
 | 4 | 10 | CLI Polish, Manpages, GitHub Pages & Landing Page | ⏳ |
 | 4 | 10a | `stamp doctor` command | ✅ |
@@ -295,7 +295,7 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 15 | Per-manager flags for reconcile/restore/doctor/list | ⚠️ Partial |
 | 4 | 16 | Multi-platform integration testing | 📝 |
 | 4 | 17 | Package manager feature audit | 📝 |
-| 4 | 18 | `stamp reinstall` command | ✅ (spec updated pending code) |
+| 4 | 18 | `stamp reinstall` command | ✅ |
 | 4 | 19 | Generate missing usage & man pages | ✅ |
 | 4 | 20 | Create GitHub Pages landing page | ⏳ |
 | 4 | 21 | `stamp init` command | ✅ |
@@ -303,9 +303,9 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
 | 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ⏳ |
 | 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ⏳ |
-| 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ⏳ |
+| 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ✅ |
 | 5 | — | Relicense to Apache-2.0 | ✅ |
-| 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ⏳ Pending |
-| 6 | 28 | Reinstall — Support Pre-Existing Packages | ⏳ Pending |
-| 6 | 29 | Flag and Compliance Updates | ⏳ Pending |
+| 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✅ |
+| 6 | 28 | Reinstall — Support Pre-Existing Packages | ✅ |
+| 6 | 29 | Flag and Compliance Updates | ✅ |
 | 6 | 30 | `stamp auto-reconcile` Command | ⏳ Pending |

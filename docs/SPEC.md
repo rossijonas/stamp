@@ -290,14 +290,15 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 
 ### Reinstall Gap
 
-**Scenario:** A package is removed and reinstalled between two `stamp reconcile` runs. Snapshot diffing sees no net change and reports no drift.
+**Scenario:** A package is removed and reinstalled between two `stamp reconcile` runs. Snapshot diffing sees no net change and reports no drift. This edge case only applies when the user **bypasses stamp and uses native package manager commands (dnf, brew, flatpak) directly**, then relies on reconcile as a safety net.
 
-**Root Cause:** Snapshot diffing is a point-in-time comparison. If the removed package is reinstalled before the next reconcile, the baseline and current snapshots are identical. Stamp has no event monitoring — it cannot observe intermediate states.
+**Root Cause:** Snapshot diffing is a point-in-time comparison between two snapshots. If the removed package is reinstalled before the next reconcile, the baseline and current snapshots are identical. Stamp has no event monitoring — it cannot observe intermediate states.
 
 **Mitigation:**
-- Run `stamp reconcile` after native package operations.
-- Enable automated timer via `stamp auto-reconcile on` (planned feature).
-- Manual timer configuration files are available in `contrib/`.
+- **Always use stamp (recommended):** The edge case never occurs if packages are managed through stamp (`stamp install`/`stamp remove`). Stamp records every install and removal in the manifest instantly — no snapshot diffing involved.
+- **Regular reconciliation:** If using native commands directly, remember to run `stamp reconcile` after each uninstall operation to keep snapshots in sync.
+- **Automated timer:** `stamp auto-reconcile on` (planned) installs a daily systemd/launchd timer.
+- **Manual timer files:** Pre-configured service/timer files available in `contrib/`.
 
 ## UNIX Compliance & Documentation Strategy
 To be a "good UNIX citizen", `stamp` must adhere to:
@@ -332,3 +333,9 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 19. **Repo List:** `stamp repo list` prints all tracked repositories; `--json` outputs machine-readable.
 20. **Hello:** `stamp hello` displays ASCII logo, project description, and suggested next steps.
 21. **Completion:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts for each shell.
+22. **Reconcile (Repo Drift):** If a new flatpak remote or brew tap is added externally, `stamp reconcile` detects and auto-tracks the repository alongside packages.
+23. **Reconcile (Manager Scope):** `stamp reconcile -m dnf` scopes drift detection to a single manager only.
+24. **Reinstall (Manager Flag):** `stamp reinstall htop -m brew` overrides manager resolution via the `--manager` flag for pre-existing packages.
+25. **Reinstall (Adapters):** `adapter.Reinstall()` executes the native reinstall command for each manager (brew reinstall, dnf reinstall, flatpak install).
+26. **Reconcile (Snapshot Save on No Drift):** If reconcile detects no drift, the current snapshot is saved to disk so future package removals are tracked correctly.
+27. **Auto-Reconcile (Planned):** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.
