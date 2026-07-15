@@ -70,6 +70,7 @@ func TestMockErrors(t *testing.T) {
 	mock := &Mock{
 		ListErr:       expectedErr,
 		InstallErr:    expectedErr,
+		ReinstallErr:  expectedErr,
 		RemoveErr:     expectedErr,
 		SearchErr:     expectedErr,
 		AddRepoErr:    expectedErr,
@@ -82,6 +83,9 @@ func TestMockErrors(t *testing.T) {
 	require.ErrorIs(t, err, expectedErr)
 
 	err = mock.Install(ctx, "htop")
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.Reinstall(ctx, "htop")
 	require.ErrorIs(t, err, expectedErr)
 
 	err = mock.Remove(ctx, "htop")
@@ -184,4 +188,76 @@ func TestMockRemove_Found(t *testing.T) {
 	assert.NotContains(t, mock.InstalledPkgs, "htop")
 	assert.Contains(t, mock.InstalledPkgs, "git")
 	assert.Contains(t, mock.InstalledPkgs, "curl")
+}
+
+func TestMockListRepos_ReturnsInstalledRepos(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:    "brew",
+		InstalledRepos: []string{"aovestdipaperino/tap", "yvgude/lean-ctx"},
+	}
+	repos, err := mock.ListRepos(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"aovestdipaperino/tap", "yvgude/lean-ctx"}, repos)
+}
+
+func TestMockListRepos_ReturnsTrackedRepos(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:  "brew",
+		TrackedRepos: []string{"old-tap"},
+	}
+	repos, err := mock.ListRepos(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"old-tap"}, repos)
+}
+
+func TestMockListRepos_Error(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:  "brew",
+		ListReposErr: assert.AnError,
+	}
+	_, err := mock.ListRepos(context.Background())
+	require.Error(t, err)
+}
+
+func TestMockReinstall_Success(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:   "brew",
+		InstalledPkgs: []string{"htop"},
+	}
+	err := mock.Reinstall(context.Background(), "htop")
+	require.NoError(t, err)
+}
+
+func TestMockReinstall_AddsPackage(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:   "brew",
+		InstalledPkgs: []string{"htop", "git"},
+	}
+	err := mock.Reinstall(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.Contains(t, mock.InstalledPkgs, "htop")
+	// Should have removed and re-added, but same package name so length unchanged
+	assert.Len(t, mock.InstalledPkgs, 2)
+}
+
+func TestMockReinstall_Error(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:  "brew",
+		ReinstallErr: assert.AnError,
+	}
+	err := mock.Reinstall(context.Background(), "htop")
+	require.Error(t, err)
+}
+
+func TestMockReinstall_InvalidName(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew"}
+	err := mock.Reinstall(context.Background(), "-invalid")
+	require.Error(t, err)
 }

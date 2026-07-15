@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +16,20 @@ import (
 	"github.com/rossijonas/stamp/internal/manager"
 	"github.com/rossijonas/stamp/internal/manifest"
 )
+
+// isTerminal reports whether the given reader is connected to a terminal.
+// Declared as a variable so it can be overridden in tests.
+var isTerminal = func(r io.Reader) bool {
+	f, ok := r.(*os.File)
+	if !ok {
+		return false
+	}
+	stat, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return stat.Mode()&os.ModeCharDevice != 0
+}
 
 type ctxKey struct{}
 

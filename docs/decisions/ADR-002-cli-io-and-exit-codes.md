@@ -25,8 +25,9 @@ We will implement the following strict CLI conventions across the entire applica
 *   **Rule of Silence:** When running in a pipeline or with the `--quiet`/`-q` flag, successful command execution produces zero output to `stdout`.
 
 ### 2. Auto-Accept Flag (`--yes` / `-y`)
-*   We introduce a global `--yes` / `-y` flag to bypass all interactive prompts (e.g., during `reconcile` or when removing critical repositories/packages).
+*   We introduce a global `--yes` / `-y` flag to bypass all interactive prompts (e.g., when removing critical repositories/packages).
 *   If `--yes` is specified, `stamp` will auto-accept all options. If the environment is a non-interactive shell (no TTY), `--yes` is assumed by default to prevent hanging scripts.
+*   **Note:** `stamp reconcile` does NOT have interactive prompts. It auto-tracks drift deterministically. The `--yes` flag is accepted on reconcile for backward compatibility with scripting, but is functionally a no-op.
 
 ### 3. CLI Verbose & Version Flags
 *   We reserve `-v` and `--verbose` strictly for global debug logging.

@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestDNF_Operations(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
-		operation   string // "list", "install", "remove", "search"
+		operation   string // "list", "install", "reinstall", "remove", "search"
 		pkgName     string
 		mockOutput  string
 		mockErr     error
@@ -47,6 +48,19 @@ func TestDNF_Operations(t *testing.T) {
 		{
 			name:        "install error",
 			operation:   "install",
+			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name:      "reinstall success",
+			operation: "reinstall",
+			pkgName:   "htop",
+			mockErr:   nil,
+		},
+		{
+			name:        "reinstall error",
+			operation:   "reinstall",
 			pkgName:     "htop",
 			mockErr:     assert.AnError,
 			expectedErr: true,
@@ -169,7 +183,7 @@ func TestDNF_Operations(t *testing.T) {
 			manager := NewDNF("dnf")
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
-			assert.Equal(t, "dnf", manager.Name()) // hit the name method
+			assert.Equal(t, "dnf", manager.Name())
 
 			var err error
 			ctx := context.Background()
@@ -571,7 +585,7 @@ func TestFlatpak_Operations(t *testing.T) {
 			name:        "add repo error (no url)",
 			operation:   "addrepo",
 			pkgName:     "flathub",
-			mockErr:     nil, // The method itself throws the error before calling exec
+			mockErr:     nil,
 			expectedErr: true,
 		},
 		{
@@ -697,7 +711,6 @@ func TestFlatpak_Operations(t *testing.T) {
 				err = manager.AddRepo(ctx, tt.pkgName, "")
 				if tt.expectedErr {
 					require.Error(t, err)
-					// We only check ErrorIs if we passed a mock error, flatpak throws a native error for empty URLs
 					if tt.mockErr != nil {
 						require.ErrorIs(t, err, tt.mockErr)
 					}
@@ -750,28 +763,22 @@ func TestMockManager(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Test Name
 	assert.Equal(t, "mock", mock.Name())
 
-	// Test ListInstalled
 	installed, err := mock.ListInstalled(ctx)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"git", "curl"}, installed)
 
-	// Test Install
 	err = mock.Install(ctx, "jq")
 	require.NoError(t, err)
 	installed, _ = mock.ListInstalled(ctx)
 	assert.Contains(t, installed, "jq")
 
-	// Test Install Duplicate
 	err = mock.Install(ctx, "jq")
 	require.NoError(t, err)
 	installed, _ = mock.ListInstalled(ctx)
-	// should still be 3 items
 	assert.Len(t, installed, 3)
 
-	// Test Remove
 	err = mock.Remove(ctx, "curl")
 	require.NoError(t, err)
 	installed, _ = mock.ListInstalled(ctx)
@@ -779,17 +786,14 @@ func TestMockManager(t *testing.T) {
 	assert.Contains(t, installed, "jq")
 	assert.Contains(t, installed, "git")
 
-	// Test Search
 	results, err := mock.Search(ctx, "to")
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"htop"}, results)
 
-	// Test Add Repo
 	err = mock.AddRepo(ctx, "test-repo", "url")
 	require.NoError(t, err)
 	assert.Contains(t, mock.TrackedRepos, "test-repo")
 
-	// Test Remove Repo
 	err = mock.RemoveRepo(ctx, "test-repo")
 	require.NoError(t, err)
 	assert.NotContains(t, mock.TrackedRepos, "test-repo")
@@ -805,6 +809,7 @@ func TestMockManagerErrors(t *testing.T) {
 		SearchErr:     expectedErr,
 		AddRepoErr:    expectedErr,
 		RemoveRepoErr: expectedErr,
+		ListReposErr:  expectedErr,
 	}
 
 	ctx := context.Background()
@@ -825,6 +830,9 @@ func TestMockManagerErrors(t *testing.T) {
 	require.ErrorIs(t, err, expectedErr)
 
 	err = mock.RemoveRepo(ctx, "repo")
+	require.ErrorIs(t, err, expectedErr)
+
+	_, err = mock.ListRepos(ctx)
 	require.ErrorIs(t, err, expectedErr)
 }
 
@@ -863,4 +871,228 @@ func TestValidatePackageName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseDNFHistoryUserInstalled(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "standard NEVRA lines",
+			input:    "htop-3.2.2-1.fc37.x86_64\nripgrep-13.0.0-4.fc38.x86_64\n",
+			expected: []string{"htop", "ripgrep"},
+		},
+		{
+			name:     "with header line",
+			input:    "Packages installed by the user:\nhtop-3.2.2-1.fc37.x86_64\n",
+			expected: []string{"htop"},
+		},
+		{
+			name:     "complex name",
+			input:    "google-chrome-stable-114.0.5735.196-1.x86_64\n",
+			expected: []string{"google-chrome-stable"},
+		},
+		{
+			name:     "empty input",
+			input:    "",
+			expected: []string{},
+		},
+		{
+			name:     "short names skipped",
+			input:    "foo\n",
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := parseDNFHistoryUserInstalled([]byte(tt.input))
+			assert.ElementsMatch(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseDNFRepos(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name: "filters system repos, keeps custom",
+			input: "repo id                     repo name\n" +
+				"fedora                      Fedora 44 - x86_64\n" +
+				"fedora-updates              Fedora 44 - x86_64 - Updates\n" +
+				"copr:copr.fedorainfracloud.org:petersen:cava Copr repo\n" +
+				"google-chrome               Google Chrome repo\n",
+			expected: []string{
+				"copr:copr.fedorainfracloud.org:petersen:cava",
+				"google-chrome",
+			},
+		},
+		{
+			name:     "only system repos",
+			input:    "repo id     repo name\nfedora      Fedora 44\nupdates     Updates\n",
+			expected: []string{},
+		},
+		{
+			name:     "empty output",
+			input:    "",
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := parseDNFRepos([]byte(tt.input))
+			assert.ElementsMatch(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDNF_ListRepos(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf")
+	manager.exec = mockExecutorHelper(
+		"repo id                     repo name\n"+
+			"fedora                      Fedora 44\n"+
+			"copr:copr.fedorainfracloud.org:petersen:cava Copr repo\n",
+		nil,
+	)
+
+	repos, err := manager.ListRepos(context.Background())
+	require.NoError(t, err)
+	assert.Contains(t, repos, "copr:copr.fedorainfracloud.org:petersen:cava")
+	assert.NotContains(t, repos, "fedora")
+}
+
+func TestDNF_ListReposError(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf")
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	_, err := manager.ListRepos(context.Background())
+	require.Error(t, err)
+}
+
+func TestBrew_ListRepos(t *testing.T) {
+	t.Parallel()
+	manager := NewBrew()
+	manager.exec = mockExecutorHelper("aovestdipaperino/tap\nyvgude/lean-ctx\n", nil)
+
+	repos, err := manager.ListRepos(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"aovestdipaperino/tap", "yvgude/lean-ctx"}, repos)
+}
+
+func TestBrew_ListReposError(t *testing.T) {
+	t.Parallel()
+	manager := NewBrew()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	_, err := manager.ListRepos(context.Background())
+	require.Error(t, err)
+}
+
+func TestFlatpak_ListRepos(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = mockExecutorHelper("Name\nflathub\nflathub-beta\n", nil)
+
+	repos, err := manager.ListRepos(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"flathub", "flathub-beta"}, repos)
+}
+
+func TestFlatpak_ListReposError(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	_, err := manager.ListRepos(context.Background())
+	require.Error(t, err)
+}
+
+func TestDNF_ListInstalledFallback(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	manager := NewDNF("dnf")
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		calls++
+		if calls == 1 {
+			return nil, assert.AnError
+		}
+		return []byte("htop-3.2.2-1.fc37.x86_64\n"), nil
+	}
+
+	pkgs, err := manager.ListInstalled(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop"}, pkgs)
+	assert.Equal(t, 2, calls)
+}
+
+func TestDNF_ListInstalledFallbackError(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	manager := NewDNF("dnf")
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		calls++
+		return nil, assert.AnError
+	}
+
+	_, err := manager.ListInstalled(context.Background())
+	require.Error(t, err)
+	assert.Equal(t, 2, calls)
+}
+
+func TestFlatpak_ListInstalledMerged(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = func(_ context.Context, cmd string, args ...string) ([]byte, error) {
+		switch {
+		case cmd == "flatpak" && slices.Contains(args, "--user"):
+			return []byte("com.spotify.Client\norg.mozilla.firefox\n"), nil
+		case cmd == "flatpak" && slices.Contains(args, "--system"):
+			return []byte("org.mozilla.firefox\norg.gimp.GIMP\n"), nil
+		default:
+			return nil, assert.AnError
+		}
+	}
+
+	pkgs, err := manager.ListInstalled(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"com.spotify.Client", "org.mozilla.firefox", "org.gimp.GIMP"}, pkgs)
+}
+
+func TestFlatpak_ListInstalledSkipsHeader(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = func(_ context.Context, cmd string, args ...string) ([]byte, error) {
+		switch {
+		case cmd == "flatpak" && slices.Contains(args, "--system"):
+			return []byte("Application ID\ncom.github.fabiocolacio.marker\ncom.slack.Slack\n"), nil
+		default:
+			return []byte{}, nil
+		}
+	}
+
+	pkgs, err := manager.ListInstalled(context.Background())
+	require.NoError(t, err)
+	assert.NotContains(t, pkgs, "Application ID")
+	assert.ElementsMatch(t, []string{"com.github.fabiocolacio.marker", "com.slack.Slack"}, pkgs)
+}
+
+func TestFlatpak_ListInstalledBothFail(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	_, err := manager.ListInstalled(context.Background())
+	require.Error(t, err)
 }

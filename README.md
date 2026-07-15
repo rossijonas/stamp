@@ -39,7 +39,7 @@
 
 ✔️ **Unified Repository Management** - *Add, remove, and list third-party repositories (repos, taps, remotes) across all managers with the same interface.*
 
-✔️ **Safety Net Reconciliation** - *Forgot to use stamp? `stamp reconcile` detects packages installed outside the tool and adds them to your manifest retroactively.*
+✔️ **Safety Net Reconciliation** - *Forgot to use stamp? `stamp reconcile` auto-detects packages installed outside the tool and adds them to your manifest without prompting. Preview with `--dry-run` first.*
 
 ✔️ **Self-Contained Documentation** - *Built-in man page generation (`stamp man install`), shell completions (`stamp completion bash|zsh|fish|powershell`), and auto-generated CLI reference docs.*
 
@@ -144,9 +144,64 @@ brew install jq
 ```
 
 **2. Reconcile:**
-Run `reconcile` periodically. `stamp` compares your current system against its snapshot, detects the newly installed `ripgrep` and `jq`, and prompts you to add them to your manifest. You can also pass the `-y` / `--yes` flag to automatically track all newly detected packages without interactive prompts (ideal for automated crontabs).
+Run `reconcile` periodically. `stamp` compares your current system against its snapshot, detects newly installed `ripgrep` and `jq`, and auto-tracks them to your manifest — no prompts, no decisions. Preview drift with `--dry-run` before committing:
 ```bash
-stamp reconcile -y
+stamp reconcile --dry-run   # preview only
+stamp reconcile             # auto-track detected changes
+```
+
+> **Note:** Only packages installed *after* your last snapshot are detected. Pre-existing packages (installed before `stamp init`) are not visible to reconcile. To track a pre-existing package, use `stamp reinstall <pkg>` instead.
+
+### ⚑ Edge Cases
+
+#### Reinstall Gap
+
+`stamp reconcile` uses snapshot diffing: it compares the current system state against the last saved snapshot. This edge case only applies when you **bypass stamp and use native package manager commands (dnf, brew, flatpak) directly**, then rely on reconcile as a safety net. If a package is **removed and then reinstalled** between two reconcile runs, the snapshot shows no net change — the package is present in both old and new snapshots, so reconcile reports no drift.
+
+```
+1. Snapshot: [htop, gcc, systemd, …]
+2. dnf remove htop           → system: [gcc, systemd, …]
+3. dnf install htop          → system: [htop, gcc, systemd, …]
+   (reconcile NOT run between remove and install)
+4. stamp reconcile           → snapshot [htop,…] vs system [htop,…]
+                              → identical → "No drift detected"
+```
+
+**Mitigation — Option A: Always Use Stamp (Recommended)**
+
+The edge case never occurs if you manage packages through stamp:
+
+```bash
+stamp install htop     # tracks automatically
+stamp remove htop      # untracks automatically
+```
+
+Use Workflow A (`stamp install`/`stamp remove`) as your primary package manager. Stamp records every install and removal in the manifest instantly — no snapshot diffing needed. Only packages installed outside stamp via native tools are subject to the reinstall gap.
+
+**Mitigation — Option B: Regular Reconciliation**
+
+If you do use native package manager commands directly, remember to run `stamp reconcile` after each uninstall operation to keep snapshots in sync:
+
+```bash
+sudo dnf remove htop && stamp reconcile
+sudo dnf install htop
+```
+
+**Mitigation — Option C: Automated Timer**
+
+Set up a daily timer to run `stamp reconcile` automatically. The `stamp auto-reconcile` command (planned) will handle this setup. In the meantime, timer files are available in `contrib/`:
+
+**Linux (systemd):**
+```bash
+cp contrib/systemd/stamp-reconcile.* ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now stamp-reconcile.timer
+```
+
+**macOS (launchd):**
+```bash
+cp contrib/launchd/com.rossijonas.stamp.reconcile.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.rossijonas.stamp.reconcile.plist
 ```
 
 ### ⚒ Rebuilding Your Environment

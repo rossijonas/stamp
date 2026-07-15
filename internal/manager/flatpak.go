@@ -3,6 +3,8 @@ package manager
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 )
 
 // Flatpak implements the Adapter interface for Flatpak.
@@ -24,12 +26,35 @@ func (m *Flatpak) Name() string {
 
 // ListInstalled returns a list of packages currently installed.
 func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
-	// Restrict to apps (excluding runtimes) and print only the application ID.
-	out, err := m.exec(ctx, "flatpak", "list", "--app", "--columns=application")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list installed packages: %w", err)
+	// Query both user and system installations, then merge and deduplicate.
+	seen := make(map[string]struct{})
+
+	userOut, userErr := m.exec(ctx, "flatpak", "list", "--user", "--app", "--columns=application")
+	if userErr == nil {
+		for _, pkg := range parseLines(userOut) {
+			if pkg == "Application ID" {
+				continue
+			}
+			seen[pkg] = struct{}{}
+		}
 	}
-	return parseLines(out), nil
+
+	sysOut, sysErr := m.exec(ctx, "flatpak", "list", "--system", "--app", "--columns=application")
+	if sysErr == nil {
+		for _, pkg := range parseLines(sysOut) {
+			if pkg == "Application ID" {
+				continue
+			}
+			seen[pkg] = struct{}{}
+		}
+	}
+
+	if userErr != nil && sysErr != nil {
+		return nil, fmt.Errorf("failed to list installed packages: %w", userErr)
+	}
+
+	result := slices.Collect(maps.Keys(seen))
+	return result, nil
 }
 
 // Install executes the native installation command.
@@ -41,6 +66,18 @@ func (m *Flatpak) Install(ctx context.Context, pkg string) error {
 	_, err := m.exec(WithStreamIO(ctx), "flatpak", "install", "-y", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
+	}
+	return nil
+}
+
+// Reinstall executes the native reinstallation command.
+func (m *Flatpak) Reinstall(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", "install", "-y", pkg)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
 	}
 	return nil
 }
@@ -68,6 +105,20 @@ func (m *Flatpak) Search(ctx context.Context, query string) ([]string, error) {
 		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
 	}
 	return parseLines(out), nil
+}
+
+// ListRepos returns a list of remotes currently configured.
+func (m *Flatpak) ListRepos(ctx context.Context) ([]string, error) {
+	out, err := m.exec(ctx, "flatpak", "remotes", "--columns=name")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list remotes: %w", err)
+	}
+	// Skip header line "Name" if present
+	lines := parseLines(out)
+	if len(lines) > 0 && lines[0] == "Name" {
+		lines = lines[1:]
+	}
+	return lines, nil
 }
 
 // AddRepo enables a third-party remote.

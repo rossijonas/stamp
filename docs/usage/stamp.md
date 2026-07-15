@@ -26,7 +26,7 @@ stamp [flags]
 * [stamp list](stamp_list.md)	 - List all intentionally installed packages
 * [stamp man](stamp_man.md)	 - Manage stamp troff man pages
 * [stamp reconcile](stamp_reconcile.md)	 - Detect packages installed outside stamp and add them to the manifest
-* [stamp reinstall](stamp_reinstall.md)	 - Reinstall a package currently tracked in the manifest
+* [stamp reinstall](stamp_reinstall.md)	 - Reinstall a package and record it in the manifest
 * [stamp remove](stamp_remove.md)	 - Remove a package and untrack it
 * [stamp repo](stamp_repo.md)	 - Manage third-party repositories
 * [stamp restore](stamp_restore.md)	 - Restore all tracked repositories and packages from the manifest

@@ -30,10 +30,10 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp init` | | | Initializes `manifest.toml` and takes baseline snapshot. |
 | `stamp install <pkg>` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. |
 | `stamp remove <pkg>` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes natively and untracks. |
-| `stamp reinstall <pkg>` | | | Reinstalls a package currently tracked in the manifest using its recorded manager. |
+| `stamp reinstall <pkg>` | | | Reinstalls natively and records intent. Works for both manifest-tracked and pre-existing packages. |
 | `stamp search <query>` | | `--manager, -m <name>` | Searches across managers. |
 | `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. |
-| `stamp reconcile` | | `--manager, -m <name>` | Detects drift, prompts user, records intent. |
+| `stamp reconcile` | | `--dry-run, -d`, `--manager, -m <name>` | Detects drift since last snapshot and auto-tracks discovered packages and repositories. |
 | `stamp restore` | | `--dry-run, -d`, `--manager, -m <name>` | Reinstalls repos and packages on a new machine. |
 | `stamp update` | `upgrade` | `--manager, -m <name>` | Runs system upgrades across all managers in parallel. |
 | `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>` | Lists all intentionally installed packages. |
@@ -41,6 +41,7 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp self-update` | `self-upgrade` | `--check, -c` | Checks for and installs the latest version of `stamp`. |
 | `stamp completion <shell>` | | | Generates shell completion scripts (bash, zsh, fish, powershell). |
 | `stamp man` | | | Command group for system reference page management. |
+| `stamp auto-reconcile on\|off` | | `--period, -p hourly\|daily(default)\|weekly` | Installs or removes automated reconcile timer (systemd/launchd). |
 
 **Man Subcommands:**
 | Command | Flags | Description |
@@ -140,12 +141,12 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Behavior:** Looks up recorded manager from manifest if not overridden by `-m`. Runs native remove, deletes package from manifest, saves manifest.
 
 ### `stamp reinstall <pkg>` (C4)
-- **Usage:** Reinstalls a package currently tracked in the manifest using its recorded manager.
+- **Usage:** Reinstalls a package natively and records it in the manifest. Works as the primary mechanism for tracking pre-existing packages that were installed before `stamp init`.
 - **Flags:** None (accepts global `-y` flag).
 - **Behavior:**
-  1. Looks up `<pkg>` in the manifest.toml. If not found, aborts with: `package "<package>" is not tracked in the manifest`.
-  2. Resolves its recorded manager (e.g. `brew`).
-  3. Calls `adapter.Install()` on the active manager.
+  1. Looks up `<pkg>` in the manifest.toml.
+  2. **If found:** Resolves its recorded manager (e.g. `brew`). Calls `adapter.Install()` on the active manager.
+  3. **If NOT found (pre-existing package):** Resolves manager via the 3-tier resolution engine. Runs native reinstall command (e.g. `dnf reinstall htop`). Falls back to native install if reinstall not supported. Appends package to manifest.
   4. Saves new system snapshots and saves manifest (updates `updated_at`).
 - **Output:** `reinstalled htop via brew` to stderr.
 
@@ -178,9 +179,19 @@ Detailed specifications, execution behaviors, and business rules for every subco
   ```
 
 ### `stamp reconcile`
-- **Usage:** Detects drift between the system state and the last snapshot, and prompts to track.
-- **Flags:** `--manager`, `-m` (Proposed)
-- **Behavior:** Fetches current state, diffs against snapshots, reports added packages, auto-tracks on `--yes` or prompts. Saves manifest and new snapshots.
+- **Usage:** Detects drift between the system state and the last snapshot, and auto-tracks discovered packages and repositories into the manifest.
+- **Flags:** `--manager`, `-m`, `--dry-run`, `-d`
+- **Behavior:**
+  - Fetches current state (packages and repositories) from all adapters.
+  - Diffs against the last snapshot.
+  - If no drift: exits with "No drift detected".
+  - If drift found AND `--dry-run`: shows all discovered packages/repos and exits without tracking.
+  - If drift found (not `--dry-run`): adds all discovered packages to manifest, saves new snapshots.
+  - No interactive prompt. Reconcile is fully deterministic:
+    - `stamp reconcile` — auto-tracks, no questions.
+    - `stamp reconcile --dry-run` — preview only, no tracking.
+    - `stamp reconcile -y` — identical to `stamp reconcile` (kept for scripting consistency).
+- **Design Rationale:** Reconcile is the safety net. There is no user decision to make: if a package was installed intentionally, it should be tracked. Users who want to inspect potential drift before committing use `--dry-run`. Pre-existing packages (installed before `stamp init`) are never detected — they are captured in the baseline snapshot. To track a pre-existing package, use `stamp reinstall <pkg>` instead.
 
 ### `stamp restore`
 - **Usage:** Restores environment on a new machine from the manifest.
@@ -266,10 +277,28 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 - **Always:** Return meaningful delta states (added, removed, unchanged).
 - **Always:** Every flag MUST have a single-character short form.
 - **Always:** Actions MUST be subcommands, not flags.
+- **Always:** Snapshot diffing is the default mechanism for drift detection.
+- **Always:** Packages and repositories installed before `stamp init` are never tracked or detected by `stamp reconcile`. They are captured in the baseline snapshot.
+- **Always:** To track a pre-existing package, use `stamp reinstall <pkg>`.
 - **Ask first:** Before adding any third-party dependencies beyond `cobra` and `go-toml`.
 - **Ask first:** Before changing the structure of the `manifest.toml`.
 - **Never:** Mutate the actual system state (run native installs) during a `reconcile` or `list` command.
 - **Never:** Use flags to represent actions (e.g. `--install`). Use subcommands instead.
+- **Never:** Present interactive prompts during `stamp reconcile`. The command is fully deterministic.
+
+## Edge Cases
+
+### Reinstall Gap
+
+**Scenario:** A package is removed and reinstalled between two `stamp reconcile` runs. Snapshot diffing sees no net change and reports no drift. This edge case only applies when the user **bypasses stamp and uses native package manager commands (dnf, brew, flatpak) directly**, then relies on reconcile as a safety net.
+
+**Root Cause:** Snapshot diffing is a point-in-time comparison between two snapshots. If the removed package is reinstalled before the next reconcile, the baseline and current snapshots are identical. Stamp has no event monitoring — it cannot observe intermediate states.
+
+**Mitigation:**
+- **Always use stamp (recommended):** The edge case never occurs if packages are managed through stamp (`stamp install`/`stamp remove`). Stamp records every install and removal in the manifest instantly — no snapshot diffing involved.
+- **Regular reconciliation:** If using native commands directly, remember to run `stamp reconcile` after each uninstall operation to keep snapshots in sync.
+- **Automated timer:** `stamp auto-reconcile on` (planned) installs a daily systemd/launchd timer.
+- **Manual timer files:** Pre-configured service/timer files available in `contrib/`.
 
 ## UNIX Compliance & Documentation Strategy
 To be a "good UNIX citizen", `stamp` must adhere to:
@@ -283,21 +312,30 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 - **Project Landing Page:** A custom landing page at `docs/index.html` served via GitHub Pages (`/docs` folder on main branch, `https://rossijonas.github.io/stamp/`).
 
 ## Success Criteria
-1. **Init:** Running `stamp init` creates the correct XDG directories and an empty `manifest.toml`.
-2. **Reconcile (No Drift):** If system state matches the last snapshot, `reconcile` exits cleanly.
-3. **Reconcile (Drift):** If `flatpak install com.spotify.Client` is run externally, `stamp reconcile` detects this one new package, prompts, and adds it to `manifest.toml`.
-4. **Restore:** Running `stamp restore` successfully adds repositories *before* executing the respective package manager install commands concurrently.
-5. **Notes:** A user can pass `--note "reason"` to `stamp install` or `stamp edit`, which will be correctly saved in the TOML manifest.
-6. **Doctor:** `stamp doctor` reports manager status, manifest health, and UNIX compliance in both TTY and JSON.
-7. **Man Pages:** `stamp man` displays help; `stamp man install` installs man pages; `stamp man check` verifies version matches binary.
-8. **Completions:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts.
-9. **Reinstall:** `stamp reinstall htop` successfully reinstalls a manifest-tracked package using its recorded manager.
-10. **Info:** `stamp info htop -m dnf` prints raw dnf info metadata directly.
-11. **Install:** `stamp install htop` installs the package natively via the resolved manager and records it in `manifest.toml`.
-12. **Remove:** `stamp remove htop` removes the package natively and removes it from the manifest.
-13. **Search:** `stamp search ripgrep` returns matching packages from all available managers.
-14. **Repo Add:** `stamp repo add myrepo -m brew` adds the repository via the specified manager and records it.
-15. **Repo Remove:** `stamp repo remove myrepo -m brew` removes the repository and untracks it.
-16. **Repo List:** `stamp repo list` prints all tracked repositories; `--json` outputs machine-readable.
-17. **Hello:** `stamp hello` displays ASCII logo, project description, and suggested next steps.
-18. **Completion:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts for each shell.
+1. **Init:** Running `stamp init` creates the correct XDG directories and an empty `manifest.toml`, and takes baseline snapshots for each available manager.
+2. **Reconcile (No Drift):** If system state matches the last snapshot, `reconcile` exits cleanly with `"No drift detected"`.
+3. **Reconcile (Drift):** If `flatpak install com.spotify.Client` is run externally, `stamp reconcile` detects this one new package and auto-tracks it to `manifest.toml` without prompting.
+4. **Reconcile (Dry Run):** `stamp reconcile --dry-run` shows all discovered drift but does NOT save manifest or snapshots.
+5. **Reconcile (Pre-existing):** Packages installed before `stamp init` are never detected by `stamp reconcile`. To track them, use `stamp reinstall <pkg>`.
+6. **Reinstall (Manifest-tracked):** `stamp reinstall htop` reinstalls a manifest-tracked package using its recorded manager.
+7. **Reinstall (Pre-existing):** `stamp reinstall htop` installs a pre-existing package not in the manifest, resolves its manager, runs native reinstall, and records it in the manifest.
+8. **Restore:** Running `stamp restore` successfully adds repositories *before* executing the respective package manager install commands concurrently.
+9. **Notes:** A user can pass `--note "reason"` to `stamp install` or `stamp edit`, which will be correctly saved in the TOML manifest.
+10. **Doctor:** `stamp doctor` reports manager status, manifest health, and UNIX compliance in both TTY and JSON.
+11. **Man Pages:** `stamp man` displays help; `stamp man install` installs man pages; `stamp man check` verifies version matches binary.
+12. **Completions:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts.
+13. **Info:** `stamp info htop -m dnf` prints raw dnf info metadata directly.
+14. **Install:** `stamp install htop` installs the package natively via the resolved manager and records it in `manifest.toml`.
+15. **Remove:** `stamp remove htop` removes the package natively and removes it from the manifest.
+16. **Search:** `stamp search ripgrep` returns matching packages from all available managers.
+17. **Repo Add:** `stamp repo add myrepo -m brew` adds the repository via the specified manager and records it.
+18. **Repo Remove:** `stamp repo remove myrepo -m brew` removes the repository and untracks it.
+19. **Repo List:** `stamp repo list` prints all tracked repositories; `--json` outputs machine-readable.
+20. **Hello:** `stamp hello` displays ASCII logo, project description, and suggested next steps.
+21. **Completion:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts for each shell.
+22. **Reconcile (Repo Drift):** If a new flatpak remote or brew tap is added externally, `stamp reconcile` detects and auto-tracks the repository alongside packages.
+23. **Reconcile (Manager Scope):** `stamp reconcile -m dnf` scopes drift detection to a single manager only.
+24. **Reinstall (Manager Flag):** `stamp reinstall htop -m brew` overrides manager resolution via the `--manager` flag for pre-existing packages.
+25. **Reinstall (Adapters):** `adapter.Reinstall()` executes the native reinstall command for each manager (brew reinstall, dnf reinstall, flatpak install).
+26. **Reconcile (Snapshot Save on No Drift):** If reconcile detects no drift, the current snapshot is saved to disk so future package removals are tracked correctly.
+27. **Auto-Reconcile (Planned):** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.

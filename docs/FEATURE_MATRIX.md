@@ -8,13 +8,13 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | `stamp install <pkg>` | `add` | ✅ | ✅ | ✅ Resolver → adapter → manifest | ✅ Complete |
 | `stamp remove <pkg>` | `uninstall`, `rm`, `delete`, `del` | ✅ | ✅ | ✅ Manifest lookup + adapter | ✅ Complete |
-| `stamp reinstall <pkg>` | | ✅ | ✅ | ✅ Manifest lookup → adapter install | ✅ Complete |
+| `stamp reinstall <pkg>` | | ✅ | ✅ | ✅ Manifest-tracked + pre-existing via resolver + `Reinstall` adapter method | ✅ Complete |
 | `stamp search <query>` | | ✅ | ✅ | ✅ Queries adapters | ✅ Complete |
 | `stamp info <pkg>` | | ✅ | ✅ | ✅ Queries adapter Info() | ✅ Complete |
 | `stamp repo add <name> [url]` | `install` | ✅ | ✅ | ✅ Adapter + manifest (--manager required) | ✅ Complete |
 | `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✅ | ✅ | ✅ Adapter + manifest (--manager required) | ✅ Complete |
 | `stamp repo list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
-| `stamp reconcile` | | ✅ | ✅ | ✅ State diff + manifest update | ✅ Complete |
+| `stamp reconcile` | | ✅ | ✅ | ✅ Auto-track + `--dry-run` + no prompt + repo drift detection | ✅ Complete |
 | `stamp restore` | | ✅ | ✅ | ✅ Sequentially adds repos then concurrently installs packages | ✅ Complete |
 | `stamp doctor` | | ✅ | ✅ | ✅ Adapter check + manifest check + compliance report | ✅ Complete |
 | `stamp completion [shell]` | | ✅ | ✅ | ✅ Cobra Gen*Completion | ✅ Complete |
@@ -25,6 +25,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
 | `stamp self-update` | `self-upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
+| `stamp auto-reconcile on\|off` | | ✅ | ❌ | ❌ | ⏳ Pending |
 
 ## Repository Commands
 
@@ -65,11 +66,13 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp self-update` | `--check` | | ✅ | ❌ | ⏳ Pending |
 | `stamp list` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
 | `stamp repo list` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
+| `stamp reconcile` | `--dry-run` | `-d` | ✅ | ✅ | ✅ Complete |
 | `stamp reconcile` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp restore` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp repo list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp doctor` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp update` | `--manager <name>` | `-m` | ✅ | ❌ | ⏳ Pending |
+| `stamp auto-reconcile` | `--period <interval>` | `-p` | ✅ | ❌ | ⏳ Pending |
 | `stamp list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 
 ## UNIX Compliance
@@ -123,4 +126,8 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ⏳ |
 | 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ⏳ |
 | 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ⏳ |
-| 5 | 11 | Relicense to Apache-2.0 | ✅ |
+| 5 | — | Relicense to Apache-2.0 | ✅ |
+| 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✅ |
+| 6 | 28 | Reinstall — Support Pre-Existing Packages | ✅ |
+| 6 | 29 | Flag and Compliance Updates | ✅ |
+| 6 | 30 | `stamp auto-reconcile` Command | ⏳ Pending |
