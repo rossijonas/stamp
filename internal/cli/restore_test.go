@@ -3,16 +3,15 @@ package cli
 import (
 	"bytes"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/rossijonas/stamp/internal/manager"
+	"github.com/rossijonas/stamp/internal/state"
 )
 
 func TestRestore_Empty(t *testing.T) {
@@ -25,7 +24,6 @@ func TestRestore_Empty(t *testing.T) {
 func TestRestore_DryRun(t *testing.T) {
 	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
 
-	// Setup manifest with repo and package
 	manifestContent := `version = 1
 system = "linux"
 
@@ -80,11 +78,13 @@ manager = "brew"
 	mPath := filepath.Join(tmpDir, "manifest.toml")
 	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
 
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
 	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore", "--yes"})
+	root.SetArgs([]string{"restore"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -96,9 +96,49 @@ manager = "brew"
 	assert.Contains(t, output, "  installed htop via brew")
 	assert.Contains(t, output, "Restore completed successfully")
 
-	// Verify state actually changed in the mock
 	assert.Contains(t, mockBrew.TrackedRepos, "my-tap")
 	assert.Contains(t, mockBrew.InstalledPkgs, "htop")
+}
+
+func TestRestore_SnapshotsSaved(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName:   "brew",
+		InstalledPkgs: []string{"htop"},
+	}
+	adapters := []manager.Adapter{mockBrew}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "Restore completed successfully")
+
+	// Verify snapshot was saved
+	snapPath := filepath.Join(tmpDir, "stamp", "snapshots", "brew.json")
+	_, err = os.Stat(snapPath)
+	require.NoError(t, err)
+
+	// Verify snapshot contains the restored package
+	loaded, err := state.Load(filepath.Join(tmpDir, "stamp", "snapshots"), "brew")
+	require.NoError(t, err)
+	assert.Contains(t, loaded.Packages, "htop")
 }
 
 func TestRestore_Failures(t *testing.T) {
@@ -129,7 +169,7 @@ manager = "brew"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore", "--yes"})
+	root.SetArgs([]string{"restore"})
 
 	err := root.Execute()
 	require.Error(t, err)
@@ -139,37 +179,6 @@ manager = "brew"
 	assert.Contains(t, output, "Some packages failed to restore:")
 	assert.Contains(t, output, "  - htop (brew): network timeout")
 	assert.Contains(t, err.Error(), "failed to restore 1 package(s)")
-}
-
-func TestRestore_NonTTYAutoTrack(t *testing.T) {
-	mockBrew := &manager.Mock{
-		ManagerName: "brew",
-	}
-	adapters := []manager.Adapter{mockBrew}
-
-	manifestContent := `version = 1
-system = "linux"
-
-[[packages]]
-name = "htop"
-manager = "brew"
-`
-	tmpDir := t.TempDir()
-	mPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
-
-	// No --yes, non-TTY input. Should auto-track.
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetIn(strings.NewReader("n\n")) // non-terminal inputs default to auto-accept
-	root.SetArgs([]string{"restore"})
-
-	err := root.Execute()
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "Restore completed successfully")
-	assert.Contains(t, mockBrew.InstalledPkgs, "htop")
 }
 
 func TestRestore_UnknownManager(t *testing.T) {
@@ -183,12 +192,12 @@ system = "linux"
 
 [[repositories]]
 name = "my-tap"
-manager = "dnf" # not in adapters
+manager = "dnf"
 url = "https://github.com/my-tap"
 
 [[packages]]
 name = "htop"
-manager = "flatpak" # not in adapters
+manager = "flatpak"
 `
 	tmpDir := t.TempDir()
 	mPath := filepath.Join(tmpDir, "manifest.toml")
@@ -198,7 +207,7 @@ manager = "flatpak" # not in adapters
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore", "--yes"})
+	root.SetArgs([]string{"restore"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -206,110 +215,6 @@ manager = "flatpak" # not in adapters
 
 	assert.Contains(t, output, "warning: manager dnf not available for repository my-tap")
 	assert.Contains(t, output, "warning: manager flatpak not available, skipping 1 package(s)")
-}
-
-func TestRestore_InteractiveConfirm(t *testing.T) {
-	oldIsTerminal := isTerminal
-	isTerminal = func(_ io.Reader) bool { return true }
-	defer func() { isTerminal = oldIsTerminal }()
-
-	mockBrew := &manager.Mock{
-		ManagerName: "brew",
-	}
-	adapters := []manager.Adapter{mockBrew}
-
-	manifestContent := `version = 1
-system = "linux"
-
-[[packages]]
-name = "htop"
-manager = "brew"
-`
-	tmpDir := t.TempDir()
-	mPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetIn(strings.NewReader("y\n")) // mock confirm
-	root.SetArgs([]string{"restore"})
-
-	err := root.Execute()
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "Restore completed successfully")
-	assert.Contains(t, mockBrew.InstalledPkgs, "htop")
-}
-
-func TestRestore_InteractiveCancel(t *testing.T) {
-	oldIsTerminal := isTerminal
-	isTerminal = func(_ io.Reader) bool { return true }
-	defer func() { isTerminal = oldIsTerminal }()
-
-	mockBrew := &manager.Mock{
-		ManagerName: "brew",
-	}
-	adapters := []manager.Adapter{mockBrew}
-
-	manifestContent := `version = 1
-system = "linux"
-
-[[packages]]
-name = "htop"
-manager = "brew"
-`
-	tmpDir := t.TempDir()
-	mPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetIn(strings.NewReader("n\n")) // mock cancel
-	root.SetArgs([]string{"restore"})
-
-	err := root.Execute()
-	require.NoError(t, err)
-	output := buf.String()
-	assert.Contains(t, output, "Restore cancelled")
-	assert.NotContains(t, mockBrew.InstalledPkgs, "htop")
-}
-
-func TestRestore_InteractiveReadError(t *testing.T) {
-	oldIsTerminal := isTerminal
-	isTerminal = func(_ io.Reader) bool { return true }
-	defer func() { isTerminal = oldIsTerminal }()
-
-	mockBrew := &manager.Mock{
-		ManagerName: "brew",
-	}
-	adapters := []manager.Adapter{mockBrew}
-
-	manifestContent := `version = 1
-system = "linux"
-
-[[packages]]
-name = "htop"
-manager = "brew"
-`
-	tmpDir := t.TempDir()
-	mPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetIn(strings.NewReader("")) // empty reader triggers read error on ReadString
-	root.SetArgs([]string{"restore"})
-
-	err := root.Execute()
-	require.NoError(t, err)
-	output := buf.String()
-	assert.Contains(t, output, "Restore cancelled")
-	assert.NotContains(t, mockBrew.InstalledPkgs, "htop")
 }
 
 func TestRestore_ManagerFlagNoMatch(t *testing.T) {
@@ -329,12 +234,11 @@ manager = "brew"
 	mPath := filepath.Join(tmpDir, "manifest.toml")
 	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
 
-	// Filter with non-existent manager — should say nothing to restore
 	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore", "--yes", "-m", "nonexistent"})
+	root.SetArgs([]string{"restore", "-m", "nonexistent"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -379,7 +283,7 @@ manager = "dnf"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore", "--yes", "-m", "brew"})
+	root.SetArgs([]string{"restore", "-m", "brew"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -390,10 +294,40 @@ manager = "dnf"
 	assert.NotContains(t, output, "fedora-copr")
 	assert.NotContains(t, output, "tmux")
 
-	// Verify only brew items were installed
 	assert.Contains(t, mockBrew.InstalledPkgs, "htop")
 	assert.Contains(t, mockBrew.TrackedRepos, "my-tap")
 	assert.NotContains(t, mockDNF.InstalledPkgs, "tmux")
+}
+
+func TestRestore_YFlag_Compatibility(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName: "brew",
+	}
+	adapters := []manager.Adapter{mockBrew}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "--yes"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Restore completed successfully")
 }
 
 func TestRestore_CorruptedManifest(t *testing.T) {
@@ -410,7 +344,7 @@ func TestRestore_CorruptedManifest(t *testing.T) {
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore", "--yes"})
+	root.SetArgs([]string{"restore"})
 
 	err := root.Execute()
 	require.Error(t, err)
