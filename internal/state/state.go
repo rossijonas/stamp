@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,19 +19,56 @@ import (
 // Snapshot represents a point-in-time record of packages and repositories installed
 // by a single package manager.
 type Snapshot struct {
-	Manager      string    `json:"manager"`
-	Packages     []string  `json:"packages"`
-	Repositories []string  `json:"repositories,omitempty"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	Manager      string                   `json:"manager"`
+	Packages     []string                 `json:"packages"`
+	Repositories []manager.RepositoryInfo `json:"repositories,omitempty"`
+	UpdatedAt    time.Time                `json:"updated_at"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler for backward compatibility with old
+// snapshot format where Repositories was a []string.
+func (s *Snapshot) UnmarshalJSON(data []byte) error {
+	type snapshotAlias Snapshot
+	alias := struct {
+		Repositories json.RawMessage `json:"repositories,omitempty"`
+		*snapshotAlias
+	}{snapshotAlias: (*snapshotAlias)(s)}
+
+	if err := json.Unmarshal(data, &alias); err != nil {
+		return err
+	}
+
+	if len(alias.Repositories) == 0 {
+		s.Repositories = nil
+		return nil
+	}
+
+	// Try new format first ([]RepositoryInfo)
+	var repos []manager.RepositoryInfo
+	if err := json.Unmarshal(alias.Repositories, &repos); err == nil {
+		s.Repositories = repos
+		return nil
+	}
+
+	// Fallback to old format ([]string)
+	var names []string
+	if err := json.Unmarshal(alias.Repositories, &names); err != nil {
+		return fmt.Errorf("failed to unmarshal repositories")
+	}
+	s.Repositories = make([]manager.RepositoryInfo, len(names))
+	for i, n := range names {
+		s.Repositories[i] = manager.RepositoryInfo{Name: n}
+	}
+	return nil
 }
 
 // Delta represents the difference (added and removed packages/repos) between two snapshots.
 type Delta struct {
-	Manager      string   `json:"manager"`
-	Added        []string `json:"added"`
-	Removed      []string `json:"removed"`
-	AddedRepos   []string `json:"added_repos,omitempty"`
-	RemovedRepos []string `json:"removed_repos,omitempty"`
+	Manager      string                   `json:"manager"`
+	Added        []string                 `json:"added"`
+	Removed      []string                 `json:"removed"`
+	AddedRepos   []manager.RepositoryInfo `json:"added_repos,omitempty"`
+	RemovedRepos []manager.RepositoryInfo `json:"removed_repos,omitempty"`
 }
 
 func xdgStateDir() string {
@@ -168,6 +206,40 @@ func diffSorted(a, b []string) (added, removed []string) {
 	return added, removed
 }
 
+// diffSortedRepos computes added/removed repositories between two sorted slices,
+// comparing by Name only (URL changes are not drift).
+func diffSortedRepos(a, b []manager.RepositoryInfo) (added, removed []manager.RepositoryInfo) {
+	slices.SortFunc(a, func(x, y manager.RepositoryInfo) int {
+		return strings.Compare(x.Name, y.Name)
+	})
+	slices.SortFunc(b, func(x, y manager.RepositoryInfo) int {
+		return strings.Compare(x.Name, y.Name)
+	})
+
+	i, j := 0, 0
+	for i < len(a) && j < len(b) {
+		o, n := a[i], b[j]
+		switch {
+		case o.Name < n.Name:
+			removed = append(removed, o)
+			i++
+		case o.Name > n.Name:
+			added = append(added, n)
+			j++
+		default:
+			i++
+			j++
+		}
+	}
+	for ; i < len(a); i++ {
+		removed = append(removed, a[i])
+	}
+	for ; j < len(b); j++ {
+		added = append(added, b[j])
+	}
+	return added, removed
+}
+
 // Diff calculates the added and removed packages and repositories between an old and new snapshot.
 func Diff(oldSnap, newSnap Snapshot) *Delta {
 	oldPkgs := slices.Clone(oldSnap.Packages)
@@ -177,12 +249,7 @@ func Diff(oldSnap, newSnap Snapshot) *Delta {
 
 	added, removed := diffSorted(oldPkgs, newPkgs)
 
-	oldRepos := slices.Clone(oldSnap.Repositories)
-	newRepos := slices.Clone(newSnap.Repositories)
-	slices.Sort(oldRepos)
-	slices.Sort(newRepos)
-
-	addedRepos, removedRepos := diffSorted(oldRepos, newRepos)
+	addedRepos, removedRepos := diffSortedRepos(oldSnap.Repositories, newSnap.Repositories)
 
 	return &Delta{
 		Manager:      newSnap.Manager,
@@ -206,7 +273,7 @@ func DiffAll(oldSnaps, newSnaps []Snapshot) []Delta {
 		o, ok := oldMap[n.Manager]
 		if !ok {
 			// If no old snapshot exists for this manager, treat all as added
-			o = Snapshot{Manager: n.Manager, Packages: []string{}, Repositories: []string{}}
+			o = Snapshot{Manager: n.Manager, Packages: []string{}, Repositories: []manager.RepositoryInfo{}}
 		}
 		deltas = append(deltas, *Diff(o, n))
 	}

@@ -11,7 +11,7 @@ import (
 type Mock struct {
 	ManagerName    string
 	InstalledPkgs  []string
-	InstalledRepos []string
+	InstalledRepos []RepositoryInfo
 	AvailablePkgs  []string
 	TrackedRepos   []string
 	ListErr        error
@@ -43,14 +43,21 @@ func (m *Mock) ListInstalled(_ context.Context) ([]string, error) {
 }
 
 // ListRepos returns a list of repositories currently configured.
-func (m *Mock) ListRepos(_ context.Context) ([]string, error) {
+func (m *Mock) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	if m.ListReposErr != nil {
 		return nil, m.ListReposErr
 	}
 	if m.InstalledRepos != nil {
 		return slices.Clone(m.InstalledRepos), nil
 	}
-	return slices.Clone(m.TrackedRepos), nil
+	if m.TrackedRepos != nil {
+		result := make([]RepositoryInfo, len(m.TrackedRepos))
+		for i, r := range m.TrackedRepos {
+			result[i] = RepositoryInfo{Name: r}
+		}
+		return result, nil
+	}
+	return nil, nil
 }
 
 // Install executes the native installation command.

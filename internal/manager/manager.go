@@ -22,6 +22,12 @@ func ValidatePackageName(pkg string) error {
 	return nil
 }
 
+// RepositoryInfo holds the name and URL of a third-party repository.
+type RepositoryInfo struct {
+	Name string `json:"name"`
+	URL  string `json:"url,omitempty"`
+}
+
 // Adapter abstracts operations for different underlying package managers
 // like dnf, brew, and flatpak.
 type Adapter interface {
@@ -33,7 +39,7 @@ type Adapter interface {
 	ListInstalled(ctx context.Context) ([]string, error)
 
 	// ListRepos returns a list of third-party repositories or taps currently configured.
-	ListRepos(ctx context.Context) ([]string, error)
+	ListRepos(ctx context.Context) ([]RepositoryInfo, error)
 
 	// Install executes the native installation command for the given package.
 	Install(ctx context.Context, pkg string) error

@@ -2,6 +2,8 @@ package manager
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -957,27 +959,63 @@ func TestParseDNFRepos(t *testing.T) {
 }
 
 func TestDNF_ListRepos(t *testing.T) {
-	t.Parallel()
-	manager := NewDNF("dnf")
-	manager.exec = mockExecutorHelper(
-		"repo id                     repo name\n"+
-			"fedora                      Fedora 44\n"+
-			"copr:copr.fedorainfracloud.org:petersen:cava Copr repo\n",
-		nil,
-	)
+	oldDir := dnfReposDir
+	dnfReposDir = t.TempDir()
+	defer func() { dnfReposDir = oldDir }()
 
-	repos, err := manager.ListRepos(context.Background())
+	// Create fixture .repo files
+	//nolint:gosec // test fixtures
+	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "enpass-yum.repo"), []byte(
+		"[enpass]\n"+
+			"name=Enpass\n"+
+			"baseurl=https://yum.enpass.io/\n"+
+			"enabled=1\n",
+	), 0o644))
+	//nolint:gosec // test fixtures
+	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "google-chrome.repo"), []byte(
+		"[google-chrome]\n"+
+			"name=Google Chrome\n"+
+			"baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64\n"+
+			"enabled=1\n",
+	), 0o644))
+	//nolint:gosec // test fixtures
+	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "fedora.repo"), []byte(
+		"[fedora]\n"+
+			"name=Fedora $releasever - $basearch\n"+
+			"metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever\n"+
+			"enabled=1\n",
+	), 0o644))
+
+	repos, err := parseDNFSources()
 	require.NoError(t, err)
-	assert.Contains(t, repos, "copr:copr.fedorainfracloud.org:petersen:cava")
-	assert.NotContains(t, repos, "fedora")
+	require.Len(t, repos, 2)
+
+	names := make(map[string]string)
+	for _, r := range repos {
+		names[r.Name] = r.URL
+	}
+
+	assert.Equal(t, "https://yum.enpass.io/", names["enpass"])
+	assert.Equal(t, "https://dl.google.com/linux/chrome/rpm/stable/x86_64", names["google-chrome"])
+	assert.NotContains(t, names, "fedora")
 }
 
-func TestDNF_ListReposError(t *testing.T) {
-	t.Parallel()
-	manager := NewDNF("dnf")
-	manager.exec = mockExecutorHelper("", assert.AnError)
+func TestDNF_ListRepos_EmptyDir(t *testing.T) {
+	oldDir := dnfReposDir
+	dnfReposDir = t.TempDir()
+	defer func() { dnfReposDir = oldDir }()
 
-	_, err := manager.ListRepos(context.Background())
+	repos, err := parseDNFSources()
+	require.NoError(t, err)
+	assert.Empty(t, repos)
+}
+
+func TestDNF_ListRepos_MissingDir(t *testing.T) {
+	oldDir := dnfReposDir
+	dnfReposDir = "/nonexistent/repos"
+	defer func() { dnfReposDir = oldDir }()
+
+	_, err := parseDNFSources()
 	require.Error(t, err)
 }
 
@@ -988,7 +1026,9 @@ func TestBrew_ListRepos(t *testing.T) {
 
 	repos, err := manager.ListRepos(context.Background())
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"aovestdipaperino/tap", "yvgude/lean-ctx"}, repos)
+	require.Len(t, repos, 2)
+	assert.Equal(t, "aovestdipaperino/tap", repos[0].Name)
+	assert.Equal(t, "yvgude/lean-ctx", repos[1].Name)
 }
 
 func TestBrew_ListReposError(t *testing.T) {
@@ -1003,11 +1043,17 @@ func TestBrew_ListReposError(t *testing.T) {
 func TestFlatpak_ListRepos(t *testing.T) {
 	t.Parallel()
 	manager := NewFlatpak()
-	manager.exec = mockExecutorHelper("Name\nflathub\nflathub-beta\n", nil)
+	manager.exec = mockExecutorHelper(
+		"Name\tURL\nflathub\thttps://dl.flathub.org/repo/flathub.flatpakrepo\nflathub-beta\thttps://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo\n",
+		nil,
+	)
 
 	repos, err := manager.ListRepos(context.Background())
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"flathub", "flathub-beta"}, repos)
+	require.Len(t, repos, 2)
+	assert.Equal(t, "flathub", repos[0].Name)
+	assert.Contains(t, repos[0].URL, "dl.flathub.org")
+	assert.Equal(t, "flathub-beta", repos[1].Name)
 }
 
 func TestFlatpak_ListReposError(t *testing.T) {

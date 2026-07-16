@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"maps"
@@ -108,17 +109,44 @@ func (m *Flatpak) Search(ctx context.Context, query string) ([]string, error) {
 }
 
 // ListRepos returns a list of remotes currently configured.
-func (m *Flatpak) ListRepos(ctx context.Context) ([]string, error) {
-	out, err := m.exec(ctx, "flatpak", "remotes", "--columns=name")
+func (m *Flatpak) ListRepos(ctx context.Context) ([]RepositoryInfo, error) {
+	out, err := m.exec(ctx, "flatpak", "remotes", "--columns=name,url")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list remotes: %w", err)
 	}
-	// Skip header line "Name" if present
-	lines := parseLines(out)
-	if len(lines) > 0 && lines[0] == "Name" {
-		lines = lines[1:]
+	return parseFlatpakRemotes(out), nil
+}
+
+// parseFlatpakRemotes parses the output of 'flatpak remotes --columns=name,url'.
+// Output is tab-separated with a header line "Name\tURL".
+func parseFlatpakRemotes(output []byte) []RepositoryInfo {
+	lines := bytes.Split(output, []byte("\n"))
+	var repos []RepositoryInfo
+	for _, line := range lines {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 {
+			continue
+		}
+		// Skip header
+		if bytes.Equal(bytes.ToLower(trimmed), []byte("name\turl")) ||
+			bytes.Equal(bytes.TrimSpace(bytes.ToLower(trimmed)), []byte("name")) {
+			continue
+		}
+		parts := bytes.SplitN(trimmed, []byte("\t"), 2)
+		name := string(bytes.TrimSpace(parts[0]))
+		if name == "" {
+			continue
+		}
+		info := RepositoryInfo{Name: name}
+		if len(parts) > 1 {
+			url := string(bytes.TrimSpace(parts[1]))
+			if url != "" && url != "(unset)" {
+				info.URL = url
+			}
+		}
+		repos = append(repos, info)
 	}
-	return lines, nil
+	return repos
 }
 
 // AddRepo enables a third-party remote.
