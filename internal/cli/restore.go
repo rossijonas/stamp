@@ -1,15 +1,14 @@
 package cli
 
 import (
-	"bufio"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
 	"github.com/rossijonas/stamp/internal/manifest"
+	"github.com/rossijonas/stamp/internal/state"
 )
 
 func newRestoreCmd() *cobra.Command {
@@ -69,29 +68,6 @@ then installs all tracked packages concurrently across package managers.`,
 						_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  - %s (%s)\n", p.Name, p.Manager)
 					}
 				}
-				return nil
-			}
-
-			track := app.yes
-			if !track {
-				if !isTerminal(cmd.InOrStdin()) {
-					track = true
-				} else {
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Restore %d repository(ies) and %d package(s)? [Y/n]: ", len(repos), len(pkgs))
-					reader := bufio.NewReader(cmd.InOrStdin())
-					response, err := reader.ReadString('\n')
-					if err != nil {
-						_, _ = fmt.Fprintln(cmd.ErrOrStderr())
-						track = false
-					} else {
-						response = strings.TrimSpace(response)
-						track = response == "" || strings.EqualFold(response, "y") || strings.EqualFold(response, "yes")
-					}
-				}
-			}
-
-			if !track {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Restore cancelled")
 				return nil
 			}
 
@@ -179,6 +155,19 @@ then installs all tracked packages concurrently across package managers.`,
 						_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  - %s (%s): %v\n", e.Pkg, e.Manager, e.Err)
 					}
 					return fmt.Errorf("failed to restore %d package(s)", len(errors))
+				}
+			}
+
+			// Save snapshots to align baseline for next reconcile
+			snapDir, err := state.SnapshotDir()
+			if err == nil {
+				currentSnaps, err := state.Current(cmd.Context(), app.adapters)
+				if err == nil {
+					for _, s := range currentSnaps {
+						if err := state.Save(snapDir, s); err != nil {
+							_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to save snapshot for %s: %v\n", s.Manager, err)
+						}
+					}
 				}
 			}
 
