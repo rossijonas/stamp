@@ -188,6 +188,11 @@ func TestDNF_Operations(t *testing.T) {
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
+		{
+			name:        "doctor not supported",
+			operation:   "doctor",
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -215,6 +220,16 @@ func TestDNF_Operations(t *testing.T) {
 				}
 			case "install":
 				err = manager.Install(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "reinstall":
+				err = manager.Reinstall(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 					if tt.mockErr != nil {
@@ -284,6 +299,13 @@ func TestDNF_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 					assert.Equal(t, tt.mockOutput, res)
+				}
+			case "doctor":
+				_, err = manager.Doctor(ctx)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
 				}
 			case "update":
 				err = manager.Update(ctx)
@@ -458,6 +480,11 @@ func TestBrew_Operations(t *testing.T) {
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
+		{
+			name:       "doctor success",
+			operation:  "doctor",
+			mockOutput: "mock doctor: all good",
+		},
 	}
 
 	for _, tt := range tests {
@@ -564,6 +591,13 @@ func TestBrew_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 					assert.Equal(t, tt.mockOutput, res)
+				}
+			case "doctor":
+				_, err = manager.Doctor(ctx)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
 				}
 			case "update":
 				err = manager.Update(ctx)
@@ -732,6 +766,11 @@ func TestFlatpak_Operations(t *testing.T) {
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
+		{
+			name:        "doctor not supported",
+			operation:   "doctor",
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -838,6 +877,13 @@ func TestFlatpak_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 					assert.Equal(t, tt.mockOutput, res)
+				}
+			case "doctor":
+				_, err = manager.Doctor(ctx)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
 				}
 			case "update":
 				err = manager.Update(ctx)

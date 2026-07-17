@@ -439,6 +439,63 @@ func TestLoad_InvalidManagerName(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid manager name")
 }
 
+func TestUnmarshalJSON_OldFormat(t *testing.T) {
+	// Old format: Repositories was a []string, not []RepositoryInfo
+	oldJSON := `{"manager":"brew","packages":["htop"],"repositories":["homebrew/core","homebrew/cask"]}`
+	var s Snapshot
+	err := s.UnmarshalJSON([]byte(oldJSON))
+	require.NoError(t, err)
+	assert.Equal(t, "brew", s.Manager)
+	assert.Equal(t, []string{"htop"}, s.Packages)
+	require.Len(t, s.Repositories, 2)
+	assert.Equal(t, "homebrew/core", s.Repositories[0].Name)
+	assert.Equal(t, "homebrew/cask", s.Repositories[1].Name)
+}
+
+func TestUnmarshalJSON_Invalid(t *testing.T) {
+	invalidJSON := `{"manager":"brew","repositories":12345}`
+	var s Snapshot
+	err := s.UnmarshalJSON([]byte(invalidJSON))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal repositories")
+}
+
+func TestXDGStateDir_FallbackNoHome(t *testing.T) {
+	oldHome := os.Getenv("HOME")
+	require.NoError(t, os.Setenv("HOME", ""))
+	defer func() { _ = os.Setenv("HOME", oldHome) }()
+
+	oldXdg := os.Getenv("XDG_DATA_HOME")
+	require.NoError(t, os.Setenv("XDG_DATA_HOME", ""))
+	defer func() { _ = os.Setenv("XDG_DATA_HOME", oldXdg) }()
+
+	dir := xdgStateDir()
+	// When HOME is empty and XDG_DATA_HOME is empty, uses "/tmp" as fallback
+	assert.Contains(t, dir, "stamp")
+}
+
+func TestDiffSorted(t *testing.T) {
+	// diffSorted with one side empty
+	added, removed := diffSorted([]string{}, []string{"a", "b"})
+	assert.ElementsMatch(t, []string{"a", "b"}, added)
+	assert.Empty(t, removed)
+
+	added, removed = diffSorted([]string{"a", "b"}, []string{})
+	assert.Empty(t, added)
+	assert.ElementsMatch(t, []string{"a", "b"}, removed)
+}
+
+func TestCurrent_AllFail(t *testing.T) {
+	ctx := context.Background()
+	mock := &manager.Mock{
+		ManagerName:  "dnf",
+		ListErr:      errors.New("fail"),
+		ListReposErr: errors.New("fail"),
+	}
+	_, err := Current(ctx, []manager.Adapter{mock})
+	require.Error(t, err)
+}
+
 func TestLoad_UnmarshalError(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "stamp-state-test-*")
 	require.NoError(t, err)

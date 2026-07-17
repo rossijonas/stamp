@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -136,9 +137,17 @@ func TestCompletion_DetectShell(t *testing.T) {
 
 func TestCompletion_NoShellDetected(t *testing.T) {
 	t.Setenv("SHELL", "")
-	_, err := execCmd(t, []string{"completion"}, []manager.Adapter{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cannot detect shell")
+	shell := detectShell()
+	assert.Empty(t, shell)
+}
+
+func TestCompletion_RunCompletion_NoShell(t *testing.T) {
+	t.Setenv("SHELL", "")
+	root := NewRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetErr(buf)
+	runCompletion(root)
+	assert.Contains(t, buf.String(), "cannot detect shell")
 }
 
 func TestCompletion_InstallPath(t *testing.T) {
