@@ -114,19 +114,44 @@ func newManInstallCmd() *cobra.Command {
 				return fmt.Errorf("failed to create man directory %s: %w", manDir, err)
 			}
 
-			manPath := filepath.Join(manDir, "stamp.1")
-			//nolint:gosec // path is controlled by --prefix flag
-			f, err := os.Create(manPath)
+			// Generate all man pages into a temp directory
+			tmpDir, err := os.MkdirTemp("", "stamp-man-*")
 			if err != nil {
-				return fmt.Errorf("failed to create %s: %w", manPath, err)
+				return fmt.Errorf("failed to create temp dir: %w", err)
 			}
-			defer func() { _ = f.Close() }()
+			defer func() { _ = os.RemoveAll(tmpDir) }()
 
-			if err := doc.GenMan(cmd.Root(), header, f); err != nil {
-				return fmt.Errorf("failed to generate man page: %w", err)
+			if err := doc.GenManTree(cmd.Root(), header, tmpDir); err != nil {
+				return fmt.Errorf("failed to generate man pages: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "man page installed to %s\n", manPath)
+			// Copy each .1 file to target directory
+			entries, err := os.ReadDir(tmpDir)
+			if err != nil {
+				return fmt.Errorf("failed to read generated man pages: %w", err)
+			}
+
+			installed := 0
+			for _, entry := range entries {
+				if filepath.Ext(entry.Name()) != ".1" {
+					continue
+				}
+				srcPath := filepath.Join(tmpDir, entry.Name())
+				dstPath := filepath.Join(manDir, entry.Name())
+
+				//nolint:gosec // paths are controlled by --prefix flag
+				data, err := os.ReadFile(srcPath)
+				if err != nil {
+					return fmt.Errorf("failed to read %s: %w", srcPath, err)
+				}
+				//nolint:gosec // man pages must be world-readable
+				if err := os.WriteFile(dstPath, data, 0644); err != nil {
+					return fmt.Errorf("failed to write %s: %w", dstPath, err)
+				}
+				installed++
+			}
+
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "installed %d man page(s) to %s\n", installed, manDir)
 			return nil
 		},
 	}

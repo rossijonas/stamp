@@ -10,7 +10,7 @@ tasks:
     desc: "Builds the stamp binary"
     cmds:
       - mkdir -p bin
-      - go build -ldflags="-X github.com/rossijonas/stamp/internal/cli.Version=dev -X github.com/rossijonas/stamp/internal/cli.Commit=$(git rev-parse --short HEAD 2>/dev/null || echo none) -X github.com/rossijonas/stamp/internal/cli.Date=$(date -u +%Y-%m-%d)" -o bin/stamp ./cmd/stamp
+      - go build -ldflags="-X github.com/rossijonas/stamp/internal/cli.Version=$(git describe --tags --abbrev=0 2>/dev/null || echo dev) -X github.com/rossijonas/stamp/internal/cli.Commit=$(git rev-parse --short HEAD 2>/dev/null || echo none) -X github.com/rossijonas/stamp/internal/cli.Date=$(date -u +%Y-%m-%d)" -o bin/stamp ./cmd/stamp
 
   build:all:
     desc: "Cross-compile for all supported platforms (requires goreleaser)"
