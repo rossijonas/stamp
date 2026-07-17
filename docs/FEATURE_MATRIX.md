@@ -126,7 +126,8 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
 | 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ✅ |
 | 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ✅ |
-| 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ⏳ |
+| 4 | 25b | Re-init guard for `stamp init` with mandatory backup | ✅ |
+| 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ✅ |
 | 5 | — | Relicense to Apache-2.0 | ✅ |
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✅ |
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✅ |

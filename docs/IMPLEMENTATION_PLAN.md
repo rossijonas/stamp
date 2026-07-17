@@ -308,8 +308,8 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 21 | `stamp init` command | ✅ |
 | 4 | 22 | `stamp list` command (alias `ls`) | ✅ |
 | 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
-| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ⏳ |
-| 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ⏳ |
+| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ✅ |
+| 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ✅ |
 | 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ✅ |
 | 5 | — | Relicense to Apache-2.0 | ✅ |
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✅ |
