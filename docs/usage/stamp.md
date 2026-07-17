@@ -19,7 +19,6 @@ stamp [flags]
 
 * [stamp completion](stamp_completion.md)	 - Generate and install shell completion script
 * [stamp doctor](stamp_doctor.md)	 - Diagnose system configuration and manifest health
-* [stamp hello](stamp_hello.md)	 - Print welcome message and recommended next steps
 * [stamp info](stamp_info.md)	 - Show package information across managers
 * [stamp init](stamp_init.md)	 - Initialize manifest.toml and take baseline snapshot
 * [stamp install](stamp_install.md)	 - Install a package and record intent
@@ -31,4 +30,5 @@ stamp [flags]
 * [stamp repo](stamp_repo.md)	 - Manage third-party repositories
 * [stamp restore](stamp_restore.md)	 - Restore all tracked repositories and packages from the manifest
 * [stamp search](stamp_search.md)	 - Search for packages across managers
+* [stamp setup](stamp_setup.md)	 - Run first-time setup wizard
 

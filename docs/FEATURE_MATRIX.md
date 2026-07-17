@@ -20,7 +20,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp completion [shell]` | | ✅ | ✅ | ✅ Auto-detect, install to path, --stdout flag | ✅ Complete |
 | `stamp man` | | ✅ | ✅ | ✅ Shows help for man command group | ✅ Complete |
 | `stamp hello` | | ✅ | ✅ | ✅ Prints ASCII logo + suggested next steps | ✅ Complete |
-| `stamp setup` | `hello` | ✅ | ❌ | ❌ | ⏳ Pending |
+| `stamp setup` | `hello` | ✅ | ✅ | ✅ Interactive wizard for completions, man, init, doctor | ✅ Complete |
 | `stamp init` | | ✅ | ✅ | ✅ Creates dirs + manifest + snapshots | ✅ Complete |
 | `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
@@ -124,7 +124,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 21 | `stamp init` command | ✅ |
 | 4 | 22 | `stamp list` command (alias `ls`) | ✅ |
 | 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
-| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ⏳ |
+| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ✅ |
 | 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ✅ |
 | 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ⏳ |
 | 5 | — | Relicense to Apache-2.0 | ✅ |

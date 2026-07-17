@@ -209,7 +209,7 @@ Build the environment reconstruction logic and final touches.
 **Task 24: Migrate `stamp hello` to `stamp setup` Wizard**
 *   **Description:** Replace `stamp hello` with `stamp setup` interactive wizard. Keep `hello` as alias. Run completion, man install, init (with prompts, default Yes), then doctor (no prompt). Support `-y` flag for scripting.
 *   **Acceptance:** `stamp setup -y` runs all steps without prompts. `stamp hello` continues to work as alias.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 25: Add Shell Completion Check to `stamp doctor`**
 *   **Description:** Check common shell completion paths (bash, zsh, fish) and report status in doctor TTY and JSON output.
