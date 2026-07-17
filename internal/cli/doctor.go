@@ -27,6 +27,7 @@ type manifestStatus struct {
 
 type doctorReport struct {
 	System          string          `json:"system"`
+	Version         string          `json:"version"`
 	PackageManagers []managerStatus `json:"package_managers"`
 	Manifest        manifestStatus  `json:"manifest"`
 	NoColor         bool            `json:"no_color"`
@@ -121,6 +122,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 			if app.json {
 				report := doctorReport{
 					System:          runtime.GOOS,
+					Version:         Version,
 					PackageManagers: managers,
 					Manifest:        ms,
 					NoColor:         app.noColor,
@@ -172,6 +174,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 			} else {
 				_, _ = fmt.Fprintln(out, "  NO_COLOR: ❌ Not set")
 			}
+			_, _ = fmt.Fprintf(out, "  Version:  stamp %s\n", Version)
 
 			if mpInstalled {
 				if mpMatches {

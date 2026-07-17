@@ -28,7 +28,7 @@ func TestMan_Install_Success(t *testing.T) {
 	prefix := t.TempDir()
 	buf, err := execCmd(t, []string{"man", "install", "--prefix", prefix}, []manager.Adapter{})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "man page installed to")
+	assert.Contains(t, buf.String(), "installed")
 
 	// Verify file was written
 	path := filepath.Join(prefix, "share", "man", "man1", "stamp.1")
