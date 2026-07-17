@@ -75,6 +75,7 @@ func TestMockErrors(t *testing.T) {
 		SearchErr:     expectedErr,
 		AddRepoErr:    expectedErr,
 		RemoveRepoErr: expectedErr,
+		UpdateErr:     expectedErr,
 	}
 
 	ctx := context.Background()
@@ -98,6 +99,9 @@ func TestMockErrors(t *testing.T) {
 	require.ErrorIs(t, err, expectedErr)
 
 	err = mock.RemoveRepo(ctx, "repo")
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.Update(ctx)
 	require.ErrorIs(t, err, expectedErr)
 }
 

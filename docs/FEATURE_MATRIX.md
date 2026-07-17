@@ -22,7 +22,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp hello` | | ✅ | ✅ | ✅ Prints ASCII logo + suggested next steps | ✅ Complete |
 | `stamp setup` | `hello` | ✅ | ✅ | ✅ Interactive wizard for completions, man, init, doctor | ✅ Complete |
 | `stamp init` | | ✅ | ✅ | ✅ Creates dirs + manifest + snapshots | ✅ Complete |
-| `stamp update` | `upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
+| `stamp update` | `upgrade` | ✅ | ✅ | ✅ errgroup concurrency + --manager flag | ✅ Complete |
 | `stamp list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
 | `stamp self-update` | `self-upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
 | `stamp auto-reconcile on\|off` | | ✅ | ❌ | ❌ | ⏳ Pending |
@@ -72,7 +72,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp restore` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp repo list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp doctor` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
-| `stamp update` | `--manager <name>` | `-m` | ✅ | ❌ | ⏳ Pending |
+| `stamp update` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 | `stamp auto-reconcile` | `--period <interval>` | `-p` | ✅ | ❌ | ⏳ Pending |
 | `stamp list` | `--manager <name>` | `-m` | ✅ | ✅ | ✅ Complete |
 
@@ -123,7 +123,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 20 | Create GitHub Pages landing page (`docs/index.html`) | ⏳ |
 | 4 | 21 | `stamp init` command | ✅ |
 | 4 | 22 | `stamp list` command (alias `ls`) | ✅ |
-| 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
+| 4 | 23 | `stamp update` command (alias `upgrade`) | ✅ |
 | 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ✅ |
 | 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ✅ |
 | 4 | 25b | Re-init guard for `stamp init` with mandatory backup | ✅ |

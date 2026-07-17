@@ -64,6 +64,9 @@ type Adapter interface {
 
 	// Doctor runs the native diagnostic command for the package manager.
 	Doctor(ctx context.Context) (string, error)
+
+	// Update runs the native system upgrade command for this package manager.
+	Update(ctx context.Context) error
 }
 
 func init() {

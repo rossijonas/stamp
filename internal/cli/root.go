@@ -236,6 +236,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newListCmd())
 	root.AddCommand(newManCmd())
+	root.AddCommand(newUpdateCmd())
 
 	return root
 }

@@ -156,7 +156,7 @@ Build the environment reconstruction logic and final touches.
 | 15b | `stamp restore -m` | ✅ |
 | 15c | `stamp doctor -m` | ✅ |
 | 15d | `stamp list -m` | ✅ (via Task 22) |
-| 15e | `stamp update -m` | ⏳ Pending (Task 23) |
+| 15e | `stamp update -m` | ✅ (Task 23) |
 
 #### Phase 4c — Infrastructure
 
@@ -203,8 +203,10 @@ Build the environment reconstruction logic and final touches.
 
 **Task 23: `stamp update` Command (alias `upgrade`)**
 *   **Description:** Run system upgrades across all available managers in parallel. Supports `--manager, -m` flag to scope to a single manager.
-*   **Acceptance:** Running `stamp update` executes native update/upgrade commands concurrently per manager.
-*   **Status:** ⏳ Pending
+*   **Acceptance:** Running `stamp update` executes native update/upgrade commands concurrently per manager. Errors from one manager don't block others. Non-zero exit if any manager fails.
+*   **Verify:** `task test` passes, manual test: `stamp update` shows per-manager results.
+*   **Files:** `internal/cli/update.go`, `internal/cli/update_test.go`, `internal/manager/dnf.go`, `internal/manager/brew.go`, `internal/manager/flatpak.go`, `internal/manager/mock.go`, `internal/manager/manager.go`
+*   **Status:** ✅ Completed
 
 **Task 24: Migrate `stamp hello` to `stamp setup` Wizard**
 *   **Description:** Replace `stamp hello` with `stamp setup` interactive wizard. Keep `hello` as alias. Run completion, man install, init (with prompts, default Yes), then doctor (no prompt). Support `-y` flag for scripting.
@@ -307,7 +309,7 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 20 | Create GitHub Pages landing page | ⏳ |
 | 4 | 21 | `stamp init` command | ✅ |
 | 4 | 22 | `stamp list` command (alias `ls`) | ✅ |
-| 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
+| 4 | 23 | `stamp update` command (alias `upgrade`) | ✅ |
 | 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ✅ |
 | 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ✅ |
 | 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ✅ |

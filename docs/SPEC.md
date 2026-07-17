@@ -233,6 +233,18 @@ Detailed specifications, execution behaviors, and business rules for every subco
     Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
   ```
 
+### `stamp update` (alias `upgrade`)
+- **Usage:** Runs system upgrades across all available package managers in parallel.
+- **Flags:** `--manager`, `-m`
+- **Behavior:**
+  1. If `-m` is set: runs that single manager's native update/upgrade command.
+  2. If no `-m`: runs ALL available managers concurrently using `sync.WaitGroup`.
+  3. Each manager streams its native output to stderr.
+  4. Errors from one manager do NOT block others. All per-manager errors are printed. If any manager fails, the command exits non-zero.
+  5. No manifest or snapshot interaction — `update` only touches the system.
+- **Output:** `updated packages via <manager>` to stderr per manager. `⚠ update failed for <manager>: <error>` on failure.
+- **Exit code:** 0 if all managers succeed, 1 if any manager fails.
+
 ### `stamp self-update` (alias `self-upgrade`)
 - **Usage:** Upgrades the stamp binary from the GitHub releases API.
 - **Flags:** `--check`, `-c`
@@ -362,4 +374,5 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 24. **Reinstall (Manager Flag):** `stamp reinstall htop -m brew` overrides manager resolution via the `--manager` flag for pre-existing packages.
 25. **Reinstall (Adapters):** `adapter.Reinstall()` executes the native reinstall command for each manager (brew reinstall, dnf reinstall, flatpak install).
 26. **Reconcile (Snapshot Save on No Drift):** If reconcile detects no drift, the current snapshot is saved to disk so future package removals are tracked correctly.
+27. **Update:** `stamp update` runs native upgrade commands for all available managers concurrently. Errors from one manager don't block others. `--manager` flag scopes to a single manager. Non-zero exit if any manager fails.
 27. **Auto-Reconcile (Planned):** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.
