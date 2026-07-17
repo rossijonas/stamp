@@ -79,10 +79,15 @@ func completionPath(shell string) string {
 	case "bash":
 		return filepath.Join(home, ".local", "share", "bash-completion", "completions", "stamp")
 	case "zsh":
-		// Prefer XDG path, fallback to ~/.zfunc
-		dir := filepath.Join(home, ".local", "share", "zsh", "site-functions")
-		if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
-			return filepath.Join(dir, "_stamp")
+		// Check common user fpath directories in preference order
+		candidates := []string{
+			filepath.Join(home, ".zsh", ".zfunc"),
+			filepath.Join(home, ".local", "share", "zsh", "site-functions"),
+		}
+		for _, dir := range candidates {
+			if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+				return filepath.Join(dir, "_stamp")
+			}
 		}
 		return filepath.Join(home, ".zfunc", "_stamp")
 	case "fish":
@@ -129,10 +134,61 @@ func installCompletion(cmd *cobra.Command, shell string) error {
 		return fmt.Errorf("failed to generate completion: %w", writeErr)
 	}
 
+	// Strip redundant compdef line from Zsh completion — #compdef is sufficient
+	if shell == "zsh" {
+		if err := stripZshCompdef(tmpPath); err != nil {
+			return fmt.Errorf("failed to process completion: %w", err)
+		}
+	}
+
 	if err := os.Rename(tmpPath, path); err != nil {
 		return fmt.Errorf("failed to install completion to %s: %w", path, err)
 	}
 
+	// Remove stale completions from other common directories (not the target)
+	home, _ := os.UserHomeDir()
+	destDir := filepath.Dir(path)
+	staleDirs := []string{
+		filepath.Join(home, ".zsh", "completions"),
+		filepath.Join(home, ".zfunc"),
+		filepath.Join(home, ".oh-my-zsh", "custom", "completions"),
+	}
+	for _, dir := range staleDirs {
+		if dir == destDir {
+			continue
+		}
+		stalePath := filepath.Join(dir, "_stamp")
+		if fi, err := os.Stat(stalePath); err == nil && !fi.IsDir() {
+			_ = os.Remove(stalePath)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  removed stale completion from %s\n", stalePath)
+		}
+	}
+
 	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "completion installed to %s\n", path)
+
+	if shell == "zsh" {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "\nTo enable completions, add BEFORE compinit in ~/.zshrc:\n")
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  fpath=(%s $fpath)\n", filepath.Dir(path))
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  autoload -U compinit; compinit\n")
+	}
+
 	return nil
+}
+
+func stripZshCompdef(path string) error {
+	//nolint:gosec // path is a temp file in the completion directory
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(data), "\n")
+	filtered := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "compdef ") {
+			continue
+		}
+		filtered = append(filtered, line)
+	}
+	//nolint:gosec // completion files must be world-readable
+	return os.WriteFile(path, []byte(strings.Join(filtered, "\n")), 0644)
 }

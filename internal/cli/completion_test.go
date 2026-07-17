@@ -67,8 +67,51 @@ func TestCompletion_AutoDetect(t *testing.T) {
 
 	buf, err := execCmd(t, []string{"completion"}, adapters)
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "completion installed to")
-	assert.Contains(t, buf.String(), "_stamp")
+	output := buf.String()
+	assert.Contains(t, output, "completion installed to")
+	assert.Contains(t, output, "_stamp")
+	assert.Contains(t, output, "add BEFORE compinit")
+	assert.Contains(t, output, "fpath=("+zfDir)
+	assert.Contains(t, output, "autoload -U compinit; compinit")
+}
+
+func TestCompletion_StripCompdef(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "_stamp")
+	content := "#compdef stamp\ncompdef _stamp stamp\n\n_stamp() { : }\n"
+	//nolint:gosec // test fixture
+	require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0644))
+	require.NoError(t, stripZshCompdef(tmpFile))
+	//nolint:gosec // test readback
+	data, err := os.ReadFile(tmpFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "#compdef stamp")
+	assert.NotContains(t, string(data), "compdef _stamp")
+}
+
+func TestCompletion_ZshInstructions(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	tmpDir := t.TempDir()
+	home := filepath.Join(tmpDir, "home")
+	zfDir := filepath.Join(home, ".zfunc")
+	require.NoError(t, os.MkdirAll(zfDir, 0750))
+	t.Setenv("HOME", home)
+
+	buf, err := execCmd(t, []string{"completion"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "completion installed to")
+	assert.Contains(t, output, "add BEFORE compinit")
+	assert.Contains(t, output, "fpath=("+zfDir)
+	assert.Contains(t, output, "autoload -U compinit; compinit")
+}
+
+func TestCompletion_BashNoInstructions(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"completion", "bash"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "completion installed to")
+	assert.NotContains(t, output, "compinit")
 }
 
 func TestCompletion_DetectShell(t *testing.T) {
