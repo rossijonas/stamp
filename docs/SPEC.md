@@ -248,6 +248,20 @@ Detailed specifications, execution behaviors, and business rules for every subco
 ### `stamp self-update` (alias `self-upgrade`)
 - **Usage:** Upgrades the stamp binary from the GitHub releases API.
 - **Flags:** `--check`, `-c`
+- **Behavior:**
+  1. Fetches the latest release metadata from `https://api.github.com/repos/rossijonas/stamp/releases/latest`.
+  2. If `--check`: prints current vs latest version. Exits 0 if up to date, 1 if update available.
+  3. If a newer version is available:
+     a. Downloads the tarball + `checksums.txt` via HTTPS with 30s timeout.
+     b. Verifies SHA-256 checksum of the downloaded tarball against `checksums.txt`.
+     c. Extracts the binary from the tarball (tar slip protection via `filepath.Base` sanitization).
+     d. Checks write permission on the install directory before writing — prompts for `sudo` if needed.
+     e. Atomically replaces the current binary via `os.Rename` (same-filesystem temp file).
+     f. Preserves original binary permissions (execute bits, group/world).
+     g. Re-installs shell completions (auto-detected shell).
+     h. Re-installs man pages.
+- **Output:** `Updated to vX.Y.Z` to stderr on success. `integrity check failed` on checksum mismatch.
+- **Exit code:** 0 if already up to date or update succeeded, 1 if check found update or error.
 
 ### `stamp completion [shell]`
 - **Usage:** Generates and installs completion scripts. Auto-detects the current shell if not specified. Uses `--stdout` / `-s` to print the script to stdout without installing.
