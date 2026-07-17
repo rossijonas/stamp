@@ -39,7 +39,7 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>` | Lists all intentionally installed packages. |
 | `stamp doctor` | | `--json, -j`, `--manager, -m <name>` | Checks manager availability, manifest integrity, and UNIX compliance. |
 | `stamp self-update` | `self-upgrade` | `--check, -c` | Checks for and installs the latest version of `stamp`. |
-| `stamp completion <shell>` | | | Generates shell completion scripts (bash, zsh, fish, powershell). |
+| `stamp completion [shell]` | | `--stdout, -s` | Generates and installs shell completion scripts. Auto-detects shell if not specified. |
 | `stamp man` | | | Command group for system reference page management. |
 | `stamp auto-reconcile on\|off` | | `--period, -p hourly\|daily(default)\|weekly` | Installs or removes automated reconcile timer (systemd/launchd). |
 
@@ -201,13 +201,13 @@ Detailed specifications, execution behaviors, and business rules for every subco
 ### `stamp doctor`
 - **Usage:** Checks manager availability, manifest health, UNIX compliance, and shell completion installation status.
 - **Flags:** `--json`, `-j`, `--manager`, `-m` (Proposed)
-- **Behavior:** Audits managers, parses manifest, checks `NO_COLOR`, `stamp man check` statuses, and shell completion installation.
+- **Behavior:** Audits managers, parses manifest, checks `NO_COLOR`, `stamp man check` statuses, and shell completion installation status.
 - **UNIX Compliance TTY section:**
   ```text
   UNIX Compliance:
-    NO_COLOR: ✅ Set
-    Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
-    Completions: ❌ Not installed — run 'stamp completion <shell>'
+  NO_COLOR: ✅ Set
+  Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
+  Completions: ❌ Not installed — run 'stamp completion'
   ```
 - **UNIX Compliance TTY section:**
   ```text
@@ -220,8 +220,15 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Usage:** Upgrades the stamp binary from the GitHub releases API.
 - **Flags:** `--check`, `-c`
 
-### `stamp completion <shell>`
-- **Usage:** Generates completion scripts for `bash`, `zsh`, `fish`, or `powershell`.
+### `stamp completion [shell]`
+- **Usage:** Generates and installs completion scripts. Auto-detects the current shell if not specified. Uses `--stdout` / `-s` to print the script to stdout without installing.
+- **Flags:** `--stdout`, `-s`
+- **Behavior:** Without args, detects shell via `$SHELL` and installs to the correct path:
+  - Bash: `~/.local/share/bash-completion/completions/stamp`
+  - Zsh: `~/.local/share/zsh/site-functions/_stamp` or `~/.zfunc/_stamp`
+  - Fish: `~/.config/fish/completions/stamp.fish`
+  - PowerShell: not auto-installable, falls back to `--stdout`
+- **Output:** `completion installed to /path` to stderr on success.
 
 ### `stamp man`
 - **Usage:** Displays help output for man page subcommands.

@@ -17,7 +17,7 @@ stamp [flags]
 
 ### SEE ALSO
 
-* [stamp completion](stamp_completion.md)	 - Generate shell completion script
+* [stamp completion](stamp_completion.md)	 - Generate and install shell completion script
 * [stamp doctor](stamp_doctor.md)	 - Diagnose system configuration and manifest health
 * [stamp hello](stamp_hello.md)	 - Print welcome message and recommended next steps
 * [stamp info](stamp_info.md)	 - Show package information across managers
