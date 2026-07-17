@@ -237,6 +237,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newListCmd())
 	root.AddCommand(newManCmd())
 	root.AddCommand(newUpdateCmd())
+	root.AddCommand(newSelfUpdateCmd())
 
 	return root
 }

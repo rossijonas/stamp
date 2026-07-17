@@ -24,7 +24,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp init` | | ✅ | ✅ | ✅ Creates dirs + manifest + snapshots | ✅ Complete |
 | `stamp update` | `upgrade` | ✅ | ✅ | ✅ errgroup concurrency + --manager flag | ✅ Complete |
 | `stamp list` | `ls` | ✅ | ✅ | ✅ Reads manifest | ✅ Complete |
-| `stamp self-update` | `self-upgrade` | ✅ | ❌ | ❌ | ⏳ Pending |
+| `stamp self-update` | `self-upgrade` | ✅ | ✅ | ✅ Atomic binary replacement + SHA-256 verification + post-update hooks | ✅ Complete |
 | `stamp auto-reconcile on\|off` | | ✅ | ❌ | ❌ | ⏳ Pending |
 
 ## Repository Commands
@@ -63,7 +63,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp restore` | `--dry-run` | `-d` | ✅ | ✅ | ✅ Complete |
 | `stamp doctor` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
 | `stamp man install` | `--prefix` | | ✅ | ✅ | ✅ Complete |
-| `stamp self-update` | `--check` | | ✅ | ❌ | ⏳ Pending |
+| `stamp self-update` | `--check` | | ✅ | ✅ | ✅ Complete |
 | `stamp completion` | `--stdout` | `-s` | ✅ | ✅ | ✅ Complete |
 | `stamp list` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
 | `stamp repo list` | `--json` | `-j` | ✅ | ✅ | ✅ Complete |
@@ -111,7 +111,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 10e | Doc generation pipeline (task docs) | ✅ |
 | 4 | 10f | Flag standardization (short forms, subcommands) | ✅ |
 | 4 | 10h | Uninstall documentation in README.md (standard + hard uninstall) | ✅ |
-| 4 | 11 | Self-Update Subcommand | ⏳ |
+| 4 | 11 | Self-Update Subcommand | ✅ |
 | 4 | 12 | `stamp hello` welcome command | ✅ |
 | 4 | 13 | `stamp info` package info command | ✅ |
 | 4 | 14 | `stamp man check` version verification | ✅ |

@@ -123,10 +123,11 @@ Build the environment reconstruction logic and final touches.
 | 10h | Uninstall documentation in README.md (standard + hard uninstall) | ✅ |
 
 **Task 11: Self-Update Subcommand**
-*   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, and replaces itself atomically. Supports `--check, -c` flag to query without downloading.
-*   **Acceptance:** User can run `stamp self-update --check` to check, and `stamp self-update` to apply.
-*   **Verify:** Unit tests mock the release API and verify binary swap logic.
-*   **Status:** ⏳ Pending
+*   **Description:** Implement `stamp self-update/self-upgrade` that checks the current binary version against the GitHub releases API, downloads the latest binary for the host OS/arch, verifies SHA-256 checksums, and replaces itself atomically with permission preservation. After update, automatically re-installs shell completions and man pages.
+*   **Acceptance:** User can run `stamp self-update --check` to check, and `stamp self-update` to apply. Post-update hooks complete successfully.
+*   **Verify:** Unit tests mock the release API, checksum verification, and binary swap logic. Run `task check`.
+*   **Files:** `internal/cli/selfupdate.go`, `internal/cli/selfupdate_test.go`
+*   **Status:** ✅ Completed
 
 **Task 12: `stamp hello` Welcome Command**
 *   **Description:** Implement a welcome command that prints the ASCII logo, a brief project description, and suggests next steps for new users.
@@ -297,7 +298,7 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 10e | Doc generation pipeline (task docs) | ✅ |
 | 4 | 10f | Flag standardization (short forms, subcommands) | ✅ |
 | 4 | 10h | Uninstall documentation in README.md | ✅ |
-| 4 | 11 | Self-Update Subcommand | ⏳ |
+| 4 | 11 | Self-Update Subcommand | ✅ |
 | 4 | 12 | `stamp hello` welcome command | ✅ |
 | 4 | 13 | `stamp info` package info command | ✅ |
 | 4 | 14 | `stamp man check` version verification | ✅ |
