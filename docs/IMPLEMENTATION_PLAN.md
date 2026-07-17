@@ -269,7 +269,14 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 *   **Status:** ✅ Completed
 
 **Task 30: `stamp auto-reconcile` Command**
-*   **Description:** Implement a subcommand to install or remove automated reconcile timers. On Linux, creates systemd user service + timer files in `~/.config/systemd/user/`. On macOS, creates launchd plist in `~/Library/LaunchAgents/`. Supports `--period`, `-p` flag (hourly/daily/weekly, default daily).
+*   **Description:** Implement a subcommand to install or remove automated reconcile timers.
+
+**Task 32: APT Package Manager Adapter (#46)**
+*   **Description:** Implement APT adapter for Debian/Ubuntu systems. Covers all `Adapter` interface methods: ListInstalled (with dpkg-query fallback excluding rc packages), Install, Reinstall, Remove, Search (apt-cache), Info (apt show / apt-cache show), AddRepo (hybrid PPA via add-apt-repository + custom URL via .list file), RemoveRepo, ListRepos (file parsing), Update (two-phase: update + upgrade), Doctor (not supported). Reuses `sudoCmd` from DNF adapter for all write operations.
+*   **Acceptance:** All adapter methods work with mocked executors. APT is auto-detected on Debian/Ubuntu systems.
+*   **Verify:** `task test` passes, `task check` passes.
+*   **Files:** `internal/manager/apt.go`, `internal/manager/apt_test.go`, `internal/cli/root.go`, `internal/cli/repo.go`
+*   **Status:** ✅ Completed On Linux, creates systemd user service + timer files in `~/.config/systemd/user/`. On macOS, creates launchd plist in `~/Library/LaunchAgents/`. Supports `--period`, `-p` flag (hourly/daily/weekly, default daily).
 *   **Acceptance:** `stamp auto-reconcile on` installs the timer. `stamp auto-reconcile off` removes it. Timer runs `stamp reconcile` at the configured interval. Pre-configured timer files available in `contrib/`.
 *   **Verify:** Manual test: `stamp auto-reconcile on --period daily` creates timer, `stamp auto-reconcile off` removes it.
 *   **Files:** `internal/cli/autoreconcile.go`, `internal/cli/autoreconcile_test.go`, `contrib/systemd/stamp-reconcile.service`, `contrib/systemd/stamp-reconcile.timer`, `contrib/launchd/com.rossijonas.stamp.reconcile.plist`
@@ -319,3 +326,4 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✅ |
 | 6 | 29 | Flag and Compliance Updates | ✅ |
 | 6 | 30 | `stamp auto-reconcile` Command | ⏳ Pending |
+| 4 | 32 | APT package manager adapter (#46) | ✅ |

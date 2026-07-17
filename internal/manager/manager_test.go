@@ -437,6 +437,18 @@ func TestBrew_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "reinstall success",
+			operation: "reinstall",
+			pkgName:   "htop",
+		},
+		{
+			name:        "reinstall error",
+			operation:   "reinstall",
+			pkgName:     "htop",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:      "update success",
 			operation: "update",
 		},
@@ -473,6 +485,16 @@ func TestBrew_Operations(t *testing.T) {
 				}
 			case "install":
 				err = manager.Install(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "reinstall":
+				err = manager.Reinstall(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 					if tt.mockErr != nil {
@@ -689,6 +711,18 @@ func TestFlatpak_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "reinstall success",
+			operation: "reinstall",
+			pkgName:   "com.spotify.Client",
+		},
+		{
+			name:        "reinstall error",
+			operation:   "reinstall",
+			pkgName:     "com.spotify.Client",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:      "update success",
 			operation: "update",
 		},
@@ -725,6 +759,16 @@ func TestFlatpak_Operations(t *testing.T) {
 				}
 			case "install":
 				err = manager.Install(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+					if tt.mockErr != nil {
+						require.ErrorIs(t, err, tt.mockErr)
+					}
+				} else {
+					require.NoError(t, err)
+				}
+			case "reinstall":
+				err = manager.Reinstall(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 					if tt.mockErr != nil {

@@ -106,6 +106,9 @@ func detectAdapters() []manager.Adapter {
 		} else if _, err := exec.LookPath("yum"); err == nil {
 			adapters = append(adapters, manager.NewDNF("yum"))
 		}
+		if _, err := exec.LookPath("apt"); err == nil {
+			adapters = append(adapters, manager.NewAPT("apt"))
+		}
 		detect("flatpak", func() manager.Adapter { return manager.NewFlatpak() })
 	}
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })

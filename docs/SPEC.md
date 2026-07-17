@@ -59,6 +59,12 @@ The complete surface area of the CLI, including aliases and flags.
 
 ---
 
+### Supported Package Managers
+- **DNF / YUM** (Fedora/RHEL)
+- **APT / apt-get** (Debian/Ubuntu) — new!
+- **Brew** (macOS)
+- **Flatpak** (Linux, sandboxed)
+
 ## Package Manager Resolution Engine
 When a user runs a package or repository command (e.g., `stamp install htop`) without specifying `--manager`, the tool resolves ambiguity using a three-tier engine:
 
