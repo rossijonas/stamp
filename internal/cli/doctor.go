@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 
@@ -103,8 +104,13 @@ Reports which managers are installed and whether the manifest is valid.`,
 			if app.manifestErr != nil {
 				ms.Error = app.manifestErr.Error()
 			} else {
-				ms.Valid = true
-				ms.PackagesCount = len(app.manifest.Packages)
+				_, statErr := os.Stat(app.manifestPath)
+				if os.IsNotExist(statErr) {
+					ms.Error = "manifest not found — run 'stamp init'"
+				} else {
+					ms.Valid = true
+					ms.PackagesCount = len(app.manifest.Packages)
+				}
 			}
 
 			var mpInstalled bool

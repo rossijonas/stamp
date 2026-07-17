@@ -140,6 +140,47 @@ func TestDoctor_Manifest_Corrupt(t *testing.T) {
 	assert.Contains(t, report.Manifest.Error, "failed to parse manifest")
 }
 
+func TestDoctor_Manifest_Missing(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+
+	var report doctorReport
+	err = json.Unmarshal(buf.Bytes(), &report)
+	require.NoError(t, err)
+
+	assert.False(t, report.Manifest.Valid)
+	assert.Contains(t, report.Manifest.Error, "manifest not found")
+}
+
+func TestDoctor_Manifest_Missing_TTY(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "❌ manifest not found")
+}
+
 func TestDoctor_ManPage_Healthy(t *testing.T) {
 	tmpDir := t.TempDir()
 	manFile := filepath.Join(tmpDir, "stamp.1")
