@@ -8,6 +8,10 @@ Create the stamp configuration directory, an empty manifest.toml,
 and take a baseline snapshot of currently installed packages
 for each available package manager.
 
+If stamp is already initialized, the existing manifest and snapshots
+are always backed up before creating a fresh state. Use -y to skip
+the confirmation prompt.
+
 ```
 stamp init [flags]
 ```

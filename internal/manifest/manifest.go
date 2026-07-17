@@ -162,3 +162,14 @@ func (m *Manifest) HasPackage(name, manager string) bool {
 	}
 	return false
 }
+
+// Backup creates a timestamped backup of the manifest file by renaming it.
+// Format: <path>.<YYYYMMDD>THHMMSSZ.bak
+func Backup(path string) (string, error) {
+	ts := time.Now().UTC().Format("20060102T150405Z")
+	backupPath := path + "." + ts + ".bak"
+	if err := os.Rename(path, backupPath); err != nil {
+		return "", fmt.Errorf("failed to backup manifest to %s: %w", backupPath, err)
+	}
+	return backupPath, nil
+}

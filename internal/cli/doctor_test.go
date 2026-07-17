@@ -182,6 +182,8 @@ func TestDoctor_Manifest_Missing_TTY(t *testing.T) {
 }
 
 func TestDoctor_Completions_NotInstalled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 	comps := checkCompletionStatus()
 	assert.False(t, comps.Installed)
 }
@@ -190,7 +192,6 @@ func TestDoctor_Completions_Installed(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	// Create a fake completion file to simulate installed
 	bashDir := filepath.Join(home, ".local", "share", "bash-completion", "completions")
 	require.NoError(t, os.MkdirAll(bashDir, 0750))
 	require.NoError(t, os.WriteFile(filepath.Join(bashDir, "stamp"), []byte("#!/bin/bash"), 0600))

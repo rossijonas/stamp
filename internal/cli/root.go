@@ -207,7 +207,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr())
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  stamp — A lightweight yet powerful wrapper for your native package managers.\n\n")
 			_, _ = fmt.Fprint(cmd.ErrOrStderr(), "Don't know where to start? Try:\n\n")
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  stamp hello    — Learn about stamp and next steps")
+			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  stamp setup    — Run first-time setup wizard")
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  stamp --help   — See all available commands")
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr())
 			return cmd.Help()

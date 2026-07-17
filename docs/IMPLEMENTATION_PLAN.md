@@ -209,12 +209,19 @@ Build the environment reconstruction logic and final touches.
 **Task 24: Migrate `stamp hello` to `stamp setup` Wizard**
 *   **Description:** Replace `stamp hello` with `stamp setup` interactive wizard. Keep `hello` as alias. Run completion, man install, init (with prompts, default Yes), then doctor (no prompt). Support `-y` flag for scripting.
 *   **Acceptance:** `stamp setup -y` runs all steps without prompts. `stamp hello` continues to work as alias.
-*   **Status:** ⏳ Pending
+*   **Status:** ✅ Completed
 
 **Task 25: Add Shell Completion Check to `stamp doctor`**
 *   **Description:** Check common shell completion paths (bash, zsh, fish) and report status in doctor TTY and JSON output.
 *   **Acceptance:** `stamp doctor` shows ✅ or ❌ for completions in both TTY and JSON modes.
 *   **Status:** ⏳ Pending
+
+**Task 25b: Re-init Guard for `stamp init` with Mandatory Backup**
+*   **Description:** Add re-init guard to `stamp init`: detect existing manifest, warn user, prompt for confirmation (default No). On confirmation, **always** backup manifest + snapshots (`<path>.<ts>.bak`) before creating fresh state. Update `stamp setup` wizard to detect initialized state and adjust prompt wording. `-y` flag bypasses prompt. Backup runs unconditionally on confirmed re-init.
+*   **Acceptance:** `stamp init` on initialized system shows warning, prompts with default No. Accepting creates timestamped backups and fresh state. Declining aborts cleanly. `-y` skips prompt. Wizard shows adjusted prompt when already initialized.
+*   **Verify:** `task test` passes.
+*   **Files:** `internal/cli/init.go`, `internal/cli/init_test.go`, `internal/cli/hello.go`, `internal/cli/hello_test.go`, `internal/manifest/manifest.go`, `internal/manifest/manifest_test.go`, `internal/state/state.go`, `internal/state/state_test.go`
+*   **Status:** ✅ Completed
 
 **Task 26: Add `yum` as Alias to `dnf` Manager**
 *   **Description:** Automatically detect `yum` when `dnf` is unavailable (RHEL/CentOS 7). Use resolved command name for all exec calls.
@@ -301,8 +308,8 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 21 | `stamp init` command | ✅ |
 | 4 | 22 | `stamp list` command (alias `ls`) | ✅ |
 | 4 | 23 | `stamp update` command (alias `upgrade`) | ⏳ |
-| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ⏳ |
-| 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ⏳ |
+| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ✅ |
+| 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ✅ |
 | 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ✅ |
 | 5 | — | Relicense to Apache-2.0 | ✅ |
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✅ |

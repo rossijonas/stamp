@@ -26,7 +26,7 @@ The complete surface area of the CLI, including aliases and flags.
 | Command | Aliases | Flags | Description |
 | :--- | :--- | :--- | :--- |
 | `stamp` | | | Prints welcome message suggesting `stamp hello` or `stamp --help`. |
-| `stamp hello` | | | Prints ASCII logo, project about, and suggests next steps. |
+| `stamp setup` | `hello` | | Runs first-time setup wizard: completions, man pages, init, doctor. |
 | `stamp init` | | | Initializes `manifest.toml` and takes baseline snapshot. |
 | `stamp install <pkg>` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. |
 | `stamp remove <pkg>` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes natively and untracks. |
@@ -108,27 +108,44 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Usage:** Suggests running `stamp hello` or `stamp --help` when executed with no arguments.
 - **Output:** Help reference to stderr.
 
-### `stamp hello` — Welcome Command (C1)
-- **Usage:** Prints welcome message containing ASCII logo, brief "about", and suggested next steps (init, doctor, man install).
-- **Flags:** None.
-- **Planned:** Migrate to `stamp setup` with interactive wizard (see issue #59). `stamp hello` will be kept as alias.
-- **TTY Output Example:**
+### `stamp setup` (alias `hello`) — Setup Wizard (C1)
+- **Usage:** Interactive first-time setup wizard. Runs completion installation, man page setup, initialization, and diagnostics in sequence.
+- **Flags:** Accepts global `-y` flag to skip all prompts.
+- **Behavior:**
+  - Step 1: Shell completions (prompt, default Yes)
+  - Step 2: Man pages (prompt, default Yes)
+  - Step 3: Initialize manifest and baseline snapshot
+    - First-time: prompt "Create manifest and baseline snapshot? [Y/n]" (default Yes)
+    - Already initialized: shows warning, prompt "Re-initialize (backup old configuration)? [y/N]" (default No)
+  - Step 4: System diagnosis (no prompt)
+  - `-y` skips all prompts, runs everything
+- **TTY Output Example (interactive):**
   ```text
-    stamp — A lightweight yet powerful wrapper for your native package managers.
+  ▪ Stamp Setup Wizard
 
-    For a fresh installation, try:
-      stamp init          — Create manifest and take initial snapshot
-      stamp doctor        — Verify system configuration
-      stamp man install   — Install offline documentation
+  Step 1 of 4: Shell Completions
+    Install shell completions? [Y/n]:
+  ```
+- **TTY Output Example (auto-accept):**
+  ```text
+  ▪ Stamp Setup Wizard (auto-accept)
 
-    Need help? Run:  stamp --help
+    Step 1: Shell Completions...  ✅
+    Step 2: Man Pages...          ✅
+    Step 3: Initialize...         ✅
+    Step 4: System Diagnosis...   ✅
+
+  ▪ Setup complete!
   ```
 
 ### `stamp init`
 - **Usage:** Initializes `manifest.toml` and takes a baseline snapshot of current system packages.
-- **Flags:** None.
+- **Flags:** Accepts global `-y` flag.
 - **Behavior:** Creates `~/.config/stamp` and `~/.local/share/stamp/snapshots` directories. Generates empty manifest.toml. Takes baseline snapshot for each available manager and saves them.
+- **Re-init guard:** If `manifest.toml` already exists (system is initialized), the user is prompted for confirmation (default No) before overwriting. On confirmation, **backup is mandatory** — the existing manifest and snapshots are always timestamp-backed up (`<path>.<YYYYMMDD>THHMMSSZ.bak`) before creating fresh state. The `-y` flag bypasses the prompt for scripting.
+- **Backup is NOT optional:** When re-init is confirmed, backup always runs before rewriting.
 - **Output:** `manifest initialized and system baseline snapshot taken` to stderr.
+- **Re-init messages:** `existing manifest backed up to <path>`, `existing snapshots backed up to <path>`, `re-init aborted` to stderr.
 
 ### `stamp install <pkg>` (alias `add`)
 - **Usage:** Installs a package natively and records it in the manifest.
@@ -338,7 +355,7 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 17. **Repo Add:** `stamp repo add myrepo -m brew` adds the repository via the specified manager and records it.
 18. **Repo Remove:** `stamp repo remove myrepo -m brew` removes the repository and untracks it.
 19. **Repo List:** `stamp repo list` prints all tracked repositories; `--json` outputs machine-readable.
-20. **Hello:** `stamp hello` displays ASCII logo, project description, and suggested next steps.
+20. **Setup:** `stamp setup` runs the setup wizard with completion, man pages, init, and doctor. `stamp hello` works as an alias.
 21. **Completion:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts for each shell.
 22. **Reconcile (Repo Drift):** If a new flatpak remote or brew tap is added externally, `stamp reconcile` detects and auto-tracks the repository alongside packages.
 23. **Reconcile (Manager Scope):** `stamp reconcile -m dnf` scopes drift detection to a single manager only.

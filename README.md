@@ -97,15 +97,12 @@
 
 #### 🔰 First-Time Setup
 
-Before using `stamp`, initialize your environment to create the manifest and take a baseline snapshot of your system:
+Before using `stamp`, run the setup wizard to initialize your environment:
 
 ```bash
-stamp init          # Creates manifest.toml + baseline snapshot
-stamp doctor        # Verify system configuration
-stamp man install   # Install offline man page documentation
+stamp setup         # Interactive wizard: completions, man pages, init, doctor
+stamp setup -y      # Non-interactive: runs all steps without prompts
 ```
-
-These steps are also suggested when you run `stamp setup`.
 
 > **⚠️ Note on Privilege Escalation:** Package managers that require root (e.g., `dnf`) automatically wrap their write operations with `sudo` internally. Always run `stamp install htop` as your normal user — do **not** use `sudo stamp install`. Sudo prompts for your password in a terminal and fails gracefully in non-interactive environments (CI/pipelines).
 
