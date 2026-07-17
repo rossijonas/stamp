@@ -186,3 +186,12 @@ func (m *Flatpak) Info(ctx context.Context, pkg string) (string, error) {
 func (m *Flatpak) Doctor(_ context.Context) (string, error) {
 	return "", fmt.Errorf("doctor not supported for flatpak")
 }
+
+// Update runs the native flatpak update command.
+func (m *Flatpak) Update(ctx context.Context) error {
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", "update", "-y")
+	if err != nil {
+		return fmt.Errorf("failed to update flatpak: %w", err)
+	}
+	return nil
+}

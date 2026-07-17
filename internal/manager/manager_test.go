@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -177,6 +178,16 @@ func TestDNF_Operations(t *testing.T) {
 			pkgName:     "-invalid",
 			expectedErr: true,
 		},
+		{
+			name:      "update success",
+			operation: "update",
+		},
+		{
+			name:        "update error",
+			operation:   "update",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -273,6 +284,13 @@ func TestDNF_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 					assert.Equal(t, tt.mockOutput, res)
+				}
+			case "update":
+				err = manager.Update(ctx)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
 				}
 			}
 		})
@@ -418,6 +436,16 @@ func TestBrew_Operations(t *testing.T) {
 			pkgName:     "-invalid",
 			expectedErr: true,
 		},
+		{
+			name:      "update success",
+			operation: "update",
+		},
+		{
+			name:        "update error",
+			operation:   "update",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -514,6 +542,13 @@ func TestBrew_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 					assert.Equal(t, tt.mockOutput, res)
+				}
+			case "update":
+				err = manager.Update(ctx)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
 				}
 			}
 		})
@@ -653,6 +688,16 @@ func TestFlatpak_Operations(t *testing.T) {
 			pkgName:     "-invalid",
 			expectedErr: true,
 		},
+		{
+			name:      "update success",
+			operation: "update",
+		},
+		{
+			name:        "update error",
+			operation:   "update",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -750,6 +795,13 @@ func TestFlatpak_Operations(t *testing.T) {
 					require.NoError(t, err)
 					assert.Equal(t, tt.mockOutput, res)
 				}
+			case "update":
+				err = manager.Update(ctx)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 		})
 	}
@@ -812,6 +864,7 @@ func TestMockManagerErrors(t *testing.T) {
 		AddRepoErr:    expectedErr,
 		RemoveRepoErr: expectedErr,
 		ListReposErr:  expectedErr,
+		UpdateErr:     expectedErr,
 	}
 
 	ctx := context.Background()
@@ -835,6 +888,9 @@ func TestMockManagerErrors(t *testing.T) {
 	require.ErrorIs(t, err, expectedErr)
 
 	_, err = mock.ListRepos(ctx)
+	require.ErrorIs(t, err, expectedErr)
+
+	err = mock.Update(ctx)
 	require.ErrorIs(t, err, expectedErr)
 }
 
@@ -1141,4 +1197,61 @@ func TestFlatpak_ListInstalledBothFail(t *testing.T) {
 
 	_, err := manager.ListInstalled(context.Background())
 	require.Error(t, err)
+}
+
+func TestPrefixWriter_SingleLine(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	pw := &prefixWriter{prefix: "[test] ", w: &buf}
+
+	n, err := pw.Write([]byte("hello\n"))
+	require.NoError(t, err)
+	assert.Equal(t, 6, n)
+	assert.Equal(t, "[test] hello\n", buf.String())
+}
+
+func TestPrefixWriter_MultipleLines(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	pw := &prefixWriter{prefix: "[brew] ", w: &buf}
+
+	_, err := pw.Write([]byte("line1\nline2\n"))
+	require.NoError(t, err)
+	assert.Equal(t, "[brew] line1\n[brew] line2\n", buf.String())
+}
+
+func TestPrefixWriter_PartialLine(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	pw := &prefixWriter{prefix: "[x] ", w: &buf}
+
+	_, err := pw.Write([]byte("partial"))
+	require.NoError(t, err)
+	assert.Empty(t, buf.String())
+
+	_, err = pw.Write([]byte("\n"))
+	require.NoError(t, err)
+	assert.Equal(t, "[x] partial\n", buf.String())
+}
+
+func TestPrefixWriter_EmptyInput(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	pw := &prefixWriter{prefix: "[x] ", w: &buf}
+
+	n, err := pw.Write(nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Empty(t, buf.String())
+}
+
+func TestWithOutputPrefix(t *testing.T) {
+	ctx := context.Background()
+	prefixed := WithOutputPrefix(ctx, "[brew] ")
+
+	prefix := getOutputPrefix(prefixed)
+	assert.Equal(t, "[brew] ", prefix)
+
+	empty := getOutputPrefix(ctx)
+	assert.Empty(t, empty)
 }

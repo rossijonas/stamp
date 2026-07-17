@@ -329,3 +329,13 @@ func (m *DNF) Info(ctx context.Context, pkg string) (string, error) {
 func (m *DNF) Doctor(_ context.Context) (string, error) {
 	return "", fmt.Errorf("doctor not supported for dnf")
 }
+
+// Update runs the native system upgrade command.
+func (m *DNF) Update(ctx context.Context) error {
+	args := sudoCmd(m.cmd, "upgrade", "-y")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to update: %w", err)
+	}
+	return nil
+}

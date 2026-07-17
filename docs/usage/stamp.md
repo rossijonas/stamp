@@ -31,4 +31,5 @@ stamp [flags]
 * [stamp restore](stamp_restore.md)	 - Restore all tracked repositories and packages from the manifest
 * [stamp search](stamp_search.md)	 - Search for packages across managers
 * [stamp setup](stamp_setup.md)	 - Run first-time setup wizard
+* [stamp update](stamp_update.md)	 - Run system upgrades across all package managers
 

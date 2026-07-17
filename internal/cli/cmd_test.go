@@ -46,6 +46,7 @@ func (m *mockAdapter) Info(_ context.Context, q string) (string, error) {
 func (m *mockAdapter) Doctor(_ context.Context) (string, error) {
 	return "mock doctor: all good", m.err
 }
+func (m *mockAdapter) Update(_ context.Context) error { return m.err }
 
 // execCmd builds a root with injected mock adapters and isolated temp paths, executes, returns output.
 func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Buffer, error) {

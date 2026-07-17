@@ -26,6 +26,7 @@ type Mock struct {
 	InfoResult     string
 	DoctorResult   string
 	DoctorErr      error
+	UpdateErr      error
 }
 
 // Name returns the package manager identifier.
@@ -178,4 +179,12 @@ func (m *Mock) Doctor(_ context.Context) (string, error) {
 		return m.DoctorResult, nil
 	}
 	return "mock doctor: all good", nil
+}
+
+// Update runs mock update — succeeds unless UpdateErr is set.
+func (m *Mock) Update(_ context.Context) error {
+	if m.UpdateErr != nil {
+		return m.UpdateErr
+	}
+	return nil
 }

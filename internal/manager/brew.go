@@ -140,3 +140,16 @@ func (m *Brew) Doctor(ctx context.Context) (string, error) {
 	}
 	return string(out), nil
 }
+
+// Update runs brew update then brew upgrade (two-phase).
+func (m *Brew) Update(ctx context.Context) error {
+	_, err := m.exec(WithStreamIO(ctx), "brew", "update")
+	if err != nil {
+		return fmt.Errorf("failed to update homebrew: %w", err)
+	}
+	_, err = m.exec(WithStreamIO(ctx), "brew", "upgrade")
+	if err != nil {
+		return fmt.Errorf("failed to upgrade packages: %w", err)
+	}
+	return nil
+}
