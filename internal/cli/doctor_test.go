@@ -181,6 +181,33 @@ func TestDoctor_Manifest_Missing_TTY(t *testing.T) {
 	assert.Contains(t, output, "❌ manifest not found")
 }
 
+func TestDoctor_Completions_NotInstalled(t *testing.T) {
+	comps := checkCompletionStatus()
+	assert.False(t, comps.Installed)
+}
+
+func TestDoctor_Completions_Installed(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	// Create a fake completion file to simulate installed
+	bashDir := filepath.Join(home, ".local", "share", "bash-completion", "completions")
+	require.NoError(t, os.MkdirAll(bashDir, 0750))
+	require.NoError(t, os.WriteFile(filepath.Join(bashDir, "stamp"), []byte("#!/bin/bash"), 0600))
+
+	comps := checkCompletionStatus()
+	assert.True(t, comps.Installed)
+	assert.Contains(t, comps.Shells, "bash")
+}
+
+func TestDoctor_Completions_TTY(t *testing.T) {
+	// No completions installed — doctor should report not installed
+	buf, err := execCmd(t, []string{"doctor"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Completions:")
+}
+
 func TestDoctor_ManPage_Healthy(t *testing.T) {
 	tmpDir := t.TempDir()
 	manFile := filepath.Join(tmpDir, "stamp.1")

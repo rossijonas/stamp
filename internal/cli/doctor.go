@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -26,13 +27,40 @@ type manifestStatus struct {
 	Error         string `json:"error,omitempty"`
 }
 
+type completionStatus struct {
+	Installed bool     `json:"installed"`
+	Shells    []string `json:"shells,omitempty"`
+}
+
 type doctorReport struct {
-	System          string          `json:"system"`
-	Version         string          `json:"version"`
-	PackageManagers []managerStatus `json:"package_managers"`
-	Manifest        manifestStatus  `json:"manifest"`
-	NoColor         bool            `json:"no_color"`
-	ManPage         manPageStatus   `json:"man_page"`
+	System          string           `json:"system"`
+	Version         string           `json:"version"`
+	PackageManagers []managerStatus  `json:"package_managers"`
+	Manifest        manifestStatus   `json:"manifest"`
+	NoColor         bool             `json:"no_color"`
+	ManPage         manPageStatus    `json:"man_page"`
+	Completions     completionStatus `json:"completions"`
+}
+
+func checkCompletionStatus() completionStatus {
+	shells := map[string]string{
+		"bash": completionPath("bash"),
+		"zsh":  completionPath("zsh"),
+		"fish": completionPath("fish"),
+	}
+	var installed []string
+	for name, path := range shells {
+		if path == "" {
+			continue
+		}
+		if _, err := os.Stat(path); err == nil {
+			installed = append(installed, name)
+		}
+	}
+	return completionStatus{
+		Installed: len(installed) > 0,
+		Shells:    installed,
+	}
 }
 
 func newDoctorCmd() *cobra.Command {
@@ -125,6 +153,8 @@ Reports which managers are installed and whether the manifest is valid.`,
 				mpMatches = status.matches
 			}
 
+			comps := checkCompletionStatus()
+
 			if app.json {
 				report := doctorReport{
 					System:          runtime.GOOS,
@@ -138,6 +168,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 						Version:   mpVersion,
 						Matches:   mpMatches,
 					},
+					Completions: comps,
 				}
 				data, err := json.MarshalIndent(report, "", "  ")
 				if err != nil {
@@ -190,6 +221,12 @@ Reports which managers are installed and whether the manifest is valid.`,
 				}
 			} else {
 				_, _ = fmt.Fprintln(out, "  Man Page: ❌ Not found — run 'stamp man install'")
+			}
+
+			if comps.Installed {
+				_, _ = fmt.Fprintf(out, "  Completions: ✅ Installed (%s)\n", strings.Join(comps.Shells, ", "))
+			} else {
+				_, _ = fmt.Fprintln(out, "  Completions: ❌ Not installed — run 'stamp completion'")
 			}
 
 			return nil
