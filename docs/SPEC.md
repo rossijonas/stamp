@@ -114,7 +114,9 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Behavior:**
   - Step 1: Shell completions (prompt, default Yes)
   - Step 2: Man pages (prompt, default Yes)
-  - Step 3: Initialize manifest and baseline snapshot (prompt, default Yes)
+  - Step 3: Initialize manifest and baseline snapshot
+    - First-time: prompt "Create manifest and baseline snapshot? [Y/n]" (default Yes)
+    - Already initialized: shows warning, prompt "Re-initialize (backup old configuration)? [y/N]" (default No)
   - Step 4: System diagnosis (no prompt)
   - `-y` skips all prompts, runs everything
 - **TTY Output Example (interactive):**
@@ -138,9 +140,12 @@ Detailed specifications, execution behaviors, and business rules for every subco
 
 ### `stamp init`
 - **Usage:** Initializes `manifest.toml` and takes a baseline snapshot of current system packages.
-- **Flags:** None.
+- **Flags:** Accepts global `-y` flag.
 - **Behavior:** Creates `~/.config/stamp` and `~/.local/share/stamp/snapshots` directories. Generates empty manifest.toml. Takes baseline snapshot for each available manager and saves them.
+- **Re-init guard:** If `manifest.toml` already exists (system is initialized), the user is prompted for confirmation (default No) before overwriting. On confirmation, **backup is mandatory** — the existing manifest and snapshots are always timestamp-backed up (`<path>.<YYYYMMDD>THHMMSSZ.bak`) before creating fresh state. The `-y` flag bypasses the prompt for scripting.
+- **Backup is NOT optional:** When re-init is confirmed, backup always runs before rewriting.
 - **Output:** `manifest initialized and system baseline snapshot taken` to stderr.
+- **Re-init messages:** `existing manifest backed up to <path>`, `existing snapshots backed up to <path>`, `re-init aborted` to stderr.
 
 ### `stamp install <pkg>` (alias `add`)
 - **Usage:** Installs a package natively and records it in the manifest.

@@ -362,6 +362,41 @@ func TestSnapshotDir_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSnapshotDirPath_NoCreate(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+	p := SnapshotDirPath()
+	assert.Equal(t, filepath.Join(tmpDir, "stamp", "snapshots"), p)
+	_, err := os.Stat(p)
+	assert.True(t, os.IsNotExist(err), "SnapshotDirPath should not create the directory")
+}
+
+func TestBackupSnapshots(t *testing.T) {
+	tmpDir := t.TempDir()
+	snapDir := filepath.Join(tmpDir, "snapshots")
+	require.NoError(t, os.MkdirAll(snapDir, 0700))
+	require.NoError(t, os.WriteFile(filepath.Join(snapDir, "brew.json"), []byte("{}"), 0600))
+
+	backupPath, err := BackupSnapshots(snapDir)
+	require.NoError(t, err)
+	assert.Contains(t, backupPath, snapDir)
+	assert.Contains(t, backupPath, ".bak")
+
+	_, err = os.Stat(snapDir)
+	assert.True(t, os.IsNotExist(err), "original snapshots dir should be renamed")
+
+	entries, err := os.ReadDir(backupPath)
+	require.NoError(t, err)
+	assert.Len(t, entries, 1)
+	assert.Equal(t, "brew.json", entries[0].Name())
+}
+
+func TestBackupSnapshots_NoDir(t *testing.T) {
+	_, err := BackupSnapshots("/nonexistent/snapshots")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to backup snapshots")
+}
+
 func TestSave_WriteFileError(t *testing.T) {
 	// Attempt to save to an invalid directory (should fail on os.WriteFile)
 	snap := Snapshot{

@@ -83,13 +83,29 @@ func xdgStateDir() string {
 	return filepath.Join(d, "stamp")
 }
 
+// SnapshotDirPath returns the path to the snapshots directory without creating it.
+func SnapshotDirPath() string {
+	return filepath.Join(xdgStateDir(), "snapshots")
+}
+
 // SnapshotDir returns the path to the snapshots directory and creates it if it doesn't exist.
 func SnapshotDir() (string, error) {
-	dir := filepath.Join(xdgStateDir(), "snapshots")
+	dir := SnapshotDirPath()
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", fmt.Errorf("failed to create snapshot directory: %w", err)
 	}
 	return dir, nil
+}
+
+// BackupSnapshots renames the snapshots directory to a timestamped backup.
+// Format: <path>.<YYYYMMDD>THHMMSSZ.bak
+func BackupSnapshots(snapDir string) (string, error) {
+	ts := time.Now().UTC().Format("20060102T150405Z")
+	backupDir := snapDir + "." + ts + ".bak"
+	if err := os.Rename(snapDir, backupDir); err != nil {
+		return "", fmt.Errorf("failed to backup snapshots to %s: %w", backupDir, err)
+	}
+	return backupDir, nil
 }
 
 // Save writes a snapshot as a JSON file to disk.

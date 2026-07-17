@@ -150,6 +150,42 @@ func TestManifestSaveRenameError(t *testing.T) {
 	assert.Equal(t, "manifest.toml", files[0].Name())
 }
 
+func TestManifestBackup_CreatesFile(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	originalContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(originalContent), 0600))
+
+	backupPath, err := Backup(mPath)
+	require.NoError(t, err)
+	assert.Contains(t, backupPath, ".bak")
+
+	_, err = os.Stat(mPath)
+	assert.True(t, os.IsNotExist(err), "original manifest should be renamed")
+
+	_, err = os.Stat(backupPath)
+	require.NoError(t, err)
+
+	//nolint:gosec // path is a controlled temp file
+	data, err := os.ReadFile(backupPath)
+	require.NoError(t, err)
+	assert.Equal(t, originalContent, string(data))
+}
+
+func TestManifestBackup_NoOriginal(t *testing.T) {
+	t.Parallel()
+	_, err := Backup("/nonexistent/manifest.toml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to backup manifest")
+}
+
 func TestManifestSaveMkdirError(t *testing.T) {
 	t.Parallel()
 	tmpFile, err := os.CreateTemp("", "manifest-mkdir-test-*")

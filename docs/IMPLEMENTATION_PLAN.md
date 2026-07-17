@@ -216,6 +216,13 @@ Build the environment reconstruction logic and final touches.
 *   **Acceptance:** `stamp doctor` shows ✅ or ❌ for completions in both TTY and JSON modes.
 *   **Status:** ⏳ Pending
 
+**Task 25b: Re-init Guard for `stamp init` with Mandatory Backup**
+*   **Description:** Add re-init guard to `stamp init`: detect existing manifest, warn user, prompt for confirmation (default No). On confirmation, **always** backup manifest + snapshots (`<path>.<ts>.bak`) before creating fresh state. Update `stamp setup` wizard to detect initialized state and adjust prompt wording. `-y` flag bypasses prompt. Backup runs unconditionally on confirmed re-init.
+*   **Acceptance:** `stamp init` on initialized system shows warning, prompts with default No. Accepting creates timestamped backups and fresh state. Declining aborts cleanly. `-y` skips prompt. Wizard shows adjusted prompt when already initialized.
+*   **Verify:** `task test` passes.
+*   **Files:** `internal/cli/init.go`, `internal/cli/init_test.go`, `internal/cli/hello.go`, `internal/cli/hello_test.go`, `internal/manifest/manifest.go`, `internal/manifest/manifest_test.go`, `internal/state/state.go`, `internal/state/state_test.go`
+*   **Status:** ✅ Completed
+
 **Task 26: Add `yum` as Alias to `dnf` Manager**
 *   **Description:** Automatically detect `yum` when `dnf` is unavailable (RHEL/CentOS 7). Use resolved command name for all exec calls.
 *   **Acceptance:** `stamp` works on systems with only `yum` installed.

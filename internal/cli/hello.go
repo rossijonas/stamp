@@ -4,10 +4,16 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
+
+func alreadyInitialized(manifestPath string) bool {
+	_, err := os.Stat(manifestPath)
+	return err == nil
+}
 
 func newHelloCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -42,7 +48,7 @@ Use -y to skip all prompts for scripting.`,
 			// Step 2: Man Pages
 			_, _ = fmt.Fprintln(errOut, "Step 2 of 4: Man Pages")
 			if autoAccept || promptYesNo(errOut, cmd.InOrStdin(), "  Install man pages? [Y/n]: ", true) {
-				runSubcommand(cmd, []string{"man", "install"})
+				runSubcommand(cmd, "man", "install")
 			} else {
 				_, _ = fmt.Fprintln(errOut, "  Run 'stamp man install' later")
 			}
@@ -50,8 +56,23 @@ Use -y to skip all prompts for scripting.`,
 
 			// Step 3: Init
 			_, _ = fmt.Fprintln(errOut, "Step 3 of 4: Initialize")
-			if autoAccept || promptYesNo(errOut, cmd.InOrStdin(), "  Create manifest and baseline snapshot? [Y/n]: ", true) {
-				runSubcommand(cmd, []string{"init"})
+			isInit := alreadyInitialized(app.manifestPath)
+			if isInit {
+				_, _ = fmt.Fprintln(errOut, "  ⚠ Stamp is already initialized on this system.")
+				_, _ = fmt.Fprintln(errOut, "  This will re-write manifest.toml and baseline snapshots.")
+			}
+			promptText := "  Create manifest and baseline snapshot? [Y/n]: "
+			promptDefault := true
+			if isInit {
+				promptText = "  Re-initialize (backup old configuration)? [y/N]: "
+				promptDefault = false
+			}
+			if autoAccept || promptYesNo(errOut, cmd.InOrStdin(), promptText, promptDefault) {
+				if isInit {
+					runSubcommand(cmd, "init", "--yes")
+				} else {
+					runSubcommand(cmd, "init")
+				}
 			} else {
 				_, _ = fmt.Fprintln(errOut, "  ⚠ stamp requires initialization to work properly")
 			}
@@ -59,7 +80,7 @@ Use -y to skip all prompts for scripting.`,
 
 			// Step 4: Doctor
 			_, _ = fmt.Fprintln(errOut, "Step 4 of 4: System Diagnosis")
-			runSubcommand(cmd, []string{"doctor"})
+			runSubcommand(cmd, "doctor")
 
 			_, _ = fmt.Fprintln(errOut)
 			_, _ = fmt.Fprintln(errOut, "▪ Setup complete!")
@@ -97,7 +118,7 @@ func runCompletion(cmd *cobra.Command) {
 	}
 }
 
-func runSubcommand(cmd *cobra.Command, args []string) {
+func runSubcommand(cmd *cobra.Command, args ...string) {
 	subCmd, _, err := cmd.Root().Find(args)
 	if err != nil || subCmd == nil {
 		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ %s command not found\n", args[0])
@@ -107,6 +128,17 @@ func runSubcommand(cmd *cobra.Command, args []string) {
 	subCmd.SetOut(cmd.OutOrStdout())
 	subCmd.SetErr(cmd.ErrOrStderr())
 	subCmd.SetIn(cmd.InOrStdin())
+
+	for _, f := range args[1:] {
+		name := strings.TrimLeft(f, "-")
+		if strings.Contains(name, "=") {
+			parts := strings.SplitN(name, "=", 2)
+			_ = subCmd.Flags().Set(parts[0], parts[1])
+		} else {
+			_ = subCmd.Flags().Set(name, "true")
+		}
+	}
+
 	if err := subCmd.RunE(subCmd, nil); err != nil {
 		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ %s failed: %v\n", args[0], err)
 	}
