@@ -266,7 +266,7 @@ func TestReconcile_RepoDrift(t *testing.T) {
 		&manager.Mock{
 			ManagerName:    "brew",
 			InstalledPkgs:  []string{"lazygit"},
-			InstalledRepos: []string{"aovestdipaperino/tap", "yvgude/lean-ctx"},
+			InstalledRepos: []manager.RepositoryInfo{{Name: "aovestdipaperino/tap"}, {Name: "yvgude/lean-ctx"}},
 		},
 	}
 
@@ -290,7 +290,7 @@ func TestReconcile_RepoAndPackageDrift(t *testing.T) {
 		&manager.Mock{
 			ManagerName:    "brew",
 			InstalledPkgs:  []string{"lazygit", "ripgrep"},
-			InstalledRepos: []string{"aovestdipaperino/tap"},
+			InstalledRepos: []manager.RepositoryInfo{{Name: "aovestdipaperino/tap"}},
 		},
 	}
 

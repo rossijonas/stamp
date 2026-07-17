@@ -92,15 +92,20 @@ Use --dry-run to preview drift without tracking.`,
 				name    string
 				manager string
 			}
+			type discoveredRepo struct {
+				name    string
+				manager string
+				url     string
+			}
 			var discovered []discoveredPkg
-			var discoveredRepos []discoveredPkg
+			var discoveredRepos []discoveredRepo
 
 			for _, d := range deltas {
 				for _, p := range d.Added {
 					discovered = append(discovered, discoveredPkg{name: p, manager: d.Manager})
 				}
 				for _, r := range d.AddedRepos {
-					discoveredRepos = append(discoveredRepos, discoveredPkg{name: r, manager: d.Manager})
+					discoveredRepos = append(discoveredRepos, discoveredRepo{name: r.Name, manager: d.Manager, url: r.URL})
 				}
 			}
 
@@ -156,6 +161,7 @@ Use --dry-run to preview drift without tracking.`,
 				if app.manifest.AddRepository(manifest.Repository{
 					Name:    r.name,
 					Manager: r.manager,
+					URL:     r.url,
 				}) {
 					trackedReposCount++
 				}

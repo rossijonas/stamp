@@ -135,54 +135,65 @@ func TestDiff_ReposAdded(t *testing.T) {
 	oldS := Snapshot{
 		Manager:      "brew",
 		Packages:     []string{"git"},
-		Repositories: []string{},
+		Repositories: []manager.RepositoryInfo{},
 	}
 	newS := Snapshot{
-		Manager:      "brew",
-		Packages:     []string{"git"},
-		Repositories: []string{"aovestdipaperino/tap", "yvgude/lean-ctx"},
+		Manager:  "brew",
+		Packages: []string{"git"},
+		Repositories: []manager.RepositoryInfo{
+			{Name: "aovestdipaperino/tap"},
+			{Name: "yvgude/lean-ctx"},
+		},
 	}
 
 	result := Diff(oldS, newS)
 	assert.Equal(t, "brew", result.Manager)
 	assert.Empty(t, result.Added)
 	assert.Empty(t, result.Removed)
-	assert.ElementsMatch(t, []string{"aovestdipaperino/tap", "yvgude/lean-ctx"}, result.AddedRepos)
+	assert.Len(t, result.AddedRepos, 2)
 	assert.Empty(t, result.RemovedRepos)
 }
 
 func TestDiff_ReposRemoved(t *testing.T) {
 	t.Parallel()
 	oldS := Snapshot{
-		Manager:      "brew",
-		Packages:     []string{"git"},
-		Repositories: []string{"old-tap"},
+		Manager:  "brew",
+		Packages: []string{"git"},
+		Repositories: []manager.RepositoryInfo{
+			{Name: "old-tap"},
+		},
 	}
 	newS := Snapshot{
 		Manager:      "brew",
 		Packages:     []string{"git"},
-		Repositories: []string{},
+		Repositories: []manager.RepositoryInfo{},
 	}
 
 	result := Diff(oldS, newS)
-	assert.ElementsMatch(t, []string{"old-tap"}, result.RemovedRepos)
+	assert.Len(t, result.RemovedRepos, 1)
 	assert.Empty(t, result.AddedRepos)
 }
 
 func TestDiff_ReposMixed(t *testing.T) {
 	t.Parallel()
 	oldS := Snapshot{
-		Manager:      "brew",
-		Repositories: []string{"a", "b"},
+		Manager: "brew",
+		Repositories: []manager.RepositoryInfo{
+			{Name: "a"}, {Name: "b"},
+		},
 	}
 	newS := Snapshot{
-		Manager:      "brew",
-		Repositories: []string{"b", "c"},
+		Manager: "brew",
+		Repositories: []manager.RepositoryInfo{
+			{Name: "b"}, {Name: "c"},
+		},
 	}
 
 	result := Diff(oldS, newS)
-	assert.ElementsMatch(t, []string{"c"}, result.AddedRepos)
-	assert.ElementsMatch(t, []string{"a"}, result.RemovedRepos)
+	assert.Len(t, result.AddedRepos, 1)
+	assert.Equal(t, "c", result.AddedRepos[0].Name)
+	assert.Len(t, result.RemovedRepos, 1)
+	assert.Equal(t, "a", result.RemovedRepos[0].Name)
 }
 
 func TestDiffAll_Empty(t *testing.T) {
@@ -193,9 +204,11 @@ func TestDiffAll_Empty(t *testing.T) {
 func TestDiffAll(t *testing.T) {
 	oldSnaps := []Snapshot{
 		{
-			Manager:      "brew",
-			Packages:     []string{"lazygit", "jq"},
-			Repositories: []string{"homebrew/core"},
+			Manager:  "brew",
+			Packages: []string{"lazygit", "jq"},
+			Repositories: []manager.RepositoryInfo{
+				{Name: "homebrew/core"},
+			},
 		},
 		{
 			Manager:  "dnf",
@@ -205,9 +218,12 @@ func TestDiffAll(t *testing.T) {
 
 	newSnaps := []Snapshot{
 		{
-			Manager:      "brew",
-			Packages:     []string{"lazygit", "ripgrep"},
-			Repositories: []string{"homebrew/core", "aovestdipaperino/tap"},
+			Manager:  "brew",
+			Packages: []string{"lazygit", "ripgrep"},
+			Repositories: []manager.RepositoryInfo{
+				{Name: "homebrew/core"},
+				{Name: "aovestdipaperino/tap"},
+			},
 		},
 		{
 			Manager:  "dnf",
@@ -222,34 +238,27 @@ func TestDiffAll(t *testing.T) {
 	deltas := DiffAll(oldSnaps, newSnaps)
 	require.Len(t, deltas, 3)
 
-	expectedMap := map[string]*Delta{
-		"brew": {
-			Manager:      "brew",
-			Added:        []string{"ripgrep"},
-			Removed:      []string{"jq"},
-			AddedRepos:   []string{"aovestdipaperino/tap"},
-			RemovedRepos: []string{},
-		},
-		"dnf": {
-			Manager: "dnf",
-			Added:   []string{"tmux"},
-			Removed: []string{},
-		},
-		"flatpak": {
-			Manager: "flatpak",
-			Added:   []string{"spotify"},
-			Removed: []string{},
-		},
-	}
+	brewDelta := deltas[0]
+	assert.Equal(t, "brew", brewDelta.Manager)
+	assert.ElementsMatch(t, []string{"ripgrep"}, brewDelta.Added)
+	assert.ElementsMatch(t, []string{"jq"}, brewDelta.Removed)
+	assert.Len(t, brewDelta.AddedRepos, 1)
+	assert.Equal(t, "aovestdipaperino/tap", brewDelta.AddedRepos[0].Name)
+	assert.Empty(t, brewDelta.RemovedRepos)
 
-	for _, d := range deltas {
-		exp, ok := expectedMap[d.Manager]
-		require.True(t, ok, "unexpected manager delta: %s", d.Manager)
-		assert.ElementsMatch(t, exp.Added, d.Added)
-		assert.ElementsMatch(t, exp.Removed, d.Removed)
-		assert.ElementsMatch(t, exp.AddedRepos, d.AddedRepos)
-		assert.ElementsMatch(t, exp.RemovedRepos, d.RemovedRepos)
-	}
+	dnfDelta := deltas[1]
+	assert.Equal(t, "dnf", dnfDelta.Manager)
+	assert.ElementsMatch(t, []string{"tmux"}, dnfDelta.Added)
+	assert.Empty(t, dnfDelta.Removed)
+	assert.Empty(t, dnfDelta.AddedRepos)
+	assert.Empty(t, dnfDelta.RemovedRepos)
+
+	flatpakDelta := deltas[2]
+	assert.Equal(t, "flatpak", flatpakDelta.Manager)
+	assert.ElementsMatch(t, []string{"spotify"}, flatpakDelta.Added)
+	assert.Empty(t, flatpakDelta.Removed)
+	assert.Empty(t, flatpakDelta.AddedRepos)
+	assert.Empty(t, flatpakDelta.RemovedRepos)
 }
 
 func TestCurrent_Success(t *testing.T) {

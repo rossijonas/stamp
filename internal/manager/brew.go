@@ -84,12 +84,17 @@ func (m *Brew) Search(ctx context.Context, query string) ([]string, error) {
 }
 
 // ListRepos returns a list of third-party taps currently configured.
-func (m *Brew) ListRepos(ctx context.Context) ([]string, error) {
+func (m *Brew) ListRepos(ctx context.Context) ([]RepositoryInfo, error) {
 	out, err := m.exec(ctx, "brew", "tap")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list taps: %w", err)
 	}
-	return parseLines(out), nil
+	names := parseLines(out)
+	result := make([]RepositoryInfo, len(names))
+	for i, name := range names {
+		result[i] = RepositoryInfo{Name: name}
+	}
+	return result, nil
 }
 
 // AddRepo enables a third-party tap.

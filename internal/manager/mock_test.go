@@ -193,12 +193,17 @@ func TestMockRemove_Found(t *testing.T) {
 func TestMockListRepos_ReturnsInstalledRepos(t *testing.T) {
 	t.Parallel()
 	mock := &Mock{
-		ManagerName:    "brew",
-		InstalledRepos: []string{"aovestdipaperino/tap", "yvgude/lean-ctx"},
+		ManagerName: "brew",
+		InstalledRepos: []RepositoryInfo{
+			{Name: "aovestdipaperino/tap"},
+			{Name: "yvgude/lean-ctx"},
+		},
 	}
 	repos, err := mock.ListRepos(context.Background())
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"aovestdipaperino/tap", "yvgude/lean-ctx"}, repos)
+	require.Len(t, repos, 2)
+	assert.Equal(t, "aovestdipaperino/tap", repos[0].Name)
+	assert.Equal(t, "yvgude/lean-ctx", repos[1].Name)
 }
 
 func TestMockListRepos_ReturnsTrackedRepos(t *testing.T) {
@@ -209,7 +214,8 @@ func TestMockListRepos_ReturnsTrackedRepos(t *testing.T) {
 	}
 	repos, err := mock.ListRepos(context.Background())
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"old-tap"}, repos)
+	require.Len(t, repos, 1)
+	assert.Equal(t, "old-tap", repos[0].Name)
 }
 
 func TestMockListRepos_Error(t *testing.T) {
