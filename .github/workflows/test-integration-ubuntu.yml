@@ -27,8 +27,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Build Docker image
-        run: docker build --build-arg BIN=bin/stamp \
-          -f test/Dockerfile.ubuntu -t stamp-test-ubuntu .
+        run: |
+          docker build --build-arg BIN=bin/stamp \
+            -f test/Dockerfile.ubuntu -t stamp-test-ubuntu .
 
       - name: Run integration tests
         run: docker run --rm stamp-test-ubuntu
