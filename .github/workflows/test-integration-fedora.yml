@@ -1,4 +1,4 @@
-name: integration: fedora
+name: "integration: fedora"
 
 on:
   release:
