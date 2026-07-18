@@ -1,5 +1,3 @@
----
-
 <p align="center">
   <picture>
     <source srcset="docs/media/stamp-logo-white-nobkg-exp_2.svg" media="(prefers-color-scheme: dark)">
