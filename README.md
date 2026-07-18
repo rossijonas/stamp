@@ -1,4 +1,4 @@
-# Stamp
+---
 
 <p align="center">
   <picture>
