@@ -24,10 +24,36 @@ tasks:
       - go test -v -race -coverprofile=coverage.out ./...
       - "go tool cover -func=coverage.out | awk -v threshold=90.0 '/total/ {cov=substr($3,1,length($3)-1); if (cov+0 < threshold) {print \"Error: Coverage below \" threshold \"% (\" cov \"%)\"; exit 1} else {print \"Coverage is good (\" cov \"%)\"}}'"
 
+  test:integration:
+    desc: "Run integration smoke tests in Docker across all target platforms"
+    deps:
+      - build
+    cmds:
+      - task: test:integration:platform
+        vars: { DISTRO: ubuntu }
+      - task: test:integration:platform
+        vars: { DISTRO: debian }
+      - task: test:integration:platform
+        vars: { DISTRO: fedora }
+
+  test:integration:platform:
+    desc: "Run integration tests for a single platform (internal)"
+    internal: true
+    cmds:
+      - cmd: docker build --build-arg BIN=bin/stamp -f test/Dockerfile.{{.DISTRO}} -t stamp-test-{{.DISTRO}} .
+        silent: true
+      - docker run --rm stamp-test-{{.DISTRO}}
+
   lint:
     desc: "Runs golangci-lint"
     cmds:
       - golangci-lint run
+
+  lint:sh:
+    desc: "Lints shell scripts with shellcheck"
+    cmds:
+      - "sh -c 'which shellcheck 2>/dev/null || (echo \"shellcheck not installed. Install: sudo dnf install -y shellcheck\" && exit 1)'"
+      - shellcheck test/integration/*.sh
 
   verify:
     desc: "Verifies module dependencies and checksums"
