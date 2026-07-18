@@ -236,11 +236,14 @@ func parseAPTSources() ([]RepositoryInfo, error) {
 var aptSourcesDir = "/etc/apt/sources.list.d"
 var aptSourcesFile = "/etc/apt/sources.list"
 
+// lookPath is overridable in tests to simulate missing add-apt-repository.
+var lookPath = osexec.LookPath
+
 // AddRepo enables a third-party repository.
 func (m *APT) AddRepo(ctx context.Context, name, url string) error {
 	if url == "" {
 		// PPA: requires add-apt-repository
-		if _, err := osexec.LookPath("add-apt-repository"); err != nil {
+		if _, err := lookPath("add-apt-repository"); err != nil {
 			return fmt.Errorf("add-apt-repository not found: install 'software-properties-common' to use PPAs")
 		}
 		args := sudoCmd("add-apt-repository", "-y", name)
@@ -287,7 +290,7 @@ func (m *APT) RemoveRepo(ctx context.Context, name string) error {
 		return nil
 	}
 
-	if _, err := osexec.LookPath("add-apt-repository"); err != nil {
+	if _, err := lookPath("add-apt-repository"); err != nil {
 		return fmt.Errorf("add-apt-repository not found: install 'software-properties-common' to remove PPAs")
 	}
 	args := sudoCmd("add-apt-repository", "-y", "--remove", name)

@@ -364,6 +364,10 @@ func TestAPT_Update_Phase1Fails(t *testing.T) {
 
 func TestAPT_RemoveRepo_NoFile(t *testing.T) {
 	t.Parallel()
+	oldLookPath := lookPath
+	lookPath = func(string) (string, error) { return "", assert.AnError }
+	defer func() { lookPath = oldLookPath }()
+
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", nil)
 
@@ -433,10 +437,13 @@ func TestAPT_Remove_Error(t *testing.T) {
 
 func TestAPT_AddRepo_PPA(t *testing.T) {
 	t.Parallel()
+	oldLookPath := lookPath
+	lookPath = func(string) (string, error) { return "", assert.AnError }
+	defer func() { lookPath = oldLookPath }()
+
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", nil)
 
-	// add-apt-repository is not available in test env
 	err := manager.AddRepo(context.Background(), "ppa:git-core/ppa", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "add-apt-repository not found")
