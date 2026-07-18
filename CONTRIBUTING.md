@@ -22,6 +22,7 @@ We use `task` instead of `make`. Here are the essential commands:
 - `task lint` - Runs static analysis.
 - `task verify` - Ensures `go.mod` and `go.sum` are clean and cryptographically verified.
 - `task security` - Runs `govulncheck` to scan for known CVEs.
+- `task test:integration` - Builds the binary, runs integration smoke tests in Docker containers (Ubuntu, Debian, Fedora). Requires Docker or Podman (`podman-docker` on Fedora).
 - `task clean` - Removes build artifacts.
 
 ## Commit Messages
