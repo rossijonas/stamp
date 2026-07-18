@@ -6,3 +6,4 @@
 coverage.out
 *.log
 .DS_Store
+docs/media/

@@ -1,23 +1,24 @@
 # Stamp
 
-```txt
-
-                              
-         █▄
-        ▄██▄      ▄
-   ▄██▀█ ██ ▄▀▀█▄ ███▄███▄ ████▄
-   ▀███▄ ██ ▄█▀██ ██ ██ ██ ██ ██
-  █▄▄██▀▄██▄▀█▄██▄██ ██ ▀█▄████▀
-                           ██
-                           ▀
-
-```
-
-*A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.*
-
----
-
-[![CI](https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/ci.yml) [![Ubuntu](https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml) [![Debian](https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml) [![Fedora](https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml/badge.svg)](https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml) [![Release](https://img.shields.io/github/v/release/rossijonas/stamp)](https://github.com/rossijonas/stamp/releases/latest) [![codecov](https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg)](https://codecov.io/gh/rossijonas/stamp) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Go Reference](https://pkg.go.dev/badge/github.com/rossijonas/stamp.svg)](https://pkg.go.dev/github.com/rossijonas/stamp) [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+<p align="center">
+  <picture>
+    <source srcset="docs/media/stamp-logo-white-nobkg-exp_2.svg" media="(prefers-color-scheme: dark)">
+    <source srcset="docs/media/stamp-logo-black-nobkg-exp_2.svg" media="(prefers-color-scheme: light)">
+    <img src="docs/media/stamp-logo-black-nobkg-exp_2.svg" alt="Stamp logo" width="320">
+  </picture>
+</p>
+<p align="center">A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.</p>
+<p align="center">
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/ci.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml/badge.svg" alt="Ubuntu"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml/badge.svg" alt="Debian"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml/badge.svg" alt="Fedora"></a>
+  <a href="https://github.com/rossijonas/stamp/releases/latest"><img src="https://img.shields.io/github/v/release/rossijonas/stamp" alt="Release"></a>
+  <a href="https://codecov.io/gh/rossijonas/stamp"><img src="https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg" alt="codecov"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+  <a href="https://pkg.go.dev/github.com/rossijonas/stamp"><img src="https://pkg.go.dev/badge/github.com/rossijonas/stamp.svg" alt="Go Reference"></a>
+  <a href="CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Code of Conduct"></a>
+</p>
 
 ---
 
