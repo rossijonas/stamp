@@ -271,6 +271,13 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 **Task 30: `stamp auto-reconcile` Command**
 *   **Description:** Implement a subcommand to install or remove automated reconcile timers.
 
+**Task 33: Docker-Based Integration Testing**
+*   **Description:** Set up Docker-based integration smoke tests for Ubuntu and Fedora containers. Each container installs stamp and runs real package manager operations (search, install, remove, repo add/remove) via the native adapter (apt on Ubuntu, dnf/flatpak on Fedora, brew on both). Uses Taskfile tasks for execution. Works with both Docker and Podman (via podman-docker) on Fedora.
+*   **Acceptance:** `task test:integration` builds the binary and runs smoke tests in Ubuntu 24.04 and Fedora 41 containers without errors.
+*   **Verify:** `task test:integration`
+*   **Files:** `test/Dockerfile.ubuntu`, `test/Dockerfile.fedora`, `test/integration/ubuntu.sh`, `test/integration/fedora.sh`, `.dockerignore`, `Taskfile.yml`
+*   **Status:** ✅ Completed
+
 **Task 32: APT Package Manager Adapter (#46)**
 *   **Description:** Implement APT adapter for Debian/Ubuntu systems. Covers all `Adapter` interface methods: ListInstalled (with dpkg-query fallback excluding rc packages), Install, Reinstall, Remove, Search (apt-cache), Info (apt show / apt-cache show), AddRepo (hybrid PPA via add-apt-repository + custom URL via .list file), RemoveRepo, ListRepos (file parsing), Update (two-phase: update + upgrade), Doctor (not supported). Reuses `sudoCmd` from DNF adapter for all write operations.
 *   **Acceptance:** All adapter methods work with mocked executors. APT is auto-detected on Debian/Ubuntu systems.
@@ -327,3 +334,4 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 6 | 29 | Flag and Compliance Updates | ✅ |
 | 6 | 30 | `stamp auto-reconcile` Command | ⏳ Pending |
 | 4 | 32 | APT package manager adapter (#46) | ✅ |
+| 4 | 33 | Docker-based integration testing | ✅ |

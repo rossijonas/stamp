@@ -1,0 +1,8 @@
+.git/
+.gitattributes
+.gitignore
+.vscode/
+*.test
+coverage.out
+*.log
+.DS_Store

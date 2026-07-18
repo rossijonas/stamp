@@ -138,6 +138,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 25b | Re-init guard for `stamp init` with mandatory backup | ✅ |
 | 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ✅ |
 | 4 | 32 | APT package manager adapter (#46) | ✅ |
+| 4 | 33 | Docker-based integration testing | ✅ |
 | 5 | — | Relicense to Apache-2.0 | ✅ |
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✅ |
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✅ |
