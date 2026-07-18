@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	osexec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -272,17 +273,18 @@ and man pages automatically. Use --check to query without downloading.`,
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ✅ Updated to %s\n", rel.TagName)
 
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  Reinstalling shell completions...")
-			shell := detectShell()
-			if shell != "" {
-				if err := installCompletion(cmd, shell); err != nil {
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ completion install failed: %v\n", err)
-				} else {
-					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✅ Completions updated")
-				}
+			if err := runNewBinary(realExe, "completion"); err != nil {
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ completion install failed: %v\n", err)
+			} else {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✅ Completions updated")
 			}
 
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  Reinstalling man pages...")
-			runSubcommand(cmd, "man", "install")
+			if err := runNewBinary(realExe, "man", "install"); err != nil {
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ man page install failed: %v\n", err)
+			} else {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✅ Man pages updated")
+			}
 
 			return nil
 		},
@@ -290,4 +292,13 @@ and man pages automatically. Use --check to query without downloading.`,
 
 	cmd.Flags().BoolVarP(&checkOnly, "check", "c", false, "check for update without downloading")
 	return cmd
+}
+
+func runNewBinary(bin string, args ...string) error {
+	//nolint:gosec // bin is the resolved path to the stamp binary itself, not user input
+	cmd := osexec.Command(bin, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
 }
