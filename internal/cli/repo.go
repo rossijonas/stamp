@@ -13,7 +13,7 @@ import (
 	"github.com/rossijonas/stamp/internal/manifest"
 )
 
-var validRepoName = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/\+]*$`)
+var validRepoName = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/\+\:]*$`)
 
 func validateRepoName(name string) error {
 	if strings.HasPrefix(name, "-") {

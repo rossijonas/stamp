@@ -62,6 +62,11 @@ func TestMock(t *testing.T) {
 	err = mock.RemoveRepo(ctx, "test-repo")
 	require.NoError(t, err)
 	assert.NotContains(t, mock.TrackedRepos, "test-repo")
+
+	// Test Doctor
+	result, err := mock.Doctor(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, result, "mock doctor")
 }
 
 func TestMockErrors(t *testing.T) {
@@ -76,6 +81,7 @@ func TestMockErrors(t *testing.T) {
 		AddRepoErr:    expectedErr,
 		RemoveRepoErr: expectedErr,
 		UpdateErr:     expectedErr,
+		DoctorErr:     expectedErr,
 	}
 
 	ctx := context.Background()
@@ -102,6 +108,9 @@ func TestMockErrors(t *testing.T) {
 	require.ErrorIs(t, err, expectedErr)
 
 	err = mock.Update(ctx)
+	require.ErrorIs(t, err, expectedErr)
+
+	_, err = mock.Doctor(ctx)
 	require.ErrorIs(t, err, expectedErr)
 }
 
