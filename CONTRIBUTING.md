@@ -19,7 +19,8 @@ We use `task` instead of `make`. Here are the essential commands:
 - `task check` - Runs all quality gates: module verification, static analysis, unit tests, and vulnerability scanning. **Must pass before opening a PR.**
 - `task build` - Builds the binary into the `bin/` directory.
 - `task test` - Runs all unit tests with the race detector enabled. Enforces 90% minimum coverage.
-- `task lint` - Runs static analysis.
+- `task lint` - Runs static analysis (Go).
+- `task lint:sh` - Lints shell scripts with ShellCheck. Requires `shellcheck` (`sudo dnf install -y shellcheck`).
 - `task verify` - Ensures `go.mod` and `go.sum` are clean and cryptographically verified.
 - `task security` - Runs `govulncheck` to scan for known CVEs.
 - `task test:integration` - Builds the binary, runs integration smoke tests in Docker containers (Ubuntu, Debian, Fedora). Requires Docker or Podman (`podman-docker` on Fedora).

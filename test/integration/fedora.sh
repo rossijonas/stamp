@@ -1,18 +1,44 @@
-#!/bin/sh
-set -e
+#!/bin/bash
+set -eo pipefail
+
+TIMEOUT=10
+test_count=0
+pass_count=0
+
+pass() {
+	test_count=$((test_count + 1))
+	pass_count=$((pass_count + 1))
+	echo "  ✅ $1"
+}
+
+fail() {
+	test_count=$((test_count + 1))
+	echo "  ❌ $1"
+}
+
+check() {
+	desc="$1"
+	shift
+	if "$@"; then
+		pass "$desc"
+	else
+		fail "$desc"
+	fi
+}
 
 echo "=== Integration: Fedora (latest) ==="
 
 stamp --version
 
-# Skip setup/init — brew init fails as root in containers
-stamp doctor
+check "doctor runs" stamp doctor
 
-# DNF: timeout wrapper for potentially slow commands
-timeout 10 stamp search htop -m dnf 2>/dev/null || echo "  (dnf search skipped — metadata not available in container)"
+check "search htop via dnf" timeout $TIMEOUT stamp search htop -m dnf
 
-# Flatpak: add remote, then search
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
-timeout 10 stamp search org.gnome.eog -m flatpak 2>/dev/null || echo "  (flatpak search skipped — no remote metadata)"
+# flatpak search may return no results (no remote metadata in container)
+timeout $TIMEOUT stamp search org.gnome.eog -m flatpak 2>/dev/null && \
+	pass "flatpak EOG search" || \
+	echo "  ⚠  flatpak search: no results (expected in container without remote metadata)"
 
-echo "✅ All Fedora integration checks passed"
+echo
+echo "  Results: $pass_count / $test_count passed"
+[ "$pass_count" = "$test_count" ]

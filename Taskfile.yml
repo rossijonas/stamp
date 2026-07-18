@@ -49,6 +49,12 @@ tasks:
     cmds:
       - golangci-lint run
 
+  lint:sh:
+    desc: "Lints shell scripts with shellcheck"
+    cmds:
+      - "sh -c 'which shellcheck 2>/dev/null || (echo \"shellcheck not installed. Install: sudo dnf install -y shellcheck\" && exit 1)'"
+      - shellcheck test/integration/*.sh
+
   verify:
     desc: "Verifies module dependencies and checksums"
     cmds:
