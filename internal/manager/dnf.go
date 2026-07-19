@@ -22,12 +22,15 @@ func NewDNF(cmd string) *DNF {
 	}
 }
 
+// stdIn is overridable in tests to simulate pipe vs TTY.
+var stdIn = os.Stdin
+
 // sudoCmd builds a sudo command that is TTY-aware.
 // In non-interactive environments (CI/pipes), adds -n to fail fast.
 // In interactive terminals, omits -n so sudo can prompt for a password.
 func sudoCmd(args ...string) []string {
 	cmd := []string{"sudo"}
-	stat, err := os.Stdin.Stat()
+	stat, err := stdIn.Stat()
 	if err == nil && stat.Mode()&os.ModeCharDevice == 0 {
 		cmd = append(cmd, "-n")
 	}
