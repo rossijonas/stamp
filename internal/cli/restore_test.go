@@ -330,6 +330,50 @@ manager = "brew"
 	assert.Contains(t, output, "Restore completed successfully")
 }
 
+func TestRestore_MultiAdapterOneFails(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName: "brew",
+		InstallErr:  assert.AnError,
+	}
+	mockDNF := &manager.Mock{
+		ManagerName: "dnf",
+	}
+	adapters := []manager.Adapter{mockBrew, mockDNF}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+
+[[packages]]
+name = "tmux"
+manager = "dnf"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore"})
+
+	err := root.Execute()
+	require.Error(t, err)
+	output := buf.String()
+
+	assert.Contains(t, output, "  installed tmux via dnf")
+	assert.Contains(t, output, "Some packages failed to restore")
+	assert.Contains(t, output, "htop (brew)")
+	assert.Contains(t, err.Error(), "failed to restore 1 package(s)")
+
+	assert.NotContains(t, mockBrew.InstalledPkgs, "htop")
+	assert.Contains(t, mockDNF.InstalledPkgs, "tmux")
+}
+
 func TestRestore_CorruptedManifest(t *testing.T) {
 	t.Parallel()
 	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
