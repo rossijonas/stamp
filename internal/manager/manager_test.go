@@ -111,6 +111,29 @@ func TestParseLines(t *testing.T) {
 	assert.ElementsMatch(t, expected, actual)
 }
 
+func TestResolveManager(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{name: "dnf identity",                input: "dnf",   expected: "dnf"},
+		{name: "brew identity",               input: "brew",  expected: "brew"},
+		{name: "yum alias to dnf",            input: "yum",   expected: "dnf"},
+		{name: "unknown pass-through",        input: "flatpak", expected: "flatpak"},
+		{name: "empty string",                input: "",      expected: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := ResolveManager(tt.input)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
 func TestValidatePackageName(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
