@@ -515,3 +515,33 @@ func TestDNF_AddRepo_URL_ExecError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to add repo")
 }
+
+func TestSudoCmd_NonTTY(t *testing.T) {
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	_ = w.Close()
+
+	oldStdin := stdIn
+	stdIn = r
+	defer func() {
+		stdIn = oldStdin
+		_ = r.Close()
+	}()
+
+	result := sudoCmd("install", "-y", "htop")
+	assert.Equal(t, []string{"sudo", "-n", "install", "-y", "htop"}, result)
+}
+
+func TestSudoCmd_StatError(t *testing.T) {
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	_ = r.Close()
+	_ = w.Close()
+
+	oldStdin := stdIn
+	stdIn = r
+	defer func() { stdIn = oldStdin }()
+
+	result := sudoCmd("update")
+	assert.Equal(t, []string{"sudo", "update"}, result)
+}
