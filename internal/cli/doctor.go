@@ -6,11 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
+	"github.com/rossijonas/stamp/internal/manifest"
 )
 
 type managerStatus struct {
@@ -63,6 +63,57 @@ func checkCompletionStatus() completionStatus {
 	}
 }
 
+func buildManagersReport(adapters []manager.Adapter) []managerStatus {
+	adapterNames := make(map[string]bool)
+	for _, a := range adapters {
+		adapterNames[a.Name()] = true
+	}
+
+	knownManagers := []struct {
+		name    string
+		details string
+	}{
+		{"apt", "Default system manager (Debian/Ubuntu)"},
+		{"dnf", "Default system manager (Fedora/RHEL, alias yum)"},
+		{"brew", "User-space manager"},
+		{"flatpak", "Sandboxed application distribution"},
+	}
+
+	managers := make([]managerStatus, 0, len(knownManagers))
+	for _, km := range knownManagers {
+		status := managerStatus{
+			Name:    km.name,
+			Details: "Executable not found in $PATH",
+		}
+		if adapterNames[km.name] {
+			status.Active = true
+			status.Details = km.details
+			path, err := exec.LookPath(km.name)
+			if err == nil {
+				status.Path = path
+			}
+		}
+		managers = append(managers, status)
+	}
+	return managers
+}
+
+func buildManifestReport(path string, manifestErr error, manifest *manifest.Manifest) manifestStatus {
+	ms := manifestStatus{Path: path}
+	if manifestErr != nil {
+		ms.Error = manifestErr.Error()
+	} else {
+		_, statErr := os.Stat(path)
+		if os.IsNotExist(statErr) {
+			ms.Error = "manifest not found — run 'stamp init'"
+		} else {
+			ms.Valid = true
+			ms.PackagesCount = len(manifest.Packages)
+		}
+	}
+	return ms
+}
+
 func newDoctorCmd() *cobra.Command {
 	var managerFlag string
 
@@ -97,50 +148,8 @@ Reports which managers are installed and whether the manifest is valid.`,
 				return nil
 			}
 
-			adapterNames := make(map[string]bool)
-			for _, a := range app.adapters {
-				adapterNames[a.Name()] = true
-			}
-
-			knownManagers := []struct {
-				name    string
-				details string
-			}{
-				{"apt", "Default system manager (Debian/Ubuntu)"},
-				{"dnf", "Default system manager (Fedora/RHEL, alias yum)"},
-				{"brew", "User-space manager"},
-				{"flatpak", "Sandboxed application distribution"},
-			}
-
-			managers := make([]managerStatus, 0, len(knownManagers))
-			for _, km := range knownManagers {
-				status := managerStatus{
-					Name:    km.name,
-					Details: "Executable not found in $PATH",
-				}
-				if adapterNames[km.name] {
-					status.Active = true
-					status.Details = km.details
-					path, err := exec.LookPath(km.name)
-					if err == nil {
-						status.Path = path
-					}
-				}
-				managers = append(managers, status)
-			}
-
-			ms := manifestStatus{Path: app.manifestPath}
-			if app.manifestErr != nil {
-				ms.Error = app.manifestErr.Error()
-			} else {
-				_, statErr := os.Stat(app.manifestPath)
-				if os.IsNotExist(statErr) {
-					ms.Error = "manifest not found — run 'stamp init'"
-				} else {
-					ms.Valid = true
-					ms.PackagesCount = len(app.manifest.Packages)
-				}
-			}
+			managers := buildManagersReport(app.adapters)
+			ms := buildManifestReport(app.manifestPath, app.manifestErr, app.manifest)
 
 			var mpInstalled bool
 			var mpPath string
@@ -156,21 +165,22 @@ Reports which managers are installed and whether the manifest is valid.`,
 
 			comps := checkCompletionStatus()
 
+			report := doctorReport{
+				System:          runtime.GOOS,
+				Version:         Version,
+				PackageManagers: managers,
+				Manifest:        ms,
+				NoColor:         app.noColor,
+				ManPage: manPageStatus{
+					Installed: mpInstalled,
+					Path:      mpPath,
+					Version:   mpVersion,
+					Matches:   mpMatches,
+				},
+				Completions: comps,
+			}
+
 			if app.json {
-				report := doctorReport{
-					System:          runtime.GOOS,
-					Version:         Version,
-					PackageManagers: managers,
-					Manifest:        ms,
-					NoColor:         app.noColor,
-					ManPage: manPageStatus{
-						Installed: mpInstalled,
-						Path:      mpPath,
-						Version:   mpVersion,
-						Matches:   mpMatches,
-					},
-					Completions: comps,
-				}
 				data, err := json.MarshalIndent(report, "", "  ")
 				if err != nil {
 					return fmt.Errorf("failed to marshal doctor report: %w", err)
@@ -179,57 +189,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 				return nil
 			}
 
-			out := cmd.OutOrStdout()
-			_, _ = fmt.Fprint(out, "▪ System Diagnosis (Stamp Doctor)\n\n")
-
-			_, _ = fmt.Fprintln(out, "Package Managers:")
-			_, _ = fmt.Fprintf(out, "  %-10s %-10s %-22s %s\n", "Name", "Status", "Path", "Details")
-			for _, m := range managers {
-				statusSymbol := "❌ Not Found"
-				path := "-"
-				if m.Active {
-					statusSymbol = "✅ Active"
-					if m.Path != "" {
-						path = m.Path
-					}
-				}
-				_, _ = fmt.Fprintf(out, "  %-10s %-10s %-22s %s\n", m.Name, statusSymbol, path, m.Details)
-			}
-
-			_, _ = fmt.Fprintln(out)
-			_, _ = fmt.Fprintln(out, "Manifest Integrity:")
-			_, _ = fmt.Fprintf(out, "  Path:   %s\n", ms.Path)
-			if ms.Valid {
-				_, _ = fmt.Fprintf(out, "  Status: ✅ Healthy (%d package(s))\n", ms.PackagesCount)
-			} else {
-				_, _ = fmt.Fprintf(out, "  Status: ❌ %s\n", ms.Error)
-			}
-
-			_, _ = fmt.Fprintln(out)
-			_, _ = fmt.Fprintln(out, "UNIX Compliance:")
-			if app.noColor {
-				_, _ = fmt.Fprintln(out, "  NO_COLOR: ✅ Set")
-			} else {
-				_, _ = fmt.Fprintln(out, "  NO_COLOR: ❌ Not set")
-			}
-			_, _ = fmt.Fprintf(out, "  Version:  stamp %s\n", Version)
-
-			if mpInstalled {
-				if mpMatches {
-					_, _ = fmt.Fprintf(out, "  Man Page: ✅ Up to date (%s)\n", mpVersion)
-				} else {
-					_, _ = fmt.Fprintf(out, "  Man Page: ⚠️ Outdated (installed %s, current %s) — run 'stamp man install'\n", mpVersion, Version)
-				}
-			} else {
-				_, _ = fmt.Fprintln(out, "  Man Page: ❌ Not found — run 'stamp man install'")
-			}
-
-			if comps.Installed {
-				_, _ = fmt.Fprintf(out, "  Completions: ✅ Installed (%s)\n", strings.Join(comps.Shells, ", "))
-			} else {
-				_, _ = fmt.Fprintln(out, "  Completions: ❌ Not installed — run 'stamp completion'")
-			}
-
+			renderDoctorTTY(cmd.OutOrStdout(), &report, app.noColor)
 			return nil
 		},
 	}

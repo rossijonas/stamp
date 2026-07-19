@@ -255,6 +255,25 @@ func TestDoctor_ManPage_UserLocal_Detected(t *testing.T) {
 	assert.Equal(t, Version, report.ManPage.Version)
 }
 
+func TestDoctor_ManPage_Outdated(t *testing.T) {
+	tmpDir := t.TempDir()
+	manFile := filepath.Join(tmpDir, "stamp.1")
+
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{manFile}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	// Man page version differs from current Version ("dev")
+	manContent := `.TH "STAMP" "1" "Jul 2026" "stamp 0.5.0" "Stamp Manual"`
+	require.NoError(t, os.WriteFile(manFile, []byte(manContent), 0600))
+
+	buf, err := execCmd(t, []string{"doctor"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "⚠️ Outdated")
+	assert.Contains(t, output, "run 'stamp man install'")
+}
+
 func TestDoctor_ManagerFlag_Active(t *testing.T) {
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
