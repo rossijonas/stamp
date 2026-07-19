@@ -1,160 +1,17 @@
 package cli
 
 import (
-	"archive/tar"
-	"compress/gzip"
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
 
-var httpClient = &http.Client{Timeout: 30 * time.Second}
-
 var osExecutable = os.Executable
-
-type release struct {
-	TagName string  `json:"tag_name"`
-	Assets  []asset `json:"assets"`
-}
-
-type asset struct {
-	Name               string `json:"name"`
-	BrowserDownloadURL string `json:"browser_download_url"`
-}
-
-var githubAPI = "https://api.github.com/repos/rossijonas/stamp/releases/latest"
-
-func releaseAssetName(version, goos, arch string) string {
-	return fmt.Sprintf("stamp_%s_%s_%s.tar.gz", version, goos, arch)
-}
-
-func fetchLatestRelease() (*release, error) {
-	req, err := http.NewRequest(http.MethodGet, githubAPI, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch latest release: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch release: HTTP %d", resp.StatusCode)
-	}
-
-	var rel release
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return nil, fmt.Errorf("failed to parse release: %w", err)
-	}
-	if rel.TagName == "" {
-		return nil, fmt.Errorf("release has no tag_name")
-	}
-	return &rel, nil
-}
-
-func findAsset(assets []asset, name string) *asset {
-	for _, a := range assets {
-		if a.Name == name {
-			return &a
-		}
-	}
-	return nil
-}
-
-func checksumFor(assetName string, body io.Reader) (string, error) {
-	data, err := io.ReadAll(body)
-	if err != nil {
-		return "", err
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		parts := strings.Fields(line)
-		if len(parts) >= 2 && parts[1] == assetName {
-			return parts[0], nil
-		}
-	}
-	return "", fmt.Errorf("checksum not found for %s", assetName)
-}
-
-func downloadFile(url string) ([]byte, error) {
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
-	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("download failed: %w", err)
-	}
-	return data, nil
-}
-
-func verifyChecksum(data []byte, expectedHex string) error {
-	h := sha256.Sum256(data)
-	got := fmt.Sprintf("%x", h)
-	if got != expectedHex {
-		return fmt.Errorf("checksum mismatch: got %s, expected %s", got, expectedHex)
-	}
-	return nil
-}
-
-func extractBinary(data []byte, dest string) error {
-	gzr, err := gzip.NewReader(strings.NewReader(string(data)))
-	if err != nil {
-		return fmt.Errorf("failed to open gzip: %w", err)
-	}
-	defer func() { _ = gzr.Close() }()
-
-	tr := tar.NewReader(gzr)
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar: %w", err)
-		}
-
-		cleanName := filepath.Base(filepath.Clean(header.Name))
-		if cleanName != "stamp" {
-			continue
-		}
-
-		//nolint:gosec // dest is a temp file created by os.CreateTemp in the binary's directory
-		out, err := os.Create(dest)
-		if err != nil {
-			return fmt.Errorf("failed to create temp binary: %w", err)
-		}
-
-		//nolint:gosec // G110: trusted source — downloaded from official GitHub release and SHA-256 verified
-		if _, err := io.Copy(out, tr); err != nil {
-			_ = out.Close()
-			return fmt.Errorf("failed to extract binary: %w", err)
-		}
-
-		if err := out.Close(); err != nil {
-			return fmt.Errorf("failed to close temp binary: %w", err)
-		}
-
-		return nil
-	}
-
-	return fmt.Errorf("binary not found in archive")
-}
 
 func newSelfUpdateCmd() *cobra.Command {
 	var checkOnly bool
