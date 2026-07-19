@@ -430,6 +430,49 @@ func TestReconcile_DryRun_ShortFlag(t *testing.T) {
 	assert.NotContains(t, output, "Tracked")
 }
 
+func TestReconcile_SnapshotDirError(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+	t.Setenv("XDG_DATA_HOME", "/root")
+
+	_, err := execCmd(t, []string{"reconcile"}, adapters)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to access snapshot directory")
+}
+
+func TestReconcile_ManifestSaveError(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	manifestDir := t.TempDir()
+	manifestPath := filepath.Join(manifestDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+	//nolint:gosec // test fixture: set directory read-only to trigger save error
+	require.NoError(t, os.Chmod(manifestDir, 0500))
+	t.Cleanup(func() {
+		_ = os.Chmod(manifestDir, 0700) //nolint:gosec // restore permissions
+	})
+
+	configPath := filepath.Join(manifestDir, "config.toml")
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(configPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to save manifest")
+}
+
 // setupSnapshots saves snapshots to {tmpDir}/stamp/snapshots/ and returns tmpDir.
 func setupSnapshots(t *testing.T, snaps []state.Snapshot) string {
 	t.Helper()
