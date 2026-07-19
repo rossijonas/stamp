@@ -449,6 +449,46 @@ func TestAPT_AddRepo_PPA(t *testing.T) {
 	assert.Contains(t, err.Error(), "add-apt-repository not found")
 }
 
+func TestAPT_AddRepo_PPA_Success(t *testing.T) {
+	t.Parallel()
+	oldLookPath := lookPath
+	lookPath = func(s string) (string, error) { return "/usr/bin/" + s, nil }
+	defer func() { lookPath = oldLookPath }()
+
+	manager := NewAPT("apt")
+	manager.exec = mockExecutorHelper("", nil)
+
+	err := manager.AddRepo(context.Background(), "ppa:git-core/ppa", "")
+	require.NoError(t, err)
+}
+
+func TestAPT_AddRepo_CustomURL_ExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewAPT("apt")
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	err := manager.AddRepo(context.Background(), "failrepo", "https://example.com/apt")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to add repository")
+}
+
+func TestAPT_RemoveRepo_FileExecError(t *testing.T) {
+	oldDir := aptSourcesDir
+	aptSourcesDir = t.TempDir()
+	defer func() { aptSourcesDir = oldDir }()
+
+	//nolint:gosec
+	require.NoError(t, os.WriteFile(filepath.Join(aptSourcesDir, "failrepo.list"),
+		[]byte("deb https://example.com/apt ./\n"), 0644))
+
+	manager := NewAPT("apt")
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	err := manager.RemoveRepo(context.Background(), "failrepo")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to remove repository")
+}
+
 func TestParseAPTListInstalled(t *testing.T) {
 	t.Parallel()
 	input := []byte("Listing...\nhtop/stable,now 3.2.1 amd64 [installed]\njq/stable,now 1.6 amd64 [installed]\nlocal-pkg,now 1.0 amd64 [installed]\n")
