@@ -118,11 +118,11 @@ func TestResolveManager(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{name: "dnf identity",                input: "dnf",   expected: "dnf"},
-		{name: "brew identity",               input: "brew",  expected: "brew"},
-		{name: "yum alias to dnf",            input: "yum",   expected: "dnf"},
-		{name: "unknown pass-through",        input: "flatpak", expected: "flatpak"},
-		{name: "empty string",                input: "",      expected: ""},
+		{name: "dnf identity", input: "dnf", expected: "dnf"},
+		{name: "brew identity", input: "brew", expected: "brew"},
+		{name: "yum alias to dnf", input: "yum", expected: "dnf"},
+		{name: "unknown pass-through", input: "flatpak", expected: "flatpak"},
+		{name: "empty string", input: "", expected: ""},
 	}
 
 	for _, tt := range tests {
