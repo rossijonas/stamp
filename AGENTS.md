@@ -10,17 +10,20 @@ If you are an AI agent working in this repository, you **MUST** adhere to the fo
 ## Go Standards
 1. **No `pkg/` directory:** `stamp` is a CLI application, not an external library. Business logic goes in `internal/`.
 2. **Naming:** Use lowercase, semantic package names. Avoid `utils` or `helpers`.
-3. **Interface-Driven:** Abstract external dependencies (like package managers or shell executions) behind interfaces to enable easy mocking.
-4. **Error Handling:** Wrap errors with context (`fmt.Errorf("failed to do X: %w", err)`). Errors must be logged OR returned, never both. Error strings must be lowercase without trailing punctuation.
-5. **Code Style:** Handle errors first (early return) to keep the happy path un-indented. Use `:=` for non-zero values, `var` for zero-value initialization.
-6. **Safety:** Always initialize maps before use (`make(map[K]V)`). Return defensive copies (`slices.Clone`) of internal data structures to prevent caller mutation.
-7. **Design Patterns:** Constructors should be explicit (no `init()` functions unless strictly required by a framework like Cobra).
+3. **Interface-Driven & Decoupling:** Abstract external dependencies (like package managers or shell executions) behind interfaces to enable easy mocking. Cross-package dependencies must be passed structurally or injected via parameters — never imported via circular paths — to prevent cyclic dependency chains between `manager`, `cli`, and `state`.
+4. **File Length & Structure (Anti-God-File):** No single source or test file may exceed 1,000 lines. Large tables or logic blocks must be extracted into focused sub-modules or per-adapter file pairs.
+5. **Error Handling:** Wrap errors with context (`fmt.Errorf("failed to do X: %w", err)`). Errors must be logged OR returned, never both. Error strings must be lowercase without trailing punctuation.
+6. **Code Style:** Handle errors first (early return) to keep the happy path un-indented. Use `:=` for non-zero values, `var` for zero-value initialization.
+7. **Safety & File Writes:** Always initialize maps before use (`make(map[K]V)`). Return defensive copies (`slices.Clone`) of internal data structures to prevent caller mutation. Files modifying completions, manifests, or snapshots must use the temp-file + atomic rename pattern to prevent partial writes.
+8. **Execution Gating (TTY-Awareness):** Privileged command execution must detect interactive vs non-interactive environments. In non-interactive mode, inject appropriate flags (e.g. `-n` for `sudo`) to prevent hangs in CI, pipelines, or containers.
+9. **Design Patterns:** Constructors should be explicit (no `init()` functions unless strictly required by a framework like Cobra).
 
 ## Testing
 1. **Framework:** Use the standard `testing` package + `github.com/stretchr/testify` (`assert` and `require`).
 2. **Mocks:** Use `testify/mock` for mocking internal interfaces.
-3. **Structure:** Use Table-Driven Tests for multiple scenarios.
-4. **Coverage:** Overall project test coverage MUST remain above **90%**. Core logic packages demand 100%.
+3. **Structure & Localization:** Use Table-Driven Tests for multiple scenarios. Manager adapter tests must be localized into their own per-adapter file pairs (e.g., `dnf_test.go`, `brew_test.go`, `flatpak_test.go`). Do not bloat `manager_test.go` beyond 1,000 lines.
+4. **Coverage & Complexity:** Overall project test coverage MUST remain above **90%**. Core logic packages demand 100%. Functions exceeding a cyclomatic complexity of 15 must have corresponding unit tests before merge. High-risk commands (`stamp reconcile`, `stamp restore`, `stamp doctor`) must always be introduced or modified with complete path coverage.
+5. **Assessment Reference:** Consult `docs/assessments/` for periodic quality reviews. Issues labeled `assessment-001` track recommendations from the latest code assessment report.
 
 ## Tools
 1. Use `task` instead of `make`.

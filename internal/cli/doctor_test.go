@@ -42,12 +42,13 @@ func TestDoctor_JSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, runtime.GOOS, report.System)
-	assert.Len(t, report.PackageManagers, 3)
+	assert.Len(t, report.PackageManagers, 4)
 
 	names := make(map[string]bool)
 	for _, m := range report.PackageManagers {
 		names[m.Name] = true
 	}
+	assert.True(t, names["apt"])
 	assert.True(t, names["dnf"])
 	assert.True(t, names["brew"])
 	assert.True(t, names["flatpak"])

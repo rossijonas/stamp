@@ -106,7 +106,8 @@ Reports which managers are installed and whether the manifest is valid.`,
 				name    string
 				details string
 			}{
-				{"dnf", "Default system manager"},
+				{"apt", "Default system manager (Debian/Ubuntu)"},
+				{"dnf", "Default system manager (Fedora/RHEL, alias yum)"},
 				{"brew", "User-space manager"},
 				{"flatpak", "Sandboxed application distribution"},
 			}
