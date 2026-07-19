@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -18,6 +19,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type errorReader struct{}
+
+func (r *errorReader) Read(_ []byte) (int, error) {
+	return 0, assert.AnError
+}
+
+type errorTransport struct{}
+
+func (*errorTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(&errorReader{}),
+	}, nil
+}
 
 func tarGzWithBinary(t *testing.T, binaryName string, content []byte) []byte {
 	t.Helper()
@@ -426,6 +442,92 @@ func TestSelfUpdate_AssetNotFound(t *testing.T) {
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestFetchLatestRelease_InvalidJSON(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{invalid json`))
+	}))
+	defer ts.Close()
+
+	oldAPI := githubAPI
+	githubAPI = ts.URL + "/repos/rossijonas/stamp/releases/latest"
+	defer func() { githubAPI = oldAPI }()
+
+	_, err := fetchLatestRelease()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse release")
+}
+
+func TestFetchLatestRelease_EmptyTag(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"tag_name":""}`))
+	}))
+	defer ts.Close()
+
+	oldAPI := githubAPI
+	githubAPI = ts.URL + "/repos/rossijonas/stamp/releases/latest"
+	defer func() { githubAPI = oldAPI }()
+
+	_, err := fetchLatestRelease()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "release has no tag_name")
+}
+
+func TestDownloadFile_HTTPError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	_, err := downloadFile(ts.URL + "/nonexistent")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "download failed: HTTP 404")
+}
+
+func TestChecksumFor_ReadError(t *testing.T) {
+	_, err := checksumFor("test.tar.gz", &errorReader{})
+	require.Error(t, err)
+}
+
+func TestExtractBinary_InvalidGzip(t *testing.T) {
+	err := extractBinary([]byte("not gzip data"), "/nonexistent/dest")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to open gzip")
+}
+
+func TestExtractBinary_CreateFileError(t *testing.T) {
+	tarballData := tarGzWithBinary(t, "stamp", []byte("content"))
+	readonlyDir := t.TempDir()
+	//nolint:gosec // test fixture: create a read-only dir to trigger file create failure
+	require.NoError(t, os.Chmod(readonlyDir, 0500))
+	t.Cleanup(func() { _ = os.Chmod(readonlyDir, 0700) }) //nolint:gosec // restore permissions
+
+	err := extractBinary(tarballData, filepath.Join(readonlyDir, "stamp"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create temp binary")
+}
+
+func TestExtractBinary_TarReadError(t *testing.T) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	_, _ = gz.Write([]byte("not a valid tar stream"))
+	require.NoError(t, gz.Close())
+
+	err := extractBinary(buf.Bytes(), filepath.Join(t.TempDir(), "stamp"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read tar")
+}
+
+func TestDownloadFile_ReadError(t *testing.T) {
+	oldClient := httpClient
+	httpClient = &http.Client{Transport: &errorTransport{}}
+	defer func() { httpClient = oldClient }()
+
+	_, err := downloadFile("http://example.invalid/nonexistent")
+	require.Error(t, err)
 }
 
 func TestSelfUpdate_PermissionDenied(t *testing.T) {
