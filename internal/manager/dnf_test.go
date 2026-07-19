@@ -484,3 +484,34 @@ func TestDNF_ListInstalledFallbackError(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
 }
+
+func TestDNF_ListRepos_ThroughAdapter(t *testing.T) {
+	oldDir := dnfReposDir
+	dnfReposDir = t.TempDir()
+	defer func() { dnfReposDir = oldDir }()
+
+	//nolint:gosec
+	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "custom.repo"), []byte(
+		"[custom-repo]\n"+
+			"name=Custom Repo\n"+
+			"baseurl=https://custom.example.com/repo\n"+
+			"enabled=1\n",
+	), 0o644))
+
+	manager := NewDNF("dnf")
+	repos, err := manager.ListRepos(context.Background())
+	require.NoError(t, err)
+	require.Len(t, repos, 1)
+	assert.Equal(t, "custom-repo", repos[0].Name)
+	assert.Equal(t, "https://custom.example.com/repo", repos[0].URL)
+}
+
+func TestDNF_AddRepo_URL_ExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf")
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	err := manager.AddRepo(context.Background(), "testrepo", "https://example.com/repo")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to add repo")
+}
