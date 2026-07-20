@@ -1,6 +1,7 @@
-FROM debian:latest
+FROM quay.io/centos/centos:stream10
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN dnf install -y epel-release && \
+    dnf install -y \
     ca-certificates \
     curl \
     flatpak \
@@ -19,6 +20,6 @@ ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
 
 ARG BIN
 COPY $BIN /usr/local/bin/stamp
-COPY test/integration/debian.sh /test.sh
+COPY test/integration/centos.sh /test.sh
 USER linuxbrew
 CMD ["/test.sh"]

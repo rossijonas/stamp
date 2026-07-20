@@ -1,10 +1,8 @@
-name: "integration: debian"
+name: "integration: rocky"
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -31,7 +29,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build --build-arg BIN=bin/stamp \
-            -f test/Dockerfile.debian -t stamp-test-debian .
+            -f test/Dockerfile.rocky -t stamp-test-rocky .
 
       - name: Run integration tests
-        run: docker run --rm stamp-test-debian
+        run: docker run --rm stamp-test-rocky
