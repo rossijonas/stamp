@@ -3,7 +3,6 @@ FROM quay.io/centos/centos:stream10
 RUN dnf install -y epel-release && \
     dnf install -y \
     ca-certificates \
-    curl \
     flatpak \
     git \
     jq \
