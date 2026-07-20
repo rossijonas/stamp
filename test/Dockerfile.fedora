@@ -5,15 +5,19 @@ RUN dnf install -y \
     curl \
     flatpak \
     git \
+    jq \
     sudo
 
 RUN useradd -m -s /bin/bash linuxbrew && \
     echo "linuxbrew ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     su - linuxbrew -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
 
+RUN su - linuxbrew -c "flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo"
+
 ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
 
 ARG BIN
 COPY $BIN /usr/local/bin/stamp
 COPY test/integration/fedora.sh /test.sh
+USER linuxbrew
 CMD ["/test.sh"]

@@ -1,11 +1,13 @@
-FROM debian:latest
+FROM opensuse/tumbleweed:latest
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN zypper install -y \
     ca-certificates \
     curl \
     flatpak \
+    gcc \
     git \
     jq \
+    make \
     python3 \
     sudo
 
@@ -19,6 +21,6 @@ ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
 
 ARG BIN
 COPY $BIN /usr/local/bin/stamp
-COPY test/integration/debian.sh /test.sh
+COPY test/integration/opensuse.sh /test.sh
 USER linuxbrew
 CMD ["/test.sh"]

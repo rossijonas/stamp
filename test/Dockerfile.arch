@@ -1,11 +1,14 @@
-FROM debian:latest
+FROM archlinux:latest
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
+    base-devel \
     ca-certificates \
     curl \
     flatpak \
     git \
     jq \
+    libxcrypt-compat \
     python3 \
     sudo
 
@@ -19,6 +22,6 @@ ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
 
 ARG BIN
 COPY $BIN /usr/local/bin/stamp
-COPY test/integration/debian.sh /test.sh
+COPY test/integration/arch.sh /test.sh
 USER linuxbrew
 CMD ["/test.sh"]

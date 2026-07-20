@@ -11,6 +11,10 @@
   <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml/badge.svg" alt="Ubuntu"></a>
   <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml/badge.svg" alt="Debian"></a>
   <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml/badge.svg" alt="Fedora"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-centos.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-centos.yml/badge.svg" alt="CentOS"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-rocky.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-rocky.yml/badge.svg" alt="Rocky"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-arch.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-arch.yml/badge.svg" alt="Arch"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-opensuse.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-opensuse.yml/badge.svg" alt="openSUSE"></a>
   <a href="https://github.com/rossijonas/stamp/releases/latest"><img src="https://img.shields.io/github/v/release/rossijonas/stamp" alt="Release"></a>
   <a href="https://codecov.io/gh/rossijonas/stamp"><img src="https://codecov.io/gh/rossijonas/stamp/branch/main/graph/badge.svg" alt="codecov"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>

@@ -3,7 +3,9 @@ FROM ubuntu:latest
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ca-certificates \
     curl \
+    flatpak \
     git \
+    jq \
     software-properties-common \
     sudo
 
@@ -11,9 +13,12 @@ RUN useradd -m -s /bin/bash linuxbrew && \
     echo "linuxbrew ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     su - linuxbrew -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
 
+RUN su - linuxbrew -c "flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo"
+
 ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
 
 ARG BIN
 COPY $BIN /usr/local/bin/stamp
 COPY test/integration/ubuntu.sh /test.sh
+USER linuxbrew
 CMD ["/test.sh"]
