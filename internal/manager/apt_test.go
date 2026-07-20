@@ -363,7 +363,7 @@ func TestAPT_Update_Phase1Fails(t *testing.T) {
 }
 
 func TestAPT_RemoveRepo_NoFile(t *testing.T) {
-	t.Parallel()
+	// Not parallel — modifies package-level lookPath
 	oldLookPath := lookPath
 	lookPath = func(string) (string, error) { return "", assert.AnError }
 	defer func() { lookPath = oldLookPath }()
@@ -436,7 +436,7 @@ func TestAPT_Remove_Error(t *testing.T) {
 }
 
 func TestAPT_AddRepo_PPA(t *testing.T) {
-	t.Parallel()
+	// Not parallel — modifies package-level lookPath
 	oldLookPath := lookPath
 	lookPath = func(string) (string, error) { return "", assert.AnError }
 	defer func() { lookPath = oldLookPath }()
@@ -450,7 +450,7 @@ func TestAPT_AddRepo_PPA(t *testing.T) {
 }
 
 func TestAPT_AddRepo_PPA_Success(t *testing.T) {
-	t.Parallel()
+	// Not parallel — modifies package-level lookPath
 	oldLookPath := lookPath
 	lookPath = func(s string) (string, error) { return "/usr/bin/" + s, nil }
 	defer func() { lookPath = oldLookPath }()
