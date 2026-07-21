@@ -291,17 +291,17 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 
 | Manager | Ubuntu | Debian | Fedora | CentOS | Rocky | Arch | openSUSE | macOS | Windows |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **DNF** | N/A | N/A | ✅ | ✅ | ✅ | N/A | N/A | N/A | N/A |
-| **APT** | ✅ | ✅ | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| **Zypper** | N/A | N/A | N/A | N/A | N/A | N/A | ✅ | N/A | N/A |
-| **Snap** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | N/A |
-| **Flatpak** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | N/A |
-| **Brew** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A |
+| **DNF** | - | - | ✅ | ✅ | ✅ | - | - | - | - |
+| **APT** | ✅ | ✅ | - | - | - | - | - | - | - |
+| **Zypper** | - | - | - | - | - | - | ✅ | - | - |
+| **Snap** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | - | - |
+| **Flatpak** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | - | - |
+| **Brew** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | - |
 | **Pacman** | | | | | | ⏳ | | | |
-| **MacPorts** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | ⏳ | |
-| **Winget** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | |
-| **Chocolatey** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | |
-| **Scoop** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | |
+| **MacPorts** | - | - | - | - | - | - | - | ⏳ | |
+| **Winget** | - | - | - | - | - | - | - | - | |
+| **Chocolatey** | - | - | - | - | - | - | - | - | |
+| **Scoop** | - | - | - | - | - | - | - | - | |
 | **Language Toolchains** | | | | | | | | | |
 | `go` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | `cargo` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
