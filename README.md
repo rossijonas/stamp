@@ -8,7 +8,7 @@
 
 <p align="center"><em>A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.</em></p>
 
-<p align="center"><em>-</em></p>
+---
 
 <p align="center"><strong>Cross-platform:</strong> Linux ✅ · macOS ✅ · Windows ⏳</p>
 
