@@ -50,11 +50,11 @@ Each script validates a common set of features:
 - On systems without `snap`, a message is printed and tests are skipped.
 
 ### Flatpak search (`stamp search Calculator -m flatpak`)
-- First search downloads Flathub metadata cache — uses `TIMEOUT_LONG`.
+- First search downloads Flathub metadata cache — uses `TIMEOUT_LONG` (most platforms) or `TIMEOUT_EXTRA` (Ubuntu/Debian) depending on network speed.
 - Cached on subsequent runs within the same image.
 
 ### Brew install (`stamp install hello -m brew`)
-- `hello` is GNU Hello ~100KB — fast to install.
+- `hello` is GNU Hello ~100KB bottle.
 - Requires Homebrew pre-installed (done in all Dockerfiles).
 
 ### Distros without native adapter

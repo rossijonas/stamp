@@ -10,8 +10,8 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | APT / apt-get | ✅ Complete | All | Debian/Ubuntu, sudo for write ops, dpkg-query fallback, add-apt-repository for PPAs |
 | Brew | ✅ Complete | All | macOS, user-space, two-phase update |
 | Flatpak | ✅ Complete | All | Linux sandboxed, -y flag |
-| Snap | ✅ Complete | All | Ubuntu, Linux (universal), sudo for write ops |
-| Zypper | ✅ Complete | All | openSUSE/SLE, sudo for write ops |
+| Snap | ✅ Complete | All except repo mgmt | Ubuntu, Linux (universal), sudo for write ops |
+| Zypper | ✅ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
 
 ## CLI Commands
 

@@ -343,4 +343,5 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 32 | APT package manager adapter (#46) | ✅ |
 | 4 | 33 | Docker-based integration testing | ✅ |
 | 4 | 34 | Post-release integration CI pipelines (ubuntu/debian/fedora) | ✅ |
-| 4 | 35 | Zypper package manager adapter (openSUSE) | ⏳ Pending |
+| 4 | 35 | Zypper package manager adapter (openSUSE) (#124) | ✅ Complete |
+| 4 | 36 | Snap package manager adapter (#47) | ✅ Complete |
