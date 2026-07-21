@@ -266,12 +266,14 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 
 ### ⚑ Upcoming Milestones
 
-- **[ ] Debian/Ubuntu Ecosystem Support**
+- **[x] Debian/Ubuntu Ecosystem Support**
   - Implement support for `apt` and `snap`.
 - **[ ] Extend MacOS Support**
   - Implement support for MacPorts.
 - **[ ] Arch Linux Ecosystem Support**
   - Implement support for `pacman`.
+- **[x] openSUSE/SUSE Ecosystem Support**
+  - Implement support for `zypper`.
 - **[ ] Developer Toolchains**
   - Track language-specific global installs (`cargo`, `pipx`, `go install`).
 
@@ -286,8 +288,9 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 | ✅ | **[DNF](https://docs.fedoraproject.org/en-US/quick-docs/dnf/)** | Fedora, RHEL, CentOS | `.rpm` | System-wide, root/sudo | High-performance C-based libsolv engine |
 | ✅ | **[Homebrew](https://brew.sh/)** | macOS, Linux | Bottles (tarballs) | User-space, no root/sudo | Avoids duplicating host OS dynamic libraries |
 | ✅ | **[Flatpak](https://flatpak.org/)** | Linux (Universal) | OSTree / OCI | User or System | Sandboxed application distribution |
-| ⏳ | **[APT](https://ubuntu.com/server/docs/how-to/software/package-management/#)** | Debian, Ubuntu, Mint | `.deb` | System-wide, root/sudo | Robust dependency resolution, stable release focus |
-| ⏳ | **[Snap](https://snapcraft.io/)** | Ubuntu, Linux | SquashFS | System-wide, root/sudo | Containerized, auto-updating application bundles |
+| ✅ | **[Zypper](https://en.opensuse.org/Portal:Zypper)** | openSUSE, SLE | `.rpm` | System-wide, root/sudo | RPM-based with libzypp SAT solver |
+| ✅ | **[APT](https://ubuntu.com/server/docs/how-to/software/package-management/#)** | Debian, Ubuntu, Mint | `.deb` | System-wide, root/sudo | Robust dependency resolution, stable release focus |
+| ✅ | **[Snap](https://snapcraft.io/)** | Ubuntu, Linux | SquashFS | System-wide, root/sudo | Containerized, auto-updating application bundles |
 | ⏳ | **[MacPorts](https://www.macports.org/)** | macOS | Source files, frameworks | System-wide, root/sudo | Fully isolated `/opt/local` directory tree |
 | ⏳ | **[Pacman](https://wiki.archlinux.org/title/Pacman)** | Arch Linux | `.pkg.tar.zst` | System-wide, root/sudo | Lightweight rolling-release synchronization |
 | | **[Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/)** | Windows 11 | AppX/MSIX, MSI, EXE | Mixed, user or system | In-place version synchronization with registry |

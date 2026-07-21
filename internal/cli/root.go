@@ -110,6 +110,8 @@ func detectAdapters() []manager.Adapter {
 			adapters = append(adapters, manager.NewAPT("apt"))
 		}
 		detect("flatpak", func() manager.Adapter { return manager.NewFlatpak() })
+		detect("snap", func() manager.Adapter { return manager.NewSnap() })
+		detect("zypper", func() manager.Adapter { return manager.NewZypper() })
 	}
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })
 	return adapters
