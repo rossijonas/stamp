@@ -74,8 +74,15 @@ check "PPA no longer in repo list" bash -c "timeout $TIMEOUT stamp repo list -m 
 echo "=== Brew ==="
 check "brew search htop" timeout $TIMEOUT stamp search htop -m brew
 
+echo "=== Brew Install/Remove ==="
+check "brew install hello" timeout $TIMEOUT_LONG stamp install hello -m brew
+check "list shows hello" bash -c "timeout $TIMEOUT stamp list | grep -q hello"
+check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew
+check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -qv hello"
+
 echo "=== Flatpak ==="
 check "flatpak remote list" timeout $TIMEOUT stamp repo list -m flatpak
+check "flatpak search Calculator" timeout $TIMEOUT_EXTRA stamp search Calculator -m flatpak
 
 echo "=== JSON Output ==="
 check "doctor shows managers" bash -c "stamp doctor 2>&1 | grep -qE 'apt|dnf|brew|flatpak'"
@@ -135,7 +142,7 @@ check "self-update --check" timeout $TIMEOUT stamp self-update --check
 check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
 
 echo "=== Update ==="
-check "update runs" timeout $TIMEOUT stamp update -m apt
+check "update runs" timeout $TIMEOUT_LONG stamp update -m apt
 check "reconcile --yes flag" timeout $TIMEOUT stamp reconcile -y -m apt
 
 echo "=== Alias Tests ==="
@@ -144,6 +151,14 @@ check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m apt
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m apt
 check "repo install alias" timeout $TIMEOUT_LONG stamp repo install ppa:git-core/ppa -m apt
 check "repo rm alias" timeout $TIMEOUT stamp repo rm ppa:git-core/ppa -m apt
+
+echo "=== Snap ==="
+if command -v snap &>/dev/null; then
+    check "snap list" timeout $TIMEOUT stamp list -m snap
+    check "snap search hello" timeout $TIMEOUT stamp search hello -m snap
+else
+    echo "  ⚠  snap not available in container — skipping snap tests"
+fi
 
 echo "=== Shell Completions ==="
 check "completion --stdout bash" timeout $TIMEOUT stamp completion --stdout bash

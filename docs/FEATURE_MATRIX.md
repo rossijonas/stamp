@@ -10,6 +10,8 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | APT / apt-get | ✅ Complete | All | Debian/Ubuntu, sudo for write ops, dpkg-query fallback, add-apt-repository for PPAs |
 | Brew | ✅ Complete | All | macOS, user-space, two-phase update |
 | Flatpak | ✅ Complete | All | Linux sandboxed, -y flag |
+| Snap | ✅ Complete | All except repo mgmt | Ubuntu, Linux (universal), sudo for write ops |
+| Zypper | ✅ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
 
 ## CLI Commands
 
@@ -125,7 +127,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 4 | 13 | `stamp info` package info command | ✅ |
 | 4 | 14 | `stamp man check` version verification | ✅ |
 | 4 | 15 | Per-manager flags for reconcile/restore/doctor/list | ⚠️ Partial |
-| 4 | 16 | Multi-platform integration testing (Fedora/Ubuntu/Arch/macOS/Windows) | 📝 |
+| 4 | 16 | Multi-platform integration testing (7 platforms: Ubuntu, Debian, Fedora, CentOS, Rocky, Arch, openSUSE) | ✅ Complete |
 | 4 | 17 | Package manager feature audit (Homebrew cask, brew services, dnf groupinstall) | 📝 |
 | 4 | 18 | `stamp reinstall` command | ✅ |
 | 4 | 19 | Generate missing usage & man pages | ✅ |

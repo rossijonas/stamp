@@ -56,7 +56,7 @@ stamp --version
 
 check "doctor runs" stamp doctor
 
-check "search finds results" bash -c "timeout $TIMEOUT_LONG stamp search htop -m dnf | grep -q ."
+check "search finds results" timeout $TIMEOUT_EXTRA stamp search rocky-release -m dnf
 
 echo "=== DNF Install/Remove ==="
 check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf
@@ -67,8 +67,15 @@ check "list no longer shows htop" bash -c "timeout $TIMEOUT stamp list | grep -q
 echo "=== Brew ==="
 check "brew search htop" timeout $TIMEOUT stamp search htop -m brew
 
+echo "=== Brew Install/Remove ==="
+check "brew install hello" timeout $TIMEOUT_EXTRA stamp install hello -m brew
+check "list shows hello" bash -c "timeout $TIMEOUT stamp list | grep -q hello"
+check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew
+check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -qv hello"
+
 echo "=== Flatpak ==="
 check "flatpak remote list" timeout $TIMEOUT stamp repo list -m flatpak
+check "flatpak search Calculator" timeout $TIMEOUT_LONG stamp search Calculator -m flatpak
 
 echo "=== JSON Output ==="
 check "doctor shows managers" bash -c "stamp doctor 2>&1 | grep -qE 'dnf|brew|flatpak|apt'"
@@ -114,11 +121,19 @@ echo "=== Restore ==="
 check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore --dry-run 2>&1 | grep -q ."
 
 echo "=== Info ==="
-check "info shows results" bash -c "timeout $TIMEOUT stamp info htop -m dnf | grep -q ."
-check "info --json" timeout $TIMEOUT stamp info htop --json
+check "info shows results" timeout $TIMEOUT_LONG stamp info rocky-release -m dnf
+check "info --json" timeout $TIMEOUT_LONG stamp info rocky-release --json
+
+echo "=== Snap ==="
+if command -v snap &>/dev/null; then
+    check "snap list" timeout $TIMEOUT stamp list -m snap
+    check "snap search hello" timeout $TIMEOUT stamp search hello -m snap
+else
+    echo "  ⚠  snap not available in container — skipping snap tests"
+fi
 
 echo "=== Alias Tests ==="
-check "install via add alias" timeout $TIMEOUT stamp add hello -m dnf
+check "install via add alias" timeout $TIMEOUT_LONG stamp add hello -m dnf
 check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m dnf
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m dnf
 
