@@ -266,16 +266,12 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 
 ### ⚑ Upcoming Milestones
 
-- **[x] Debian/Ubuntu Ecosystem Support**
-  - Implement support for `apt` and `snap`.
 - **[ ] Extend MacOS Support**
   - Implement support for MacPorts.
 - **[ ] Arch Linux Ecosystem Support**
   - Implement support for `pacman`.
-- **[x] openSUSE/SUSE Ecosystem Support**
-  - Implement support for `zypper`.
 - **[ ] Developer Toolchains**
-  - Track language-specific global installs (`cargo`, `pipx`, `go install`).
+  - Track language-specific global installs (`cargo`, `pipx`, `go install`, `npm`).
 
 ### ⊞ Compatibility & Support Tracker
 
@@ -283,36 +279,26 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 
 #### ⌨ OS Package Managers
 
-| Status | Package Manager | Target Platforms | Core Binary Format | Scope & Permissions | Key Unique Architectural Feature |
-| :---: | :--- | :--- | :--- | :--- | :--- |
-| ✅ | **[DNF](https://docs.fedoraproject.org/en-US/quick-docs/dnf/)** | Fedora, RHEL, CentOS | `.rpm` | System-wide, root/sudo | High-performance C-based libsolv engine |
-| ✅ | **[Homebrew](https://brew.sh/)** | macOS, Linux | Bottles (tarballs) | User-space, no root/sudo | Avoids duplicating host OS dynamic libraries |
-| ✅ | **[Flatpak](https://flatpak.org/)** | Linux (Universal) | OSTree / OCI | User or System | Sandboxed application distribution |
-| ✅ | **[Zypper](https://en.opensuse.org/Portal:Zypper)** | openSUSE, SLE | `.rpm` | System-wide, root/sudo | RPM-based with libzypp SAT solver |
-| ✅ | **[APT](https://ubuntu.com/server/docs/how-to/software/package-management/#)** | Debian, Ubuntu, Mint | `.deb` | System-wide, root/sudo | Robust dependency resolution, stable release focus |
-| ✅ | **[Snap](https://snapcraft.io/)** | Ubuntu, Linux | SquashFS | System-wide, root/sudo | Containerized, auto-updating application bundles |
-| ⏳ | **[MacPorts](https://www.macports.org/)** | macOS | Source files, frameworks | System-wide, root/sudo | Fully isolated `/opt/local` directory tree |
-| ⏳ | **[Pacman](https://wiki.archlinux.org/title/Pacman)** | Arch Linux | `.pkg.tar.zst` | System-wide, root/sudo | Lightweight rolling-release synchronization |
-| | **[Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/)** | Windows 11 | AppX/MSIX, MSI, EXE | Mixed, user or system | In-place version synchronization with registry |
-| | **[Chocolatey](https://chocolatey.org/)** | Windows | `.nupkg` (NuGet wrappers) | System-wide, admin | First-party configuration management integration |
-| | **[Scoop](https://scoop.sh/)** | Windows | Portable ZIP extracts | User-space, no admin | Shim-based path management to avoid path pollution |
-| | **[APK](https://wiki.alpinelinux.org/wiki/Alpine_Package_Keeper)** | Alpine Linux | `.apk` | System-wide, root/sudo | Designed around musl and BusyBox for minimal size |
+> ✅ = Implemented · ⏳ = Planned · N/A = Not available on this OS · *(blank)* = Not implemented or not planned
 
-#### ⛁ Developer Toolchains (Language Package Managers)
-
-Tracking global CLI tools installed via language package managers is on our roadmap.
-
-| Status | Language | Primary Tool(s) | Manifest Format | Key Architectural Isolation Mechanism |
-| :---: | :--- | :--- | :--- | :--- |
-| ⏳ | **Go** | `go install` | `go.mod` | Minimal Version Selection (MVS) algorithm |
-| ⏳ | **Rust** | `cargo install` | `Cargo.toml` | Highly structured, static build compiler caching |
-| ⏳ | **Python** | `pipx` / `uv tool` | `pyproject.toml` | Isolated virtual environments and centralized caches |
-| ⏳ | **JS / TS** | `npm` / `bun` | `package.json` | Content-addressable folders linked via symlinks |
-| | **Ruby** | Bundler | `Gemfile` | Local execution sandbox isolation |
-| | **PHP** | Composer | `composer.json` | Local vendor path isolation |
-| | **Java / JVM**| Gradle | `build.gradle` | Highly configurable execution tasks & build graph caching |
-| | **.NET** | NuGet | `.csproj` | Multi-targeting framework library extractors |
-| | **Swift** | Swift Package Manager | `Package.swift` | Native Xcode compiler static link integration |
+| Manager | Ubuntu | Debian | Fedora | CentOS | Rocky | Arch | openSUSE | macOS | Windows |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **DNF** | N/A | N/A | ✅ | ✅ | ✅ | N/A | N/A | N/A | N/A |
+| **APT** | ✅ | ✅ | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| **Zypper** | N/A | N/A | N/A | N/A | N/A | N/A | ✅ | N/A | N/A |
+| **Snap** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | N/A |
+| **Flatpak** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | N/A |
+| **Brew** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A |
+| **Pacman** | | | | | | ⏳ | | | |
+| **MacPorts** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | ⏳ | |
+| **Winget** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | |
+| **Chocolatey** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | |
+| **Scoop** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | |
+| **Language Toolchains** | | | | | | | | | |
+| `go` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| `cargo` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| `pipx` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| `npm` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
 ## ▪ Architecture & Vision
 
