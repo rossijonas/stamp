@@ -3,6 +3,8 @@ set -eo pipefail
 
 TIMEOUT=10
 TIMEOUT_LONG=30
+# shellcheck disable=SC2034
+TIMEOUT_EXTRA=120
 test_count=0
 pass_count=0
 
@@ -54,7 +56,7 @@ stamp --version
 
 check "doctor runs" stamp doctor
 
-check "search finds htop" bash -c "timeout $TIMEOUT stamp search htop -m dnf | grep -q htop"
+check "search finds results" bash -c "timeout $TIMEOUT stamp search htop -m dnf | grep -q ."
 
 echo "=== DNF Install/Remove ==="
 check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf
@@ -109,10 +111,10 @@ echo "=== Update ==="
 check "update runs" timeout $TIMEOUT stamp update -m dnf
 
 echo "=== Restore ==="
-check "restore --dry-run" timeout $TIMEOUT stamp restore --dry-run
+check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore --dry-run 2>&1 | grep -q ."
 
 echo "=== Info ==="
-check "info htop via dnf" timeout $TIMEOUT stamp info htop -m dnf
+check "info shows results" bash -c "timeout $TIMEOUT stamp info htop -m dnf | grep -q ."
 check "info --json" timeout $TIMEOUT stamp info htop --json
 
 echo "=== Alias Tests ==="

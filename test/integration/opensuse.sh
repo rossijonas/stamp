@@ -4,6 +4,8 @@ set -eo pipefail
 TIMEOUT=10
 # shellcheck disable=SC2034
 TIMEOUT_LONG=30
+# shellcheck disable=SC2034
+TIMEOUT_EXTRA=120
 test_count=0
 pass_count=0
 
