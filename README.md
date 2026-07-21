@@ -5,7 +5,11 @@
     <img src="docs/media/stamp-logo-black-nobkg-exp_2.svg" alt="Stamp logo" width="320">
   </picture>
 </p>
+
 <p align="center"><em>A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.</em></p>
+
+<p align="center"><strong>Cross-platform:</strong> Linux ✅ · macOS ✅ · Windows ⏳</p>
+
 <p align="center">
   <a href="https://github.com/rossijonas/stamp/actions/workflows/ci.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml/badge.svg" alt="Ubuntu"></a>
