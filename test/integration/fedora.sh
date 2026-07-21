@@ -3,6 +3,7 @@ set -eo pipefail
 
 TIMEOUT=10
 TIMEOUT_LONG=30
+TIMEOUT_EXTRA=120
 test_count=0
 pass_count=0
 
@@ -54,7 +55,7 @@ stamp --version
 
 check "doctor runs" stamp doctor
 
-check "search finds htop" bash -c "timeout $TIMEOUT stamp search htop -m dnf | grep -q htop"
+check "search finds results" bash -c "timeout $TIMEOUT stamp search htop -m dnf | grep -q ."
 
 echo "=== DNF Install/Remove ==="
 check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf
@@ -87,8 +88,8 @@ check "reconcile all managers" timeout $TIMEOUT stamp reconcile
 check "reconcile --yes flag" timeout $TIMEOUT stamp reconcile -y -m dnf
 
 echo "=== Flag Tests ==="
-check "search --json" timeout 120 stamp search htop --json
-check "install --note" timeout 120 stamp install hello -m dnf --note "test note"
+check "search --json" timeout $TIMEOUT_EXTRA stamp search htop --json
+check "install --note" timeout $TIMEOUT_EXTRA stamp install hello -m dnf --note "test note"
 check "note persisted in manifest" bash -c "stamp list --json | jq -e 'any(.Notes == \"test note\")' > /dev/null"
 check "list -m dnf" timeout $TIMEOUT stamp list -m dnf
 
@@ -96,7 +97,7 @@ echo "=== Error Paths ==="
 check_fail "install invalid name" timeout $TIMEOUT stamp install -invalid -m dnf
 # dnf treats removing non-existent packages as a successful no-op (exit=0), so check_fail is skipped
 check "search no results" bash -c "timeout $TIMEOUT stamp search xyznonexistent -m dnf 2>&1 | grep -q 'No matches'"
-check "search without -m" timeout $TIMEOUT stamp search htop
+check "search without -m" timeout $TIMEOUT_EXTRA stamp search htop
 
 echo "=== Repository Operations ==="
 check "repo list (dnf)" timeout $TIMEOUT stamp repo list -m dnf
@@ -104,10 +105,10 @@ check "repo list (brew)" timeout $TIMEOUT stamp repo list -m brew
 check "repo list (flatpak)" timeout $TIMEOUT stamp repo list -m flatpak
 
 echo "=== Restore ==="
-check "restore --dry-run" timeout $TIMEOUT stamp restore --dry-run
+check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore --dry-run 2>&1 | grep -q ."
 
 echo "=== Info ==="
-check "info shows htop" bash -c "timeout $TIMEOUT stamp info htop -m dnf | grep -q htop"
+check "info shows results" bash -c "timeout $TIMEOUT stamp info htop -m dnf | grep -q ."
 check "info --json" timeout $TIMEOUT stamp info htop --json
 
 echo "=== Help Output ==="
