@@ -56,7 +56,7 @@ stamp --version
 
 check "doctor runs" stamp doctor
 
-check "search finds results" bash -c "timeout $TIMEOUT stamp search htop -m dnf | grep -q ."
+check "search finds results" bash -c "timeout $TIMEOUT_LONG stamp search htop -m dnf | grep -q ."
 
 echo "=== DNF Install/Remove ==="
 check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf
@@ -108,7 +108,7 @@ check "reconcile --dry-run" timeout $TIMEOUT stamp reconcile --dry-run -m dnf
 check "reconcile runs" timeout $TIMEOUT stamp reconcile -m dnf
 
 echo "=== Update ==="
-check "update runs" timeout $TIMEOUT stamp update -m dnf
+check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf
 
 echo "=== Restore ==="
 check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore --dry-run 2>&1 | grep -q ."

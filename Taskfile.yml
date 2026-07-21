@@ -35,6 +35,14 @@ tasks:
         vars: { DISTRO: debian }
       - task: test:integration:platform
         vars: { DISTRO: fedora }
+      - task: test:integration:platform
+        vars: { DISTRO: centos }
+      - task: test:integration:platform
+        vars: { DISTRO: rocky }
+      - task: test:integration:platform
+        vars: { DISTRO: arch }
+      - task: test:integration:platform
+        vars: { DISTRO: opensuse }
 
   test:integration:platform:
     desc: "Run integration tests for a single platform (internal)"
