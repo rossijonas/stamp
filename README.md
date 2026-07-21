@@ -8,7 +8,11 @@
 
 <p align="center"><em>A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.</em></p>
 
+<p align="center"><em>___</em></p>
+
 <p align="center"><strong>Cross-platform:</strong> Linux ✅ · macOS ✅ · Windows ⏳</p>
+
+<p align="center"><em>___</em></p>
 
 <p align="center">
   <a href="https://github.com/rossijonas/stamp/actions/workflows/ci.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
