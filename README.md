@@ -10,7 +10,7 @@
 
 ---
 
-<p align="center"><strong>Cross-platform:</strong> Linux ✅ · macOS ✅ · <em>Windows ⏳</em></p>
+<p align="center"><strong>Cross-platform:</strong> Linux ✅ · macOS ✅ · <em>Windows</em> ⏳</p>
 
 <p align="center">
   <a href="https://github.com/rossijonas/stamp/actions/workflows/ci.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
