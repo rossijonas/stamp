@@ -289,7 +289,7 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 
 > ✅ = Implemented · ⏳ = Planned · N/A = Not available on this OS · *(blank)* = Not implemented or not planned
 
-| Manager | Ubuntu | Debian | Fedora | CentOS | Rocky | Arch | openSUSE | macOS | Windows |
+| *Manager* | Ubuntu | Debian | Fedora | CentOS | Rocky | Arch | openSUSE | macOS | Windows |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **DNF** | - | - | ✅ | ✅ | ✅ | - | - | - | - |
 | **APT** | ✅ | ✅ | - | - | - | - | - | - | - |
@@ -302,11 +302,11 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 | **Winget** | - | - | - | - | - | - | - | - | |
 | **Chocolatey** | - | - | - | - | - | - | - | - | |
 | **Scoop** | - | - | - | - | - | - | - | - | |
-| **Language Toolchains** | | | | | | | | | |
-| `go` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| `cargo` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| `pipx` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| `npm` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| *Language Toolchains* | | | | | | | | | |
+| `go` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | |
+| `cargo` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | |
+| `pipx` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | |
+| `npm` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | |
 
 ## ▪ Architecture & Vision
 
