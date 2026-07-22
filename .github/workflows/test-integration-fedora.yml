@@ -1,8 +1,8 @@
-name: "integration: fedora"
+name: "intgr.: fedora"
 
 on:
   workflow_run:
-    workflows: ["Release"]
+    workflows: ["Auto Tag & Release"]
     types:
       - completed
   workflow_dispatch:

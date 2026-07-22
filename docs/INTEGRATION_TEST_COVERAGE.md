@@ -12,7 +12,7 @@ Each script tests the native package manager plus all cross-platform adapters.
 | Fedora (latest) | `fedora.sh` | `Dockerfile.fedora` | DNF | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
 | CentOS Stream 10 | `centos.sh` | `Dockerfile.centos` | DNF | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
 | Rocky Linux 9 | `rocky.sh` | `Dockerfile.rocky` | DNF | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
-| Arch Linux | `arch.sh` | `Dockerfile.arch` | — (brew only) | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
+| Arch Linux | `arch.sh` | `Dockerfile.arch` | Pacman | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
 | openSUSE Tumbleweed | `opensuse.sh` | `Dockerfile.opensuse` | Zypper | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
 
 ## Cross-Platform Tests (all scripts)
@@ -40,6 +40,7 @@ Each script validates a common set of features:
 | CentOS | DNF: search, install, remove, repo list |
 | Rocky | DNF: search, install, remove, repo list |
 | openSUSE | Zypper: search, install, remove |
+| Arch | Pacman: search, install, remove |
 
 ## Caveats & Known Gaps
 
@@ -57,9 +58,9 @@ Each script validates a common set of features:
 - `hello` is GNU Hello ~100KB bottle.
 - Requires Homebrew pre-installed (done in all Dockerfiles).
 
-### Distros without native adapter
-- Arch Linux has no native adapter yet (Pacman pending).
-- Tests on Arch run only cross-platform adapters (brew, flatpak, snap).
+### MacPorts (macOS)
+- MacPorts adapter implemented but not tested in CI (no macOS Docker runner available).
+- Coverage relies on unit tests (mocked exec) and manual testing on real macOS machines.
 
 ### What's NOT tested in integration tests
 - **`stamp reconcile` on all distros**: Only tested on Ubuntu, Fedora, CentOS, Debian, Rocky.

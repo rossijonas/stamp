@@ -12,6 +12,8 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | Flatpak | ✅ Complete | All | Linux sandboxed, -y flag |
 | Snap | ✅ Complete | All except repo mgmt | Ubuntu, Linux (universal), sudo for write ops |
 | Zypper | ✅ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
+| Pacman | ✅ Complete | All except repo mgmt | Arch Linux, sudo for write ops |
+| MacPorts | ✅ Complete | All except repo mgmt | macOS, sudo for write ops |
 
 ## CLI Commands
 

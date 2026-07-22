@@ -75,7 +75,7 @@ check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -
 
 echo "=== Flatpak ==="
 check "flatpak remote list" timeout $TIMEOUT stamp repo list -m flatpak
-check "flatpak search Calculator" timeout $TIMEOUT_LONG stamp search Calculator -m flatpak
+check "flatpak search Calculator" timeout $TIMEOUT_EXTRA stamp search Calculator -m flatpak
 
 echo "=== JSON Output ==="
 check "doctor shows managers" bash -c "stamp doctor 2>&1 | grep -qE 'dnf|brew|flatpak|apt'"

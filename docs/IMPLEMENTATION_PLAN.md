@@ -345,3 +345,5 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 34 | Post-release integration CI pipelines (ubuntu/debian/fedora) | ✅ |
 | 4 | 35 | Zypper package manager adapter (openSUSE) (#124) | ✅ Complete |
 | 4 | 36 | Snap package manager adapter (#47) | ✅ Complete |
+| 4 | 37 | Pacman package manager adapter (Arch Linux) (#49) | ✅ Complete |
+| 4 | 38 | MacPorts package manager adapter (macOS) (#48) | ✅ Complete |

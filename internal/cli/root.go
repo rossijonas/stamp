@@ -112,8 +112,12 @@ func detectAdapters() []manager.Adapter {
 		detect("flatpak", func() manager.Adapter { return manager.NewFlatpak() })
 		detect("snap", func() manager.Adapter { return manager.NewSnap() })
 		detect("zypper", func() manager.Adapter { return manager.NewZypper() })
+		detect("pacman", func() manager.Adapter { return manager.NewPacman() })
 	}
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })
+	if runtime.GOOS == "darwin" {
+		detect("port", func() manager.Adapter { return manager.NewMacPorts() })
+	}
 	return adapters
 }
 
