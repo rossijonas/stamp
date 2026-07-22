@@ -1,8 +1,8 @@
-name: "integration: ubuntu"
+name: "intgr.: ubuntu"
 
 on:
   workflow_run:
-    workflows: ["Release"]
+    workflows: ["Auto Tag & Release"]
     types:
       - completed
   workflow_dispatch:

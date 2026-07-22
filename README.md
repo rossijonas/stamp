@@ -295,8 +295,8 @@ While `stamp` currently targets Red Hat-based systems, our goal is to become the
 | **Snap** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | - | - |
 | **Flatpak** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | - | - |
 | **Brew** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | - |
-| **Pacman** | | | | | | ⏳ | | | |
-| **MacPorts** | - | - | - | - | - | - | - | ⏳ | |
+| **Pacman** | | | | | | ✅ | | | |
+| **MacPorts** | - | - | - | - | - | - | - | ✅ | |
 | **Winget** | - | - | - | - | - | - | - | - | |
 | **Chocolatey** | - | - | - | - | - | - | - | - | |
 | **Scoop** | - | - | - | - | - | - | - | - | |
