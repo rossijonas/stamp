@@ -54,11 +54,11 @@ check "flatpak remote list" timeout $TIMEOUT stamp repo list -m flatpak
 check "flatpak search Calculator" timeout $TIMEOUT_LONG stamp search Calculator -m flatpak
 
 echo "=== Pacman ==="
-check "search finds results" bash -c "timeout $TIMEOUT stamp search hello -m pacman | grep -q ."
-check "install hello via pacman" timeout $TIMEOUT_LONG stamp install hello -m pacman
-check "list shows hello" bash -c "timeout $TIMEOUT stamp list | grep -q hello"
-check "remove hello via pacman" timeout $TIMEOUT_LONG stamp remove hello -m pacman
-check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -qv hello"
+check "search finds results" bash -c "timeout $TIMEOUT stamp search sl -m pacman | grep -q ."
+check "install sl via pacman" timeout $TIMEOUT_LONG stamp install sl -m pacman
+check "list shows sl" bash -c "timeout $TIMEOUT stamp list | grep -q sl"
+check "remove sl via pacman" timeout $TIMEOUT_LONG stamp remove sl -m pacman
+check "list no longer shows sl" bash -c "timeout $TIMEOUT stamp list | grep -qv sl"
 
 echo "=== JSON Output ==="
 check "doctor shows managers" bash -c "stamp doctor 2>&1 | grep -qE 'brew|flatpak|apt|dnf'"
