@@ -1,3 +1,5 @@
+theme: null
+
 title: Stamp
 tagline: A lightweight yet powerful wrapper for your native package managers
 description: >-
