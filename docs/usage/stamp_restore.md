@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp restore
 
 Restore all tracked repositories and packages from the manifest
@@ -10,6 +13,14 @@ then installs all tracked packages concurrently across package managers.
 
 ```
 stamp restore [flags]
+```
+
+### Examples
+
+```
+  stamp restore
+  stamp restore -y
+  stamp restore --dry-run
 ```
 
 ### Options
@@ -30,5 +41,5 @@ stamp restore [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

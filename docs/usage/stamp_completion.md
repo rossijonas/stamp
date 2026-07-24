@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp completion
 
 Generate and install shell completion script
@@ -11,6 +14,14 @@ correct system path. Use --stdout to print the script instead.
 
 ```
 stamp completion [bash|zsh|fish|powershell]
+```
+
+### Examples
+
+```
+  stamp completion
+  stamp completion --stdout bash
+  stamp completion fish
 ```
 
 ### Options
@@ -30,5 +41,5 @@ stamp completion [bash|zsh|fish|powershell]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

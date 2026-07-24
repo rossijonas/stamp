@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp man check
 
 Verify installed man page version matches current stamp version
@@ -22,5 +25,5 @@ stamp man check [flags]
 
 ### SEE ALSO
 
-* [stamp man](stamp_man.md)	 - Manage stamp troff man pages
+* [stamp man](stamp_man.html)	 - Manage stamp troff man pages
 

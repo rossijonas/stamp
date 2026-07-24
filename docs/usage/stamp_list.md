@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp list
 
 List all intentionally installed packages
@@ -11,6 +14,14 @@ Use -m to filter by a specific package manager.
 
 ```
 stamp list [flags]
+```
+
+### Examples
+
+```
+  stamp list
+  stamp list --json
+  stamp list -m brew
 ```
 
 ### Options
@@ -30,5 +41,5 @@ stamp list [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

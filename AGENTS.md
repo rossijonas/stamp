@@ -6,6 +6,7 @@ If you are an AI agent working in this repository, you **MUST** adhere to the fo
 1. **Spec-Driven Development:** Do not write code without an agreed-upon specification in `docs/SPEC.md` and an implementation plan in `docs/IMPLEMENTATION_PLAN.md`.
 2. **Vertical Slices:** Deliver working features vertically. Do not build all horizontal layers (e.g., all managers, then all commands) at once.
 3. **Read-Only Plan Mode:** When planning, do not execute commands or modify files until the human approves the plan.
+4. **Documentation Must Accompany Changes:** Every pull request that adds, changes, or removes functionality MUST include corresponding updates to the documentation site (`docs/`) and/or README. Documentation changes must be in the same PR as the code they describe — not deferred to a follow-up.
 
 ## Go Standards
 1. **No `pkg/` directory:** `stamp` is a CLI application, not an external library. Business logic goes in `internal/`.

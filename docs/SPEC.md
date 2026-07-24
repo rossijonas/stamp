@@ -1,28 +1,38 @@
+---
+---
+
+
 # Spec: Stamp (Intent Tracker)
 
 ## Objective
+
 Build a lightweight yet powerful wrapper for native package managers. Stamp lets developers install, search, get info, and remove packages and repositories across multiple package managers through a single CLI — tracking every intentional choice into a portable, version-controllable TOML manifest. The primary workflow is using `stamp install` as a unified wrapper to guarantee total traceability from day one. It also acts as a passive safety net, allowing developers to track changes retroactively via local snapshot diffing (`stamp reconcile`) if they bypass the tool. It fully supports tracking custom repositories (taps, remotes) across all supported package managers.
 
 ## Tech Stack
+
 - **Language:** Go 1.26+
 - **CLI Framework:** `spf13/cobra` (industry standard for Go CLIs)
 - **Manifest Parsing:** `pelletier/go-toml/v2`
 - **Output/UI:** Standard `fmt` and `log` (keeping it simple for MVP)
 
 ## Command Blueprint
+
 The complete surface area of the CLI, including aliases and flags.
 
 **Global Flags:**
+
 *   `--verbose`, `-v`: Enable debug/verbose logging.
 *   `--json`, `-j`: Output results in machine-readable JSON format.
 *   `--yes`, `-y`: Bypasses all interactive confirmation prompts (Auto-Accept).
 
 ### Flag Standardization Rules
+
 1. Every flag SHOULD have a single-character short form (e.g. `--manager`, `-m`).
 2. Actions MUST be subcommands, not flags. (e.g. `stamp man install`, not `stamp man --install`).
 3. Boolean flags for enabling/disabling behavior are acceptable (e.g. `--dry-run`, `--json`).
 
 **Core Commands:**
+
 | Command | Aliases | Flags | Description |
 | :--- | :--- | :--- | :--- |
 | `stamp` | | | Prints welcome message suggesting `stamp hello` or `stamp --help`. |
@@ -44,6 +54,7 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp auto-reconcile on\|off` | | `--period, -p hourly\|daily(default)\|weekly` | Installs or removes automated reconcile timer (systemd/launchd). |
 
 **Man Subcommands:**
+
 | Command | Flags | Description |
 | :--- | :--- | :--- |
 | `stamp man` | | Shows help for `stamp man` command group. Same as `stamp man help`. |
@@ -51,6 +62,7 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp man check` | | Verifies installed man page version matches stamp version. |
 
 **Repository Commands:**
+
 | Command | Aliases | Flags | Description |
 | :--- | :--- | :--- | :--- |
 | `stamp repo add <name> [url]` | `install` | `--manager, -m <name> (Required)` | Adds custom repository and records it. |
@@ -60,28 +72,34 @@ The complete surface area of the CLI, including aliases and flags.
 ---
 
 ### Supported Package Managers
+
 - **DNF / YUM** (Fedora/RHEL)
 - **APT / apt-get** (Debian/Ubuntu) — new!
 - **Brew** (macOS)
 - **Flatpak** (Linux, sandboxed)
 
 ## Package Manager Resolution Engine
+
 When a user runs a package or repository command (e.g., `stamp install htop`) without specifying `--manager`, the tool resolves ambiguity using a three-tier engine:
 
 1. **Tier 1: Explicit Override:** If `--manager <name>` or `-m <name>` is provided, `stamp` directly executes that manager's command.
+
 2. **Tier 2: User Preference (Declarative):** If the package exists in multiple managers, `stamp` checks the user's `config.toml` precedence list:
    ```toml
    precedence = ["dnf", "flatpak", "brew"]
    ```
    If a match is found, `stamp` automatically selects the manager with the highest configured precedence.
+
 3. **Tier 3: Interactive Choice (Fallback):** If no precedence is defined (or there's a tie) and the process runs in an interactive terminal (TTY), `stamp` prompts the user to select the manager. In non-interactive environments (scripts/pipelines), the command fails with a clean error prompting the user to specify `--manager`.
 
 ---
 
 ## Configuration
+
 The `stamp` configuration is stored securely at `~/.config/stamp/config.toml`. It allows users to define global precedence and regex-based routing rules.
 
 ### TOML Schema:
+
 ```toml
 # ~/.config/stamp/config.toml
 
@@ -101,6 +119,7 @@ prefer = "dnf"
 ```
 
 ### Precedence Matching Logic:
+
 1.  **Rule Match:** The resolution engine iterates through the `[[rules]]` slice. If the package name matches a defined regular expression `pattern`, the engine immediately selects the associated `prefer` manager.
 2.  **Global Precedence:** If no pattern rules match, the engine scans the global `precedence` array from left to right. The first manager in the list that reports the package as "available" is selected.
 3.  **Tie-Breaker:** If the package is not found in the precedence list (or the list is empty), the engine falls back to prompting the user (in an interactive TTY) or failing cleanly (in scripts).
@@ -108,13 +127,16 @@ prefer = "dnf"
 ---
 
 ## Commands Specs
+
 Detailed specifications, execution behaviors, and business rules for every subcommand.
 
 ### `stamp` (root)
+
 - **Usage:** Suggests running `stamp hello` or `stamp --help` when executed with no arguments.
 - **Output:** Help reference to stderr.
 
 ### `stamp setup` (alias `hello`) — Setup Wizard (C1)
+
 - **Usage:** Interactive first-time setup wizard. Runs completion installation, man page setup, initialization, and diagnostics in sequence.
 - **Flags:** Accepts global `-y` flag to skip all prompts.
 - **Behavior:**
@@ -145,6 +167,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
   ```
 
 ### `stamp init`
+
 - **Usage:** Initializes `manifest.toml` and takes a baseline snapshot of current system packages.
 - **Flags:** Accepts global `-y` flag.
 - **Behavior:** Creates `~/.config/stamp` and `~/.local/share/stamp/snapshots` directories. Generates empty manifest.toml. Takes baseline snapshot for each available manager and saves them.
@@ -154,16 +177,19 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Re-init messages:** `existing manifest backed up to <path>`, `existing snapshots backed up to <path>`, `re-init aborted` to stderr.
 
 ### `stamp install <pkg>` (alias `add`)
+
 - **Usage:** Installs a package natively and records it in the manifest.
 - **Flags:** `--manager`, `-m`, `--note`, `-n`
 - **Behavior:** Validates name, resolves manager, runs native install, appends package to manifest, saves manifest. For managers requiring root (e.g., DNF), write operations automatically wrap with `sudo` — TTY-aware, prompts for password when needed. On systems where `dnf` is unavailable, the adapter falls back to `yum` automatically.
 
 ### `stamp remove <pkg>` (aliases `uninstall`, `rm`, `delete`, `del`)
+
 - **Usage:** Removes a package natively and untracks it.
 - **Flags:** `--manager`, `-m`
 - **Behavior:** Looks up recorded manager from manifest if not overridden by `-m`. Runs native remove, deletes package from manifest, saves manifest.
 
 ### `stamp reinstall <pkg>` (C4)
+
 - **Usage:** Reinstalls a package natively and records it in the manifest. Works as the primary mechanism for tracking pre-existing packages that were installed before `stamp init`.
 - **Flags:** None (accepts global `-y` flag).
 - **Behavior:**
@@ -174,11 +200,13 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Output:** `reinstalled htop via brew` to stderr.
 
 ### `stamp search <query>`
+
 - **Usage:** Searches for matching packages across all available managers.
 - **Flags:** `--manager`, `-m`
 - **Behavior:** Queries all adapters or the scoped manager and prints matching packages.
 
 ### `stamp info <pkg>` (C2)
+
 - **Usage:** Queries detailed package information.
 - **Flags:** `--manager`, `-m`
 - **Behavior:**
@@ -202,6 +230,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
   ```
 
 ### `stamp reconcile`
+
 - **Usage:** Detects drift between the system state and the last snapshot, and auto-tracks discovered packages and repositories into the manifest.
 - **Flags:** `--manager`, `-m`, `--dry-run`, `-d`
 - **Behavior:**
@@ -217,11 +246,13 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Design Rationale:** Reconcile is the safety net. There is no user decision to make: if a package was installed intentionally, it should be tracked. Users who want to inspect potential drift before committing use `--dry-run`. Pre-existing packages (installed before `stamp init`) are never detected — they are captured in the baseline snapshot. To track a pre-existing package, use `stamp reinstall <pkg>` instead.
 
 ### `stamp restore`
+
 - **Usage:** Restores environment on a new machine from the manifest.
 - **Flags:** `--dry-run`, `-d`, `--manager`, `-m` (Proposed)
 - **Behavior:** Adds repositories sequentially in Phase 1, then installs packages concurrently in Phase 2.
 
 ### `stamp doctor`
+
 - **Usage:** Checks manager availability, manifest health, UNIX compliance, and shell completion installation status.
 - **Flags:** `--json`, `-j`, `--manager`, `-m` (Proposed)
 - **Behavior:** Audits managers, parses manifest, checks `NO_COLOR`, `stamp man check` statuses, and shell completion installation status.
@@ -240,6 +271,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
   ```
 
 ### `stamp update` (alias `upgrade`)
+
 - **Usage:** Runs system upgrades across all available package managers in parallel.
 - **Flags:** `--manager`, `-m`
 - **Behavior:**
@@ -252,6 +284,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Exit code:** 0 if all managers succeed, 1 if any manager fails.
 
 ### `stamp self-update` (alias `self-upgrade`)
+
 - **Usage:** Upgrades the stamp binary from the GitHub releases API.
 - **Flags:** `--check`, `-c`
 - **Behavior:**
@@ -270,6 +303,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Exit code:** 0 if already up to date or update succeeded, 1 if check found update or error.
 
 ### `stamp completion [shell]`
+
 - **Usage:** Generates and installs completion scripts. Auto-detects the current shell if not specified. Uses `--stdout` / `-s` to print the script to stdout without installing.
 - **Flags:** `--stdout`, `-s`
 - **Behavior:** Without args, detects shell via `$SHELL` and installs to the correct path:
@@ -280,17 +314,21 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Output:** `completion installed to /path` to stderr on success.
 
 ### `stamp man`
+
 - **Usage:** Displays help output for man page subcommands.
 - **Subcommands:** `install` (install man pages to path), `check` (verify man page version vs binary version).
 
 ### `stamp repo`
+
 - **Usage:** Command group managing custom package repositories.
 - **Subcommands:** `add` (install repo), `remove` (untrack repo), `list` (ls tracked repos).
 
 ---
 
 ## Data Model
+
 The TOML manifest supports `notes` for user context and a `repositories` block.
+
 ```toml
 [[repositories]]
 name = "flathub"
@@ -304,6 +342,7 @@ notes = "better git TUI than default"
 ```
 
 ## Project Structure
+
 ```text
 stamp/
 ├── cmd/stamp/         → Main application entrypoint
@@ -319,9 +358,11 @@ stamp/
 ```
 
 ## Code Style
+
 Idiomatic Go with strict error wrapping and interface-driven design for testability.
 
 ## Testing Strategy
+
 - **Framework:** standard `testing` package + `stretchr/testify` for assertions.
 - **Test Locations:** Co-located with source (`state_test.go` next to `state.go`).
 - **Core Coverage:** 100% on `internal/state/` and `internal/manifest/`.
@@ -329,6 +370,7 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 - **Minimum:** 90% overall project coverage.
 
 ## Boundaries
+
 - **Always:** Use `context.Context` for all shell executions (`os/exec`).
 - **Always:** Return meaningful delta states (added, removed, unchanged).
 - **Always:** Every flag MUST have a single-character short form.
@@ -351,12 +393,14 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 **Root Cause:** Snapshot diffing is a point-in-time comparison between two snapshots. If the removed package is reinstalled before the next reconcile, the baseline and current snapshots are identical. Stamp has no event monitoring — it cannot observe intermediate states.
 
 **Mitigation:**
+
 - **Always use stamp (recommended):** The edge case never occurs if packages are managed through stamp (`stamp install`/`stamp remove`). Stamp records every install and removal in the manifest instantly — no snapshot diffing involved.
 - **Regular reconciliation:** If using native commands directly, remember to run `stamp reconcile` after each uninstall operation to keep snapshots in sync.
 - **Automated timer:** `stamp auto-reconcile on` (planned) installs a daily systemd/launchd timer.
 - **Manual timer files:** Pre-configured service/timer files available in `contrib/`.
 
 ## UNIX Compliance & Documentation Strategy
+
 To be a "good UNIX citizen", `stamp` must adhere to:
 - **POSIX Syntax:** Handled natively by `spf13/cobra`.
 - **XDG Base Directory:** Config in `~/.config/stamp`, state in `~/.local/share/stamp`.
@@ -368,6 +412,7 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 - **Project Landing Page:** A custom landing page at `docs/index.html` served via GitHub Pages (`/docs` folder on main branch, `https://rossijonas.github.io/stamp/`).
 
 ## Success Criteria
+
 1. **Init:** Running `stamp init` creates the correct XDG directories and an empty `manifest.toml`, and takes baseline snapshots for each available manager.
 2. **Reconcile (No Drift):** If system state matches the last snapshot, `reconcile` exits cleanly with `"No drift detected"`.
 3. **Reconcile (Drift):** If `flatpak install com.spotify.Client` is run externally, `stamp reconcile` detects this one new package and auto-tracks it to `manifest.toml` without prompting.

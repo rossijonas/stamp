@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-005: CLI Architecture — Manifest Error Guards and Output Streams
 
 ## Status

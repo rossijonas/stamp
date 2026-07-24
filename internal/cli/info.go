@@ -28,8 +28,9 @@ func newInfoCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:   "info <package>",
-		Short: "Show package information across managers",
+		Use:     "info <package>",
+		Short:   "Show package information across managers",
+		Example: "  stamp info htop\n  stamp info -m brew lazygit\n  stamp info htop --json",
 		Long: `Query detailed information about a package.
 By default, queries all available managers and outputs a summary table.
 If -m, --manager is specified, displays the native manager's full raw info block.`,

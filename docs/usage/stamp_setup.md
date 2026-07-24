@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp setup
 
 Run first-time setup wizard
@@ -10,6 +13,14 @@ Use -y to skip all prompts for scripting.
 
 ```
 stamp setup [flags]
+```
+
+### Examples
+
+```
+  stamp setup
+  stamp setup -y
+  stamp hello
 ```
 
 ### Options
@@ -28,5 +39,5 @@ stamp setup [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

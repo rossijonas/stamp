@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-007: NO_COLOR Compliance Approach
 
 ## Status

@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp man install
 
 Install the stamp man page to system or user path
@@ -23,5 +26,5 @@ stamp man install [flags]
 
 ### SEE ALSO
 
-* [stamp man](stamp_man.md)	 - Manage stamp troff man pages
+* [stamp man](stamp_man.html)	 - Manage stamp troff man pages
 

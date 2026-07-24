@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-006: Documentation Generation Strategy
 
 ## Status

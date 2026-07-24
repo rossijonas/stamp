@@ -15,8 +15,9 @@ import (
 
 func newInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "init",
-		Short: "Initialize manifest.toml and take baseline snapshot",
+		Use:     "init",
+		Short:   "Initialize manifest.toml and take baseline snapshot",
+		Example: "  stamp init\n  stamp init -y",
 		Long: `Create the stamp configuration directory, an empty manifest.toml,
 and take a baseline snapshot of currently installed packages
 for each available package manager.

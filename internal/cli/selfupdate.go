@@ -20,6 +20,7 @@ func newSelfUpdateCmd() *cobra.Command {
 		Use:     "self-update",
 		Aliases: []string{"self-upgrade"},
 		Short:   "Update stamp to the latest version",
+		Example: "  stamp self-update\n  stamp self-update --check\n  stamp self-upgrade",
 		Long: `Check for and apply updates to the stamp binary.
 
 Downloads the latest release from GitHub, verifies its SHA-256 checksum,

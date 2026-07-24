@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp reinstall
 
 Reinstall a package and record it in the manifest
@@ -10,6 +13,13 @@ tracked in the manifest, resolve the manager and track it.
 
 ```
 stamp reinstall <package> [flags]
+```
+
+### Examples
+
+```
+  stamp reinstall htop
+  stamp reinstall -m brew lazygit
 ```
 
 ### Options
@@ -29,5 +39,5 @@ stamp reinstall <package> [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp reconcile
 
 Detect packages installed outside stamp and add them to the manifest
@@ -10,6 +13,14 @@ Use --dry-run to preview drift without tracking.
 
 ```
 stamp reconcile [flags]
+```
+
+### Examples
+
+```
+  stamp reconcile
+  stamp reconcile --dry-run
+  stamp reconcile -m dnf
 ```
 
 ### Options
@@ -30,5 +41,5 @@ stamp reconcile [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

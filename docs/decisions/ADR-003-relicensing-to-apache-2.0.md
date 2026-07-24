@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-003: Relicense Stamp to Apache-2.0
 
 ## Status

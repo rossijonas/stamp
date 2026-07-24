@@ -13,8 +13,9 @@ func newRestoreCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:   "restore",
-		Short: "Restore all tracked repositories and packages from the manifest",
+		Use:     "restore",
+		Short:   "Restore all tracked repositories and packages from the manifest",
+		Example: "  stamp restore\n  stamp restore -y\n  stamp restore --dry-run",
 		Long: `Read the manifest and restore your system state.
 It first adds all tracked repositories sequentially,
 then installs all tracked packages concurrently across package managers.`,

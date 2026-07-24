@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp init
 
 Initialize manifest.toml and take baseline snapshot
@@ -16,6 +19,13 @@ the confirmation prompt.
 stamp init [flags]
 ```
 
+### Examples
+
+```
+  stamp init
+  stamp init -y
+```
+
 ### Options
 
 ```
@@ -32,5 +42,5 @@ stamp init [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

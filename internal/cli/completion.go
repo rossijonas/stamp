@@ -14,8 +14,9 @@ func newCompletionCmd() *cobra.Command {
 	var stdout bool
 
 	cmd := &cobra.Command{
-		Use:   "completion [bash|zsh|fish|powershell]",
-		Short: "Generate and install shell completion script",
+		Use:     "completion [bash|zsh|fish|powershell]",
+		Short:   "Generate and install shell completion script",
+		Example: "  stamp completion\n  stamp completion --stdout bash\n  stamp completion fish",
 		Long: `Generate and install shell completion scripts for stamp.
 
 Without arguments, auto-detects the current shell and installs to the

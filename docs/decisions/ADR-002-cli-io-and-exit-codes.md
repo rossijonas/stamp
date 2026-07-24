@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-002: CLI I/O Separation, Exit Codes, and Flag Constraints
 
 ## Status

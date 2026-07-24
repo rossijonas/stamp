@@ -1,3 +1,6 @@
+---
+---
+
 # Integration Test Coverage
 
 Stamp runs Docker-based integration tests across 7 Linux distributions.
@@ -7,13 +10,13 @@ Each script tests the native package manager plus all cross-platform adapters.
 
 | Distro | Script | Dockerfile | Native Adapter | Brew | Flatpak | Snap |
 |--------|--------|------------|----------------|------|---------|------|
-| Ubuntu (latest) | `ubuntu.sh` | `Dockerfile.ubuntu` | APT | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
-| Debian (latest) | `debian.sh` | `Dockerfile.debian` | APT | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
-| Fedora (latest) | `fedora.sh` | `Dockerfile.fedora` | DNF | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
-| CentOS Stream 10 | `centos.sh` | `Dockerfile.centos` | DNF | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
-| Rocky Linux 9 | `rocky.sh` | `Dockerfile.rocky` | DNF | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
-| Arch Linux | `arch.sh` | `Dockerfile.arch` | Pacman | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
-| openSUSE Tumbleweed | `opensuse.sh` | `Dockerfile.opensuse` | Zypper | ✅ search, install, remove | ✅ repo list, search | ⚠️ guarded |
+| Ubuntu (latest) | `ubuntu.sh` | `Dockerfile.ubuntu` | APT | ✓ search, install, remove | ✓ repo list, search | ⚠ guarded |
+| Debian (latest) | `debian.sh` | `Dockerfile.debian` | APT | ✓ search, install, remove | ✓ repo list, search | ⚠ guarded |
+| Fedora (latest) | `fedora.sh` | `Dockerfile.fedora` | DNF | ✓ search, install, remove | ✓ repo list, search | ⚠ guarded |
+| CentOS Stream 10 | `centos.sh` | `Dockerfile.centos` | DNF | ✓ search, install, remove | ✓ repo list, search | ⚠ guarded |
+| Rocky Linux 9 | `rocky.sh` | `Dockerfile.rocky` | DNF | ✓ search, install, remove | ✓ repo list, search | ⚠ guarded |
+| Arch Linux | `arch.sh` | `Dockerfile.arch` | Pacman | ✓ search, install, remove | ✓ repo list, search | ⚠ guarded |
+| openSUSE Tumbleweed | `opensuse.sh` | `Dockerfile.opensuse` | Zypper | ✓ search, install, remove | ✓ repo list, search | ⚠ guarded |
 
 ## Cross-Platform Tests (all scripts)
 

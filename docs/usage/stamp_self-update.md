@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp self-update
 
 Update stamp to the latest version
@@ -12,6 +15,14 @@ and man pages automatically. Use --check to query without downloading.
 
 ```
 stamp self-update [flags]
+```
+
+### Examples
+
+```
+  stamp self-update
+  stamp self-update --check
+  stamp self-upgrade
 ```
 
 ### Options
@@ -31,5 +42,5 @@ stamp self-update [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 
