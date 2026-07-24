@@ -26,7 +26,7 @@ func TestDoctor_TTY(t *testing.T) {
 	assert.Contains(t, output, "Package Managers:")
 	assert.Contains(t, output, "Manifest Integrity:")
 	assert.Contains(t, output, "Path:")
-	assert.Contains(t, output, "Man Page: ❌ Not found")
+	assert.Contains(t, output, "Man Page: ✗ Not found")
 }
 
 func TestDoctor_JSON(t *testing.T) {
@@ -179,7 +179,7 @@ func TestDoctor_Manifest_Missing_TTY(t *testing.T) {
 	err := root.Execute()
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "❌ manifest not found")
+	assert.Contains(t, output, "✗ manifest not found")
 }
 
 func TestDoctor_Completions_NotInstalled(t *testing.T) {
@@ -270,7 +270,7 @@ func TestDoctor_ManPage_Outdated(t *testing.T) {
 	buf, err := execCmd(t, []string{"doctor"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "⚠️ Outdated")
+	assert.Contains(t, output, "⚠ Outdated")
 	assert.Contains(t, output, "run 'stamp man install'")
 }
 

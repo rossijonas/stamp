@@ -3,23 +3,22 @@
 
 ## Restoring on a New Machine
 
-Clone your dotfiles (containing your `manifest.toml`) and run:
+Place your `manifest.toml` in the right location and run:
 
 ```bash
-git clone https://github.com/you/dotfiles.git
-cp dotfiles/stamp/manifest.toml ~/.config/stamp/
+cp manifest.toml ~/.config/stamp/          # copy your manifest to the stamp config dir
 stamp restore -y
 ```
 
 ```text
 ▪ Phase 1: Restoring repositories...
-  ✅ added flathub via flatpak
-  ✅ added homebrew/cask via brew
+  ✓ added flathub via flatpak
+  ✓ added homebrew/cask via brew
 ▪ Phase 2: Restoring packages...
-  ✅ installed htop via apt
-  ✅ installed lazygit via brew
-  ✅ installed spotify via flatpak
-✅ Restore complete — 3 packages installed
+  ✓ installed htop via apt
+  ✓ installed lazygit via brew
+  ✓ installed spotify via flatpak
+✓ Restore complete — 3 packages installed
 ```
 
 ### Dry run

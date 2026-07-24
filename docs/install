@@ -1,0 +1,137 @@
+#!/bin/sh
+set -eu
+
+REPO="rossijonas/stamp"
+INSTALL_DIR="${STAMP_INSTALL_DIR:-/usr/local/bin}"
+BINARY="stamp"
+
+# ─── Help ───
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      echo "Install stamp - https://gostamp.dev"
+      echo ""
+      echo "Usage: curl -fsSL https://gostamp.dev/install | sh"
+      echo ""
+      echo "Environment variables:"
+      echo "  STAMP_INSTALL_DIR  Install directory (default: /usr/local/bin)"
+      echo ""
+      echo "Examples:"
+      echo "  curl -fsSL https://gostamp.dev/install | sh"
+      echo "  curl -fsSL https://gostamp.dev/install | STAMP_INSTALL_DIR=~/.local/bin sh"
+      exit 0
+      ;;
+  esac
+done
+
+# ─── Dependencies ───
+for cmd in curl tar; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Error: $cmd is required to install stamp"
+    exit 1
+  fi
+done
+
+# SHA-256 tool (sha256sum on Linux, shasum on macOS)
+SHA_CMD=""
+if command -v sha256sum >/dev/null 2>&1; then
+  SHA_CMD="sha256sum -c checksums.txt --ignore-missing"
+elif command -v shasum >/dev/null 2>&1; then
+  SHA_CMD="shasum -a 256 -c checksums.txt --ignore-missing"
+else
+  echo "Error: sha256sum or shasum is required to verify the download"
+  exit 1
+fi
+
+# Downloader with fallback (wget preferred for minimal images)
+DOWNLOADER=""
+if command -v wget >/dev/null 2>&1; then
+  DOWNLOADER="wget"
+elif command -v curl >/dev/null 2>&1; then
+  DOWNLOADER="curl"
+fi
+
+download() {
+  case "$DOWNLOADER" in
+    curl) curl -fsSL --retry 3 "$1" -o "$2" ;;
+    wget) wget -q --retry-connrefused --tries=3 "$1" -O "$2" ;;
+  esac
+}
+
+# ─── Platform detection ───
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+
+case "$ARCH" in
+  x86_64|amd64) ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+  *)
+    echo "Error: unsupported architecture $ARCH (supported: amd64, arm64)"
+    exit 1
+    ;;
+esac
+
+case "$OS" in
+  linux|darwin) ;;
+  *)
+    echo "Error: unsupported OS $OS (supported: linux, darwin)"
+    exit 1
+    ;;
+esac
+
+# ─── Temp directory ───
+TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+# ─── Fetch latest version ───
+echo "▪ Fetching latest release..."
+VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)"
+
+if [ -z "$VERSION" ]; then
+  echo "Error: failed to fetch latest version from GitHub"
+  exit 1
+fi
+
+echo "  Latest: $VERSION"
+
+# ─── Download ───
+TARBALL="stamp_${VERSION#v}_${OS}_${ARCH}.tar.gz"
+TARBALL_URL="https://github.com/$REPO/releases/download/$VERSION/$TARBALL"
+CHECKSUMS_URL="https://github.com/$REPO/releases/download/$VERSION/checksums.txt"
+
+echo "▪ Downloading $TARBALL..."
+download "$TARBALL_URL" "$TMPDIR/stamp.tar.gz"
+download "$CHECKSUMS_URL" "$TMPDIR/checksums.txt"
+
+# ─── Verify SHA-256 ───
+echo "▪ Verifying checksum..."
+(cd "$TMPDIR" && $SHA_CMD) || {
+  echo "Error: checksum verification failed"
+  echo "  The downloaded file may be corrupted or tampered with."
+  echo "  Please try again or report this issue:"
+  echo "  https://github.com/$REPO/issues"
+  exit 1
+}
+
+# ─── Extract ───
+echo "▪ Extracting..."
+tar -xzf "$TMPDIR/stamp.tar.gz" -C "$TMPDIR"
+
+# ─── Install ───
+echo "▪ Installing to $INSTALL_DIR..."
+mkdir -p "$INSTALL_DIR" 2>/dev/null || true
+
+if [ -w "$INSTALL_DIR" ]; then
+  mv -f "$TMPDIR/$BINARY" "$INSTALL_DIR/$BINARY"
+elif command -v sudo >/dev/null 2>&1; then
+  sudo mv -f "$TMPDIR/$BINARY" "$INSTALL_DIR/$BINARY"
+else
+  echo "Error: cannot write to $INSTALL_DIR and sudo is not available"
+  echo "  To install to a different directory:"
+  echo "  curl -fsSL https://gostamp.dev/install | STAMP_INSTALL_DIR=~/.local/bin sh"
+  exit 1
+fi
+
+echo ""
+echo "✅ Stamp $VERSION installed to $INSTALL_DIR/$BINARY"
+echo "  Run 'stamp doctor' to verify."

@@ -3,7 +3,7 @@
 
 ## stamp
 
-A lightweight yet powerful wrapper for your native package managers
+A lightweight yet powerful tool that wraps many package managers into one
 
 ```
 stamp [flags]

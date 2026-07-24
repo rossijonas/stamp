@@ -22,7 +22,7 @@ Existing tools fail to bridge this gap:
 
 ## The Solution: Stamp
 
-`stamp` occupies the unfulfilled space in the package management ecosystem: **A lightweight yet powerful wrapper for your native package managers. Install, track, and restore without changing your tools.**
+`stamp` occupies the unfulfilled space in the package management ecosystem: **A lightweight yet powerful tool that wraps many package managers into one. Install, track, and restore without changing your tools. One manifest. One command to restore it all.**
 
 `stamp` offers the declarative benefits of Nix with the imperative ease of `dnf`. 
 

@@ -15,7 +15,7 @@ stamp reconcile                 # detects ripgrep and tracks it
     Added: ripgrep (dnf)
     Added: codehaus-casa (copr)
 ▪ Tracking 1 new package and 1 new repository...
-✅ reconciled — manifest updated
+✓ reconciled — manifest updated
 ```
 
 ### Dry run

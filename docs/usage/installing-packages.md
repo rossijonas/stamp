@@ -13,7 +13,7 @@ Stamp auto-detects the best package manager for your system.
 
 ```text
 ▪ installing htop via apt...
-✅ installed htop via apt
+✓ installed htop via apt
 ```
 
 ### Specify a manager
@@ -31,7 +31,7 @@ stamp install lazygit -m brew --note "better git TUI than default"
 
 ```text
 ▪ installing lazygit via brew...
-✅ installed lazygit via brew (note: better git TUI than default)
+✓ installed lazygit via brew (note: better git TUI than default)
 ```
 
 Notes are saved to your manifest so you remember why you installed something.
@@ -54,7 +54,7 @@ stamp reinstall htop
 
 ```text
 ▪ reinstalling htop via apt...
-✅ reinstalled htop via apt
+✓ reinstalled htop via apt
 ```
 
 For pre-existing packages (installed before `stamp init`), reinstall resolves the manager automatically and records the package in the manifest.

@@ -21,7 +21,7 @@ Manage third-party repositories
 
 ### SEE ALSO
 
-* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful tool that wraps many package managers into one
 * [stamp repo add](stamp_repo_add.html)	 - Add a third-party repository
 * [stamp repo list](stamp_repo_list.html)	 - List all tracked repositories
 * [stamp repo remove](stamp_repo_remove.html)	 - Remove a third-party repository

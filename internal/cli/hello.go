@@ -29,6 +29,7 @@ Use -y to skip all prompts for scripting.`,
 			app := appFromCtx(cmd)
 			autoAccept := app.yes
 			errOut := cmd.ErrOrStderr()
+			_, _ = fmt.Fprint(errOut, stampBanner)
 
 			if autoAccept {
 				_, _ = fmt.Fprintln(errOut, "▪ Stamp Setup Wizard (auto-accept)")

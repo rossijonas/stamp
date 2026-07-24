@@ -33,8 +33,8 @@ When the manifest TOML file is corrupted on disk:
 
 ### Actions as Subcommands (Not Flags)
 Actions that change system state or perform operations MUST be subcommands, not flags:
-- ✅ `stamp man install` (not `stamp man --install`)
-- ❌ `stamp man --prefix /path` → ✅ `stamp man install --prefix /path`
+- ✓ `stamp man install` (not `stamp man --install`)
+- ✗ `stamp man --prefix /path` → ✓ `stamp man install --prefix /path`
 - This ensures consistent CLI design and discoverability
 - Boolean flags for enabling/disabling behavior are acceptable (e.g. `--dry-run`, `--yes`, `--json`)
 

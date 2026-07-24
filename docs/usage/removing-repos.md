@@ -9,7 +9,7 @@ stamp repo remove ppa:git-core/ppa -m apt
 
 ```text
 ▪ removing repo ppa:git-core/ppa via apt...
-✅ removed ppa:git-core/ppa via apt
+✓ removed ppa:git-core/ppa via apt
 ```
 
 ### Using aliases
