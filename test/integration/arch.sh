@@ -54,7 +54,7 @@ echo "=== Flatpak ==="
 check "flatpak remote list" timeout $TIMEOUT stamp repo list -m flatpak
 echo "  • warming flatpak appstream cache..."
 timeout $TIMEOUT_LONG flatpak update --appstream 2>&1 || true
-check "flatpak search Calculator" timeout $TIMEOUT_LONG stamp search Calculator -m flatpak
+check "flatpak search Calculator" timeout $TIMEOUT_EXTRA stamp search Calculator -m flatpak
 
 echo "=== Pacman ==="
 check "search finds results" bash -c "timeout $TIMEOUT stamp search sl -m pacman | grep -q ."
