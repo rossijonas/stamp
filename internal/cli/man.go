@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -70,7 +71,7 @@ func checkInstalledManVersion() (*manCheckResult, string, error) {
 	ver := string(match[1])
 	return &manCheckResult{
 		version: ver,
-		matches: ver == Version,
+		matches: strings.TrimPrefix(ver, "v") == Version,
 	}, path, nil
 }
 
@@ -101,7 +102,7 @@ func newManInstallCmd() *cobra.Command {
 			header := &doc.GenManHeader{
 				Title:   "STAMP",
 				Section: "1",
-				Source:  fmt.Sprintf("stamp %s", Version),
+				Source:  fmt.Sprintf("stamp v%s", Version),
 				Manual:  "Stamp Manual",
 			}
 
@@ -211,7 +212,7 @@ func newManCheckCmd() *cobra.Command {
 			if status.matches {
 				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "✓ Man page is up to date (%s)\n", status.version)
 			} else {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠ Man page is outdated (installed %s, current %s). Run 'stamp man install' to update.\n", status.version, Version)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠ Man page is outdated (installed %s, current v%s). Run 'stamp man install' to update.\n", status.version, Version)
 			}
 
 			return nil

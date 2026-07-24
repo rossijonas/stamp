@@ -36,7 +36,7 @@ and man pages automatically. Use --check to query without downloading.`,
 			}
 
 			latestVersion := strings.TrimPrefix(rel.TagName, "v")
-			currentVersion := strings.TrimPrefix(Version, "v")
+			currentVersion := Version
 
 			if checkOnly {
 				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  Current version: v%s\n", currentVersion)

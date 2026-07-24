@@ -23,7 +23,7 @@ func main() {
 	header := &doc.GenManHeader{
 		Title:   "STAMP",
 		Section: "1",
-		Source:  fmt.Sprintf("stamp %s", cli.Version),
+		Source:  fmt.Sprintf("stamp v%s", cli.Version),
 		Manual:  "Stamp Manual",
 	}
 
