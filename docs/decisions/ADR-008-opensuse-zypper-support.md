@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-008: Support openSUSE and Zypper Package Manager
 
 ## Status

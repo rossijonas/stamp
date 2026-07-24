@@ -16,6 +16,7 @@ func newListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List all intentionally installed packages",
+		Example: "  stamp list\n  stamp list --json\n  stamp list -m brew",
 		Long: `Read the manifest and display all tracked packages.
 By default prints a table of package names and their managers.
 Use --json for machine-readable output.

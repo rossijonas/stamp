@@ -20,6 +20,7 @@ func newHelloCmd() *cobra.Command {
 		Use:     "setup",
 		Aliases: []string{"hello"},
 		Short:   "Run first-time setup wizard",
+		Example: "  stamp setup\n  stamp setup -y\n  stamp hello",
 		Long: `Guided setup for new stamp installations.
 Runs completion installation, man page setup, initialization, and diagnostics.
 Use -y to skip all prompts for scripting.`,

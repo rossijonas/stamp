@@ -1,9 +1,20 @@
+---
+---
+
 ## stamp search
 
 Search for packages across managers
 
 ```
 stamp search <query> [flags]
+```
+
+### Examples
+
+```
+  stamp search htop
+  stamp search lazygit -m brew
+  stamp search ripgrep
 ```
 
 ### Options
@@ -23,5 +34,5 @@ stamp search <query> [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

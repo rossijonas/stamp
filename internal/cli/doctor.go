@@ -118,8 +118,9 @@ func newDoctorCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:   "doctor",
-		Short: "Diagnose system configuration and manifest health",
+		Use:     "doctor",
+		Short:   "Diagnose system configuration and manifest health",
+		Example: "  stamp doctor\n  stamp doctor --json\n  stamp doctor -m dnf",
 		Long: `Check package manager availability and manifest integrity.
 Reports which managers are installed and whether the manifest is valid.`,
 		Args: cobra.NoArgs,

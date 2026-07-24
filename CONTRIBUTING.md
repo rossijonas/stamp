@@ -3,9 +3,12 @@
 We welcome contributions to `stamp`! This document outlines our development standards.
 
 ## Prerequisites
+
 - [Go 1.26+](https://go.dev/doc/install)
 - [Taskfile](https://taskfile.dev/installation/) (`go install github.com/go-task/task/v3/cmd/task@latest` or `brew install go-task`)
 - [golangci-lint](https://golangci-lint.run/)
+- **Ruby 3+** — required for local docs preview (see [Documentation](#documentation) section)
+- **Bundler** — `gem install bundler` (after installing Ruby)
 
 ## Development Workflow
 
@@ -16,6 +19,7 @@ go mod tidy
 ```
 
 We use `task` instead of `make`. Here are the essential commands:
+
 - `task check` - Runs all quality gates: module verification, static analysis, unit tests, and vulnerability scanning. **Must pass before opening a PR.**
 - `task build` - Builds the binary into the `bin/` directory.
 - `task test` - Runs all unit tests with the race detector enabled. Enforces 90% minimum coverage.
@@ -25,6 +29,58 @@ We use `task` instead of `make`. Here are the essential commands:
 - `task security` - Runs `govulncheck` to scan for known CVEs.
 - `task test:integration` - Builds the binary, runs integration smoke tests in Docker containers (Ubuntu, Debian, Fedora, CentOS Stream 10, Rocky Linux 9, Arch Linux, openSUSE Tumbleweed). Requires Docker or Podman (`podman-docker` on Fedora).
 - `task clean` - Removes build artifacts.
+- `task docs` - Regenerates CLI reference docs from cobra into `docs/usage/` and `docs/man/`.
+- `task docs:serve` - Serves the Jekyll docs site locally at `http://localhost:4000` (requires `bundle install` first).
+
+## Documentation
+
+The project website is served at [https://gostamp.dev](https://gostamp.dev) via GitHub Pages, built with Jekyll from the `docs/` directory.
+
+### Prerequisites
+
+```bash
+# Fedora
+sudo dnf install ruby-devel gcc-c++
+
+# Ubuntu/Debian
+sudo apt install ruby-dev g++
+```
+
+### Local preview
+
+```bash
+gem install bundler
+bundle install
+task docs:serve
+```
+
+### Regenerate CLI reference docs
+
+After adding examples or changing command structure:
+
+```bash
+task docs
+```
+
+This runs `go run ./tools/docgen/` which generates Markdown + man pages from the cobra command tree into `docs/usage/` and `docs/man/`.
+
+### File structure
+
+| Path | Purpose |
+|------|---------|
+| `docs/index.html` | Landing page |
+| `docs/_layouts/` | Page templates |
+| `docs/_includes/` | Header, nav, footer partials |
+| `docs/assets/` | CSS and JS |
+| `docs/usage/` | CLI reference (auto-generated + editorial) |
+| `docs/getting-started/` | Intro and installation guides |
+| `docs/history/` | Vision, spec, feature matrix |
+| `docs/community/` | Community links |
+| `docs/CNAME` | Custom domain (`gostamp.dev`) |
+
+### CI/CD
+
+`.github/workflows/docs.yml` automatically regenerates CLI docs, builds the Jekyll site, and deploys to GitHub Pages on every push to `main`.
 
 ## Commit Messages
 
@@ -40,8 +96,9 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 ## Pull Request Process
 
 1. Ensure `task check` passes locally before opening a PR
-2. CI automatically runs: lint, tests (with race detector and ≥90% coverage), govulncheck, and validates that at least one commit follows the Conventional Commits format
-3. Once merged to `main`, a new version is automatically tagged and released
+2. **Every PR must include corresponding documentation updates.** Changes to CLI commands, features, workflows, or architecture require updates to the relevant docs pages (`docs/usage/`, `docs/getting-started/`, `docs/history/`, README, etc.). Documentation changes must be atomic with the code they describe — not deferred.
+3. CI automatically runs: lint, tests (with race detector and ≥90% coverage), govulncheck, and validates that at least one commit follows the Conventional Commits format
+4. Once merged to `main`, a new version is automatically tagged and released
 
 ## Release Process
 

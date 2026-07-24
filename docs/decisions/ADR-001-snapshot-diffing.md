@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-001: Use Local Snapshot Diffing for Intention Tracking
 
 ## Status

@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp doctor
 
 Diagnose system configuration and manifest health
@@ -9,6 +12,14 @@ Reports which managers are installed and whether the manifest is valid.
 
 ```
 stamp doctor [flags]
+```
+
+### Examples
+
+```
+  stamp doctor
+  stamp doctor --json
+  stamp doctor -m dnf
 ```
 
 ### Options
@@ -28,5 +39,5 @@ stamp doctor [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

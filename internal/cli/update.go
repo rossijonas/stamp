@@ -26,6 +26,7 @@ func newUpdateCmd() *cobra.Command {
 		Use:     "update",
 		Aliases: []string{"upgrade"},
 		Short:   "Run system upgrades across all package managers",
+		Example: "  stamp update\n  stamp update -m apt\n  stamp upgrade",
 		Long: `Run system upgrade commands for each available package manager.
 Updates and upgrades all packages to their latest versions.
 Use -m to scope to a single package manager.`,

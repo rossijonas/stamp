@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp repo
 
 Manage third-party repositories
@@ -18,8 +21,8 @@ Manage third-party repositories
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
-* [stamp repo add](stamp_repo_add.md)	 - Add a third-party repository
-* [stamp repo list](stamp_repo_list.md)	 - List all tracked repositories
-* [stamp repo remove](stamp_repo_remove.md)	 - Remove a third-party repository
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp repo add](stamp_repo_add.html)	 - Add a third-party repository
+* [stamp repo list](stamp_repo_list.html)	 - List all tracked repositories
+* [stamp repo remove](stamp_repo_remove.html)	 - Remove a third-party repository
 

@@ -1,3 +1,6 @@
+---
+---
+
 # ADR-004: Use Goreleaser with Auto-Tagging for Release Automation
 
 ## Status
@@ -44,9 +47,9 @@ Use two complementary workflows:
 ### Version Injection
 Version, commit hash, and build date are injected at build time via ldflags:
 ```
--X github.com/rossijonas/stamp/internal/cli.Version={{.Version}}
+{% raw %}-X github.com/rossijonas/stamp/internal/cli.Version={{.Version}}
 -X github.com/rossijonas/stamp/internal/cli.Commit={{.Commit}}
--X github.com/rossijonas/stamp/internal/cli.Date={{.Date}}
+-X github.com/rossijonas/stamp/internal/cli.Date={{.Date}}{% endraw %}
 ```
 
 ## Alternatives Considered

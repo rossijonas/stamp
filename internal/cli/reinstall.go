@@ -14,8 +14,9 @@ func newReinstallCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:   "reinstall <package>",
-		Short: "Reinstall a package and record it in the manifest",
+		Use:     "reinstall <package>",
+		Short:   "Reinstall a package and record it in the manifest",
+		Example: "  stamp reinstall htop\n  stamp reinstall -m brew lazygit",
 		Long: `Look up the package in the manifest to find its recorded package manager,
 then execute the native reinstallation command. If the package is not
 tracked in the manifest, resolve the manager and track it.`,

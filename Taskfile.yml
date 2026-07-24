@@ -84,7 +84,7 @@ tasks:
       - task: security
 
   docs:
-    desc: "Generates CLI documentation (Markdown + man pages)"
+    desc: "Regenerates CLI reference docs from cobra into docs/usage/ and docs/man/"
     cmds:
       - go run ./tools/docgen/
 
@@ -92,3 +92,8 @@ tasks:
     desc: "Removes build artifacts"
     cmds:
       - rm -rf bin/
+
+  docs:serve:
+    desc: "Serves the Jekyll docs site locally at http://localhost:4000 (requires bundle install)"
+    cmds:
+      - bundle exec jekyll serve --source docs --destination docs/_site --livereload

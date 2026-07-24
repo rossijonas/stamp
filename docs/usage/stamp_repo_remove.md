@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp repo remove
 
 Remove a third-party repository
@@ -23,5 +26,5 @@ stamp repo remove <name> [flags]
 
 ### SEE ALSO
 
-* [stamp repo](stamp_repo.md)	 - Manage third-party repositories
+* [stamp repo](stamp_repo.html)	 - Manage third-party repositories
 

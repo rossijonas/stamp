@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp man
 
 Manage stamp troff man pages
@@ -26,7 +29,7 @@ stamp man [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
-* [stamp man check](stamp_man_check.md)	 - Verify installed man page version matches current stamp version
-* [stamp man install](stamp_man_install.md)	 - Install the stamp man page to system or user path
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp man check](stamp_man_check.html)	 - Verify installed man page version matches current stamp version
+* [stamp man install](stamp_man_install.html)	 - Install the stamp man page to system or user path
 

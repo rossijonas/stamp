@@ -1,3 +1,6 @@
+---
+---
+
 # Stamp: Project Vision & Value Proposition
 
 ## The Problem: The Workstation Setup Paradox

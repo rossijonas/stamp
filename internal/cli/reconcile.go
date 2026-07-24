@@ -15,8 +15,9 @@ func newReconcileCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "reconcile",
-		Short: "Detect packages installed outside stamp and add them to the manifest",
+		Use:     "reconcile",
+		Short:   "Detect packages installed outside stamp and add them to the manifest",
+		Example: "  stamp reconcile\n  stamp reconcile --dry-run\n  stamp reconcile -m dnf",
 		Long: `Compare the current system package state against the last snapshot.
 Any new packages found are auto-tracked to the manifest.
 Use --dry-run to preview drift without tracking.`,

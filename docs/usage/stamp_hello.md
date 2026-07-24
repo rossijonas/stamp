@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp hello
 
 Print welcome message and recommended next steps
@@ -22,5 +25,5 @@ stamp hello [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

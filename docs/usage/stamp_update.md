@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp update
 
 Run system upgrades across all package managers
@@ -10,6 +13,14 @@ Use -m to scope to a single package manager.
 
 ```
 stamp update [flags]
+```
+
+### Examples
+
+```
+  stamp update
+  stamp update -m apt
+  stamp upgrade
 ```
 
 ### Options
@@ -29,5 +40,5 @@ stamp update [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

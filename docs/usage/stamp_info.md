@@ -1,3 +1,6 @@
+---
+---
+
 ## stamp info
 
 Show package information across managers
@@ -10,6 +13,14 @@ If -m, --manager is specified, displays the native manager's full raw info block
 
 ```
 stamp info <package> [flags]
+```
+
+### Examples
+
+```
+  stamp info htop
+  stamp info -m brew lazygit
+  stamp info htop --json
 ```
 
 ### Options
@@ -29,5 +40,5 @@ stamp info <package> [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

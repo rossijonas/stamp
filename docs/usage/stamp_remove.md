@@ -1,9 +1,22 @@
+---
+---
+
 ## stamp remove
 
 Remove a package and untrack it
 
 ```
 stamp remove <package> [flags]
+```
+
+### Examples
+
+```
+  stamp remove htop
+  stamp remove -m brew lazygit
+  stamp uninstall htop
+  stamp rm htop
+  stamp delete htop
 ```
 
 ### Options
@@ -23,5 +36,5 @@ stamp remove <package> [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.md)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
 

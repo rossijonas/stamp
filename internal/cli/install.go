@@ -18,6 +18,7 @@ func newInstallCmd() *cobra.Command {
 		Use:     "install <package>",
 		Aliases: []string{"add"},
 		Short:   "Install a package and record intent",
+		Example: "  stamp install htop\n  stamp install spotify --manager flatpak\n  stamp add lazygit -m brew --note \"better git TUI\"",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
@@ -67,6 +68,7 @@ func newRemoveCmd() *cobra.Command {
 		Use:     "remove <package>",
 		Aliases: []string{"uninstall", "rm", "delete", "del"},
 		Short:   "Remove a package and untrack it",
+		Example: "  stamp remove htop\n  stamp remove -m brew lazygit\n  stamp uninstall htop\n  stamp rm htop\n  stamp delete htop",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
@@ -134,9 +136,10 @@ func newSearchCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:   "search <query>",
-		Short: "Search for packages across managers",
-		Args:  cobra.ExactArgs(1),
+		Use:     "search <query>",
+		Short:   "Search for packages across managers",
+		Example: "  stamp search htop\n  stamp search lazygit -m brew\n  stamp search ripgrep",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			query := args[0]
