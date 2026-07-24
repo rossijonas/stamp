@@ -27,4 +27,4 @@ bin/
 docs/man/
 _site/
 .bundle/
-vendor/bundle/
+vendor/

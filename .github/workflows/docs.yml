@@ -35,7 +35,7 @@ jobs:
           bundler-cache: true
 
       - name: Generate CLI docs
-        run: go run ./tools/docgen/
+        run: go run -mod=mod ./tools/docgen/
 
       - name: Build Jekyll site
         run: bundle exec jekyll build --source docs --destination docs/_site
