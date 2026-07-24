@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eo pipefail
+export HOMEBREW_NO_AUTO_UPDATE=1
 
 TIMEOUT=10
 # shellcheck disable=SC2034
@@ -12,12 +13,12 @@ pass_count=0
 pass() {
 	test_count=$((test_count + 1))
 	pass_count=$((pass_count + 1))
-	echo "  ✅ $1"
+	echo "  ✓ $1"
 }
 
 fail() {
 	test_count=$((test_count + 1))
-	echo "  ❌ $1"
+	echo "  ✗ $1"
 }
 
 check() {
@@ -27,7 +28,7 @@ check() {
 		pass "$desc"
 	else
 		exit_code=$?
-		echo "  ❌ $desc (exit=$exit_code)"
+		echo "  ✗ $desc (exit=$exit_code)"
 		# shellcheck disable=SC2001
 		echo "$out" | sed 's/^/      | /'
 		test_count=$((test_count + 1))
@@ -58,6 +59,8 @@ check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -
 
 echo "=== Flatpak ==="
 check "flatpak remote list" timeout $TIMEOUT stamp repo list -m flatpak
+echo "  • warming flatpak appstream cache..."
+timeout $TIMEOUT_LONG flatpak update --appstream 2>&1 || true
 check "flatpak search Calculator" timeout $TIMEOUT_LONG stamp search Calculator -m flatpak
 
 echo "=== JSON Output ==="

@@ -128,20 +128,20 @@ and man pages automatically. Use --check to query without downloading.`,
 				return fmt.Errorf("failed to replace binary: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ✅ Updated to %s\n", rel.TagName)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ✓ Updated to %s\n", rel.TagName)
 
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  Reinstalling shell completions...")
 			if err := runNewBinary(realExe, "completion"); err != nil {
 				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ completion install failed: %v\n", err)
 			} else {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✅ Completions updated")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✓ Completions updated")
 			}
 
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  Reinstalling man pages...")
 			if err := runNewBinary(realExe, "man", "install"); err != nil {
 				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ man page install failed: %v\n", err)
 			} else {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✅ Man pages updated")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✓ Man pages updated")
 			}
 
 			return nil

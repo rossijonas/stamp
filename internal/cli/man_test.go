@@ -67,7 +67,7 @@ func TestMan_Check_NotExist(t *testing.T) {
 
 	buf, err := execCmd(t, []string{"man", "check"}, []manager.Adapter{})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "❌ Man page not installed. Run 'stamp man install'")
+	assert.Contains(t, buf.String(), "✗ Man page not installed. Run 'stamp man install'")
 }
 
 func TestMan_Check_Success(t *testing.T) {
@@ -90,7 +90,7 @@ func TestMan_Check_Success(t *testing.T) {
 
 	buf, err := execCmd(t, []string{"man", "check"}, []manager.Adapter{})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "✅ Man page is up to date")
+	assert.Contains(t, buf.String(), "✓ Man page is up to date")
 }
 
 func TestMan_Check_Outdated(t *testing.T) {
@@ -111,7 +111,7 @@ func TestMan_Check_Outdated(t *testing.T) {
 
 	buf, err := execCmd(t, []string{"man", "check"}, []manager.Adapter{})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "⚠️ Man page is outdated")
+	assert.Contains(t, buf.String(), "⚠ Man page is outdated")
 	assert.Contains(t, buf.String(), "v0.1.0")
 	assert.Contains(t, buf.String(), Version)
 }

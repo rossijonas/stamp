@@ -29,7 +29,7 @@ stamp man [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful tool that wraps many package managers into one
 * [stamp man check](stamp_man_check.html)	 - Verify installed man page version matches current stamp version
 * [stamp man install](stamp_man_install.html)	 - Install the stamp man page to system or user path
 

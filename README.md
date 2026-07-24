@@ -6,7 +6,7 @@
   </picture>
 </p>
 
-<p align="center"><em>A lightweight yet powerful tool that wraps many package managers into one. Install, track, and restore without changing your tools.</em></p>
+<p align="center"><em>A lightweight yet powerful tool that wraps many package managers into one. Install, track, and restore without changing your tools. One manifest. One command to restore it all.</em></p>
 
 <p align="center">
   <a href="https://github.com/rossijonas/stamp/actions/workflows/ci.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -28,9 +28,9 @@
 
 ## ▪ Intro
 
-> ⚠️ **Active Development:** `stamp` is currently in the MVP phase of active development. Features are being delivered incrementally. For a complete look at our progress, check the [Implementation Plan](docs/IMPLEMENTATION_PLAN.md).
+> ⚠ **Active Development:** `stamp` is currently in the MVP phase of active development. Features are being delivered incrementally. For a complete look at our progress, check the [Implementation Plan](docs/IMPLEMENTATION_PLAN.md).
 
-Stamp is a lightweight yet powerful tool that wraps many package managers into one. Install, track, and restore without changing your tools. One manifest. One command to restore it all.
+A lightweight yet powerful tool that wraps many package managers into one. Install, track, and restore without changing your tools. One manifest. One command to restore it all.
 
 Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 

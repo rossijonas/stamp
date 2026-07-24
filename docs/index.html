@@ -20,6 +20,7 @@ title: Stamp
     <div class="install-tabs">
       <button class="active" data-tab="curl">curl</button>
       <button data-tab="go">go install</button>
+      <button data-tab="release">release</button>
       <button data-tab="source">source</button>
     </div>
     <div class="pane" id="tab-curl">
@@ -27,6 +28,10 @@ title: Stamp
     </div>
     <div class="pane" id="tab-go" style="display:none">
       <span class="prompt">$</span> go install github.com/rossijonas/stamp/cmd/stamp@latest
+    </div>
+    <div class="pane" id="tab-release" style="display:none">
+      <span class="prompt">$</span> curl -fsSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_linux_amd64.tar.gz | tar xz<br>
+      <span class="prompt">$</span> sudo mv stamp /usr/local/bin/
     </div>
     <div class="pane" id="tab-source" style="display:none">
       <span class="prompt">$</span> git clone https://github.com/rossijonas/stamp.git<br>
@@ -68,7 +73,7 @@ title: Stamp
       <span class="feature-icon">[&lt;]</span>
       <div>
         <h3>One-Command Restore</h3>
-        <p>Clone your dotfiles and run <code>stamp restore</code> to rebuild your entire environment on a new machine in minutes.</p>
+        <p>Drop your <code>manifest.toml</code> into <code>~/.config/stamp/</code> and run <code>stamp restore</code> to rebuild your entire environment on a new machine in minutes.</p>
       </div>
     </div>
     <div class="feature-item">
@@ -126,9 +131,9 @@ title: Stamp
 <span class="prompt">$</span> stamp reconcile              # auto-track changes</pre>
   </div>
 
-  <div class="usage-example">
+    <div class="usage-example">
     <h3>Restore on a new machine</h3>
-    <pre><span class="prompt">$</span> git clone ~/dotfiles
+    <pre><span class="prompt">$</span> cp manifest.toml ~/.config/stamp/   # copy your manifest to the stamp config dir
 <span class="prompt">$</span> stamp restore -y              # rebuild everything</pre>
   </div>
 

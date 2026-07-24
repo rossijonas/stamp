@@ -13,7 +13,7 @@ Stamp looks up the package in your manifest and uses the recorded manager.
 
 ```text
 ▪ removing htop via apt...
-✅ removed htop via apt
+✓ removed htop via apt
 ```
 
 ### Specify a manager

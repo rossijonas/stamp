@@ -15,6 +15,22 @@ curl -fsSL https://gostamp.dev/install | bash
 go install github.com/rossijonas/stamp/cmd/stamp@latest
 ```
 
+### GitHub Releases
+
+Download the pre-built binary for your platform from the latest release.
+
+```bash
+# Linux x86_64
+curl -fsSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_linux_amd64.tar.gz | tar xz
+sudo mv stamp /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -fsSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_darwin_arm64.tar.gz | tar xz
+sudo mv stamp /usr/local/bin/
+```
+
+Replace `linux_amd64` with `darwin_amd64` (Intel Mac) or `linux_arm64` (ARM Linux) as needed.
+
 ### From source
 
 ```bash

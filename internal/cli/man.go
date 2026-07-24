@@ -199,19 +199,19 @@ func newManCheckCmd() *cobra.Command {
 			}
 
 			if err != nil {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "❌ Error checking man page: %v\n", err)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "✗ Error checking man page: %v\n", err)
 				return nil
 			}
 
 			if installedPath == "" {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "❌ Man page not installed. Run 'stamp man install' to install.")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "✗ Man page not installed. Run 'stamp man install' to install.")
 				return nil
 			}
 
 			if status.matches {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "✅ Man page is up to date (%s)\n", status.version)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "✓ Man page is up to date (%s)\n", status.version)
 			} else {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠️ Man page is outdated (installed %s, current %s). Run 'stamp man install' to update.\n", status.version, Version)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠ Man page is outdated (installed %s, current %s). Run 'stamp man install' to update.\n", status.version, Version)
 			}
 
 			return nil

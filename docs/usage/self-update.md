@@ -12,7 +12,7 @@ stamp self-update
 ```text
 ▪ Checking for updates...
 ▪ Downloading stamp v0.21.0...
-✅ Updated to v0.21.0
+✓ Updated to v0.21.0
 ```
 
 ### Check only

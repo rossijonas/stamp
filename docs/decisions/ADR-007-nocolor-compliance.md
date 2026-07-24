@@ -43,8 +43,8 @@ if !app.noColor {
 TTY output:
 ```
 UNIX Compliance:
-  NO_COLOR: ✅ Set
-  NO_COLOR: ❌ Not set
+  NO_COLOR: ✓ Set
+  NO_COLOR: ✗ Not set
 ```
 
 JSON output:

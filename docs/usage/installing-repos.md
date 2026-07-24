@@ -11,7 +11,7 @@ stamp repo add ppa:git-core/ppa -m apt
 
 ```text
 ▪ adding repo ppa:git-core/ppa via apt...
-✅ added ppa:git-core/ppa via apt
+✓ added ppa:git-core/ppa via apt
 ```
 
 ### Add by URL
@@ -22,7 +22,7 @@ stamp repo add flathub https://dl.flathub.org/repo/flathub.flatpakrepo -m flatpa
 
 ```text
 ▪ adding repo flathub via flatpak...
-✅ added flathub via flatpak
+✓ added flathub via flatpak
 ```
 
 The `--manager` / `-m` flag is **required** for all repo operations.

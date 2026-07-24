@@ -41,5 +41,5 @@ stamp list [flags]
 
 ### SEE ALSO
 
-* [stamp](stamp.html)	 - A lightweight yet powerful wrapper for your native package managers
+* [stamp](stamp.html)	 - A lightweight yet powerful tool that wraps many package managers into one
 

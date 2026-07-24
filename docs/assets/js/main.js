@@ -17,6 +17,16 @@
     });
   }
 
+  // Mobile nav toggle
+  var navToggle = document.querySelector('.nav-toggle');
+  if (navToggle) {
+    navToggle.addEventListener('click', function() {
+      document.querySelector('.site-header').classList.toggle('nav-open');
+      var expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !expanded);
+    });
+  }
+
   // Sidebar accordion
   document.querySelectorAll('.accordion-toggle').forEach(function(toggle) {
     toggle.addEventListener('click', function() {

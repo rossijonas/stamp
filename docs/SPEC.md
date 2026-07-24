@@ -149,6 +149,14 @@ Detailed specifications, execution behaviors, and business rules for every subco
   - `-y` skips all prompts, runs everything
 - **TTY Output Example (interactive):**
   ```text
+         █▄
+        ▄██▄      ▄
+   ▄██▀█ ██ ▄▀▀█▄ ███▄███▄ ████▄
+   ▀███▄ ██ ▄█▀██ ██ ██ ██ ██ ██
+  █▄▄██▀▄██▄▀█▄██▄██ ██ ▀█▄████▀
+                           ██
+                           ▀
+
   ▪ Stamp Setup Wizard
 
   Step 1 of 4: Shell Completions
@@ -156,12 +164,20 @@ Detailed specifications, execution behaviors, and business rules for every subco
   ```
 - **TTY Output Example (auto-accept):**
   ```text
+         █▄
+        ▄██▄      ▄
+   ▄██▀█ ██ ▄▀▀█▄ ███▄███▄ ████▄
+   ▀███▄ ██ ▄█▀██ ██ ██ ██ ██ ██
+  █▄▄██▀▄██▄▀█▄██▄██ ██ ▀█▄████▀
+                           ██
+                           ▀
+
   ▪ Stamp Setup Wizard (auto-accept)
 
-    Step 1: Shell Completions...  ✅
-    Step 2: Man Pages...          ✅
-    Step 3: Initialize...         ✅
-    Step 4: System Diagnosis...   ✅
+    Step 1: Shell Completions...  ✓
+    Step 2: Man Pages...          ✓
+    Step 3: Initialize...         ✓
+    Step 4: System Diagnosis...   ✓
 
   ▪ Setup complete!
   ```
@@ -259,15 +275,15 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **UNIX Compliance TTY section:**
   ```text
   UNIX Compliance:
-  NO_COLOR: ✅ Set
-  Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
-  Completions: ❌ Not installed — run 'stamp completion'
+  NO_COLOR: ✓ Set
+  Man Page: ⚠ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
+  Completions: ✗ Not installed — run 'stamp completion'
   ```
 - **UNIX Compliance TTY section:**
   ```text
   UNIX Compliance:
-    NO_COLOR: ✅ Set
-    Man Page: ⚠️ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
+    NO_COLOR: ✓ Set
+    Man Page: ⚠ Outdated (man v1.1.0, binary v1.2.3) — run 'stamp man install'
   ```
 
 ### `stamp update` (alias `upgrade`)
