@@ -1,0 +1,70 @@
+---
+layout: default
+---
+<div class="docs-wrapper">
+  <aside class="docs-sidebar">
+  <button class="accordion-toggle" aria-expanded="true">Getting Started</button>
+  <div class="accordion-body" style="display: block;">
+    <a href="{{ '/getting-started/' | relative_url }}">Intro</a>
+    <a href="{{ '/getting-started/installation.html' | relative_url }}">Installation</a>
+
+  </div>
+  <button class="accordion-toggle" aria-expanded="false">Usage</button>
+  <div class="accordion-body">
+    <a href="{{ '/usage/' | relative_url }}">Overview</a>
+    <a href="{{ '/usage/setup.html' | relative_url }}">Setup</a>
+    <a href="{{ '/usage/configuration.html' | relative_url }}">Configuration</a>
+    <a href="{{ '/usage/installing-packages.html' | relative_url }}">Installing Packages</a>
+    <a href="{{ '/usage/installing-repos.html' | relative_url }}">Installing Repos</a>
+    <a href="{{ '/usage/removing-packages.html' | relative_url }}">Removing Packages</a>
+    <a href="{{ '/usage/listing-packages.html' | relative_url }}">Listing Packages</a>
+    <a href="{{ '/usage/removing-repos.html' | relative_url }}">Removing Repos</a>
+    <a href="{{ '/usage/reconcile.html' | relative_url }}">Reconcile</a>
+    <a href="{{ '/usage/restore.html' | relative_url }}">Restore</a>
+    <a href="{{ '/usage/update.html' | relative_url }}">Update</a>
+    <a href="{{ '/usage/self-update.html' | relative_url }}">Self-Update</a>
+
+  </div>
+  <button class="accordion-toggle" aria-expanded="false">CLI Reference</button>
+  <div class="accordion-body">
+    <a href="{{ '/usage/stamp.html' | relative_url }}">stamp</a>
+    <a href="{{ '/usage/stamp_completion.html' | relative_url }}">completion</a>
+    <a href="{{ '/usage/stamp_doctor.html' | relative_url }}">doctor</a>
+    <a href="{{ '/usage/stamp_info.html' | relative_url }}">info</a>
+    <a href="{{ '/usage/stamp_init.html' | relative_url }}">init</a>
+    <a href="{{ '/usage/stamp_install.html' | relative_url }}">install</a>
+    <a href="{{ '/usage/stamp_list.html' | relative_url }}">list</a>
+    <a href="{{ '/usage/stamp_man.html' | relative_url }}">man</a>
+    <a href="{{ '/usage/stamp_reconcile.html' | relative_url }}">reconcile</a>
+    <a href="{{ '/usage/stamp_reinstall.html' | relative_url }}">reinstall</a>
+    <a href="{{ '/usage/stamp_remove.html' | relative_url }}">remove</a>
+    <a href="{{ '/usage/stamp_repo.html' | relative_url }}">repo</a>
+    <a href="{{ '/usage/stamp_restore.html' | relative_url }}">restore</a>
+    <a href="{{ '/usage/stamp_search.html' | relative_url }}">search</a>
+    <a href="{{ '/usage/stamp_self-update.html' | relative_url }}">self-update</a>
+    <a href="{{ '/usage/stamp_setup.html' | relative_url }}">setup</a>
+    <a href="{{ '/usage/stamp_update.html' | relative_url }}">update</a>
+
+  </div>
+  <button class="accordion-toggle" aria-expanded="false">History</button>
+  <div class="accordion-body">
+    <a href="{{ '/VISION.html' | relative_url }}">Vision</a>
+    <a href="{{ '/SPEC.html' | relative_url }}">Specification</a>
+    <a href="{{ '/FEATURE_MATRIX.html' | relative_url }}">Feature Matrix</a>
+    <a href="{{ '/INTEGRATION_TEST_COVERAGE.html' | relative_url }}">Test Coverage</a>
+    <a href="{{ '/IMPLEMENTATION_PLAN.html' | relative_url }}">Implementation Plan</a>
+    <a href="{{ '/history/os-manager-matrix.html' | relative_url }}">OS × Manager Matrix</a>
+    <a href="{{ '/decisions/' | relative_url }}">Architecture Decisions</a>
+
+  </div>
+  <button class="accordion-toggle" aria-expanded="false">Community</button>
+  <div class="accordion-body">
+    <a href="https://github.com/rossijonas/stamp/blob/main/CONTRIBUTING.md">Contributing</a>
+    <a href="https://github.com/rossijonas/stamp/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a>
+    <a href="https://github.com/rossijonas/stamp/blob/main/LICENSE">License</a>
+    <a href="https://github.com/rossijonas/stamp">GitHub</a>
+  </aside>
+  <main class="docs-content">
+    {{ content }}
+  </main>
+</div>

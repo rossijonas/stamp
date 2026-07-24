@@ -1,0 +1,155 @@
+---
+layout: default
+title: Stamp
+---
+
+<section class="hero">
+  <div class="logo-main">
+    <img class="logo-dark" src="{{ '/media/stamp-logo-white-nobkg-exp_2.svg' | relative_url }}" alt="Stamp" width="280">
+    <img class="logo-light" src="{{ '/media/stamp-logo-black-nobkg-exp_2.svg' | relative_url }}" alt="Stamp" width="280">
+  </div>
+  <div class="tagline">
+    <p class="tagline-main">A lightweight yet powerful tool that wraps many package managers into one.</p>
+    <p class="tagline-sub">Install, track, and restore without changing your tools.</p>
+    <p class="tagline-sub">One manifest. One command to restore it all.</p>
+  </div>
+
+  <p class="dev-notice"><span class="dev-warn">&#9888;</span> Stamp is currently in the MVP phase of active development. Features are being delivered incrementally. For a complete look at our progress, check the <a href="{{ '/IMPLEMENTATION_PLAN.html' | relative_url }}">implementation plan</a>.</p>
+
+  <div class="install-block">
+    <div class="install-tabs">
+      <button class="active" data-tab="curl">curl</button>
+      <button data-tab="go">go install</button>
+      <button data-tab="source">source</button>
+    </div>
+    <div class="pane" id="tab-curl">
+      <span class="prompt">$</span> curl -fsSL https://gostamp.dev/install | bash
+    </div>
+    <div class="pane" id="tab-go" style="display:none">
+      <span class="prompt">$</span> go install github.com/rossijonas/stamp/cmd/stamp@latest
+    </div>
+    <div class="pane" id="tab-source" style="display:none">
+      <span class="prompt">$</span> git clone https://github.com/rossijonas/stamp.git<br>
+      <span class="prompt">$</span> cd stamp && go build -o bin/stamp ./cmd/stamp<br>
+      <span class="prompt">$</span> sudo cp bin/stamp /usr/local/bin/
+    </div>
+  </div>
+
+  <p style="text-align: center; margin-top: 1.5rem;">
+    <a href="{{ '/getting-started/installation.html' | relative_url }}" class="usage-link">Explore installation methods →</a>
+  </p>
+</section>
+
+<section class="features" id="features">
+  <h2>Features</h2>
+  <div class="feature-list">
+    <div class="feature-item">
+      <span class="feature-icon">[&gt;]</span>
+      <div>
+        <h3>Multi-Manager Wrapper</h3>
+        <p>Install, search, and remove packages across DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, and MacPorts &mdash; plus language toolchains (<code>go</code>, <code>cargo</code>, <code>pipx</code>, <code>npm</code>) &mdash; through a single CLI.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[+]</span>
+      <div>
+        <h3>Cross-Platform</h3>
+        <p>Works on <strong>Linux</strong> &amp; <strong>macOS</strong> today. <strong>Windows</strong> support is planned.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[*]</span>
+      <div>
+        <h3>Automatic Intent Tracking</h3>
+        <p>Every install is recorded in a portable <code>manifest.toml</code>. Only your intentional choices, not dependency noise.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[&lt;]</span>
+      <div>
+        <h3>One-Command Restore</h3>
+        <p>Clone your dotfiles and run <code>stamp restore</code> to rebuild your entire environment on a new machine in minutes.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[/]</span>
+      <div>
+        <h3>Safety Net Reconciliation</h3>
+        <p>Forgot to use stamp? <code>stamp reconcile</code> detects packages installed outside the tool and tracks them automatically.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[#]</span>
+      <div>
+        <h3>Unified Repository Management</h3>
+        <p>Add, remove, and list third-party repositories &mdash; PPAs, taps, remotes &mdash; across all managers with the same interface.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[?]</span>
+      <div>
+        <h3>Self-Contained Docs</h3>
+        <p>Built-in man pages (<code>stamp man install</code>), shell completions, and auto-generated CLI reference docs.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[!]</span>
+      <div>
+        <h3>Context Preservation</h3>
+        <p>Add <code>--note</code> to any install so you remember <em>why</em> you needed a package six months later.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[$]</span>
+      <div>
+        <h3>UNIX Compliant</h3>
+        <p>XDG Base Directory, NO_COLOR support, strict stdout/stderr separation, and TTY-aware sudo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="usage" id="usage">
+  <h2>Usage</h2>
+
+  <div class="usage-example">
+    <h3>Install and track</h3>
+    <pre><span class="prompt">$</span> stamp install htop
+<span class="prompt">$</span> stamp install spotify --manager flatpak
+<span class="prompt">$</span> stamp add lazygit -m brew --note "better git TUI"</pre>
+  </div>
+
+  <div class="usage-example">
+    <h3>Detect drift and reconcile</h3>
+    <pre><span class="prompt">$</span> sudo dnf install ripgrep
+<span class="prompt">$</span> stamp reconcile --dry-run   # preview drift
+<span class="prompt">$</span> stamp reconcile              # auto-track changes</pre>
+  </div>
+
+  <div class="usage-example">
+    <h3>Restore on a new machine</h3>
+    <pre><span class="prompt">$</span> git clone ~/dotfiles
+<span class="prompt">$</span> stamp restore -y              # rebuild everything</pre>
+  </div>
+
+  <div class="usage-example">
+    <h3>Keep everything fresh</h3>
+    <pre><span class="prompt">$</span> stamp update                   # update all managers
+<span class="prompt">$</span> stamp self-update              # update stamp itself</pre>
+  </div>
+
+  <p style="text-align: center; margin-top: 2.5rem;">
+    <a href="{{ '/usage/' | relative_url }}" class="usage-link">Explore all usage guides →</a>
+  </p>
+</section>
+
+<script>
+document.querySelectorAll('.install-tabs button').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.install-tabs button').forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    document.querySelectorAll('.install-block .pane').forEach(function(c) { c.style.display = 'none'; });
+    document.getElementById('tab-' + this.dataset.tab).style.display = 'block';
+  });
+});
+</script>
