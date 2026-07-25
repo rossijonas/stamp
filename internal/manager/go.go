@@ -240,7 +240,7 @@ func (m *Go) RemoveRepo(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported for go")
 }
 
-// ListRepos returns an error since go has no concept of repositories.
+// ListRepos returns an empty list since go has no concept of repositories.
 func (m *Go) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
-	return nil, fmt.Errorf("not supported for go")
+	return nil, nil
 }

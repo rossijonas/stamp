@@ -404,8 +404,11 @@ follows the `pipx` model — installing user-facing tools, not project dependenc
 - Module paths are stored in the manifest and snapshot — enabling round-trip remove/info.
 
 ### Search / Doctor / Repos
-- All three return errors (`not supported`). Search errors are printed as warnings to
-  stderr; valid results from other managers remain on stdout.
+- Search and Doctor return errors (`not supported`). Search errors are printed as warnings
+  to stderr; valid results from other managers remain on stdout.
+- `ListRepos` returns an empty list (no error) — adapters without repo support signal
+  "no repos available" rather than failing the snapshot pipeline.
+- `AddRepo`/`RemoveRepo` return errors (`not supported`) — these are user-facing write ops.
 
 ### Update
 - Single package (`-p <module> -m go`): runs `go install <module>@latest`.

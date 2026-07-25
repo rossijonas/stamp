@@ -146,7 +146,7 @@ func TestPacman_Operations(t *testing.T) {
 		{
 			name:        "list repos not supported",
 			operation:   "listrepos",
-			expectedErr: true,
+			expectedErr: false,
 		},
 	}
 
@@ -224,8 +224,13 @@ func TestPacman_Operations(t *testing.T) {
 				err = manager.RemoveRepo(ctx, "repo")
 				require.Error(t, err)
 			case "listrepos":
-				_, err = manager.ListRepos(ctx)
-				require.Error(t, err)
+				res, err := manager.ListRepos(ctx)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+					assert.Empty(t, res)
+				}
 			}
 		})
 	}

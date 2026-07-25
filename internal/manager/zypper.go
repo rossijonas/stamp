@@ -152,9 +152,9 @@ func (m *Zypper) RemoveRepo(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported for zypper")
 }
 
-// ListRepos returns an error since repo management is not supported for zypper.
+// ListRepos returns an empty list until native zypper repo listing is implemented (ADR-008).
 func (m *Zypper) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
-	return nil, fmt.Errorf("not supported for zypper")
+	return nil, nil
 }
 
 var _ Adapter = (*Zypper)(nil)

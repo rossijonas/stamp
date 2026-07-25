@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"io"
+
+	"github.com/rossijonas/stamp/internal/state"
 )
 
 func renderNoBaselineDryRun(w io.Writer) {
@@ -38,4 +40,13 @@ func renderDryRunHint(w io.Writer) {
 
 func renderTrackedSummary(w io.Writer, pkgCount, repoCount int) {
 	_, _ = fmt.Fprintf(w, "Tracked %d package(s), %d repository(ies)\n", pkgCount, repoCount)
+}
+
+// printSnapshotWarnings prints non-fatal warnings from the snapshot pipeline to stderr/writer.
+func printSnapshotWarnings(w io.Writer, snaps []state.Snapshot) {
+	for _, s := range snaps {
+		for _, warn := range s.Warnings {
+			_, _ = fmt.Fprintf(w, "warning: %s: %s\n", s.Manager, warn)
+		}
+	}
 }

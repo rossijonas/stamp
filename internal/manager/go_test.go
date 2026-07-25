@@ -269,9 +269,9 @@ func TestGo_UnsupportedOperations(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not supported")
 
-	_, err = mgr.ListRepos(ctx)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not supported")
+	repos, err := mgr.ListRepos(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, repos)
 }
 
 func TestGo_GoBinDir_Cache(t *testing.T) {

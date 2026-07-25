@@ -50,6 +50,7 @@ Use --dry-run to preview drift without tracking.`,
 			if err != nil {
 				return fmt.Errorf("failed to fetch current package state: %w", err)
 			}
+			printSnapshotWarnings(cmd.ErrOrStderr(), currentSnaps)
 
 			if len(oldSnaps) == 0 {
 				if dryRun {
