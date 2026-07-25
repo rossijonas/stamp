@@ -20,6 +20,7 @@ stamp [flags]
 
 ### SEE ALSO
 
+* [stamp auto-reconcile](stamp_auto-reconcile.html)	 - Manage automated reconcile timer
 * [stamp completion](stamp_completion.html)	 - Generate and install shell completion script
 * [stamp doctor](stamp_doctor.html)	 - Diagnose system configuration and manifest health
 * [stamp info](stamp_info.html)	 - Show package information across managers

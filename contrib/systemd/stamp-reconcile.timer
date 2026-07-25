@@ -1,5 +1,6 @@
 [Unit]
-Description=Run stamp reconcile daily
+Description=Stamp auto-reconcile timer
+Documentation=https://gostamp.dev
 
 [Timer]
 OnCalendar=daily

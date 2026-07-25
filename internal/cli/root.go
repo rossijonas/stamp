@@ -247,6 +247,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newManCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newSelfUpdateCmd())
+	root.AddCommand(newAutoReconcileCmd())
 
 	return root
 }
