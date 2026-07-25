@@ -414,7 +414,7 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 
 - **Always use stamp (recommended):** The edge case never occurs if packages are managed through stamp (`stamp install`/`stamp remove`). Stamp records every install and removal in the manifest instantly — no snapshot diffing involved.
 - **Regular reconciliation:** If using native commands directly, remember to run `stamp reconcile` after each uninstall operation to keep snapshots in sync.
-- **Automated timer:** `stamp auto-reconcile on` (planned) installs a daily systemd/launchd timer.
+- **Automated timer:** `stamp auto-reconcile on` installs a daily systemd/launchd timer.
 - **Manual timer files:** Pre-configured service/timer files available in `contrib/`.
 
 ## UNIX Compliance & Documentation Strategy
@@ -458,4 +458,4 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 25. **Reinstall (Adapters):** `adapter.Reinstall()` executes the native reinstall command for each manager (brew reinstall, dnf reinstall, flatpak install).
 26. **Reconcile (Snapshot Save on No Drift):** If reconcile detects no drift, the current snapshot is saved to disk so future package removals are tracked correctly.
 27. **Update:** `stamp update` runs native upgrade commands for all available managers concurrently. Errors from one manager don't block others. `--manager` flag scopes to a single manager. Non-zero exit if any manager fails.
-27. **Auto-Reconcile (Planned):** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.
+27. **Auto-Reconcile:** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.

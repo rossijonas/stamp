@@ -271,7 +271,7 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 *   **Depends on:** Task 27
 *   **Status:** ✓ Completed
 
-**Task 30: `stamp auto-reconcile` Command**
+**Task 30: `stamp auto-reconcile` Command** ✓
 *   **Description:** Implement a subcommand to install or remove automated reconcile timers.
 
 **Task 33: Docker-Based Integration Testing**
@@ -342,7 +342,7 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✓ |
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✓ |
 | 6 | 29 | Flag and Compliance Updates | ✓ |
-| 6 | 30 | `stamp auto-reconcile` Command | ~ Pending |
+| 6 | 30 | `stamp auto-reconcile` Command | ✓ |
 | 4 | 32 | APT package manager adapter (#46) | ✓ |
 | 4 | 33 | Docker-based integration testing | ✓ |
 | 4 | 34 | Post-release integration CI pipelines (ubuntu/debian/fedora) | ✓ |

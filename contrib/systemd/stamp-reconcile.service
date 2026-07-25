@@ -1,6 +1,7 @@
 [Unit]
-Description=Stamp package drift reconciliation
+Description=Stamp auto-reconcile
+Documentation=https://gostamp.dev
 
 [Service]
-ExecStart=%h/.local/bin/stamp reconcile
 Type=oneshot
+ExecStart=/usr/local/bin/stamp reconcile

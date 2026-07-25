@@ -41,7 +41,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp update` | `upgrade` | ✓ | ✓ | ✓ errgroup concurrency + --manager + --package + --serial flags | ✓ Complete |
 | `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 | `stamp self-update` | `self-upgrade` | ✓ | ✓ | ✓ Atomic binary replacement + SHA-256 verification + post-update hooks | ✓ Complete |
-| `stamp auto-reconcile on\|off` | | ✓ | ✗ | ✗ | ~ Pending |
+| `stamp auto-reconcile on\|off` | | ✓ | ✓ | ✓ systemd/launchd timer, --period flag | ✓ Complete |
 
 ## Repository Commands
 
@@ -91,7 +91,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp update` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 | `stamp update` | `--package <pkg>` | `-p` | ✓ | ✓ | ✓ Complete |
 | `stamp update` | `--serial` | `-s` | ✓ | ✓ | ✓ Complete |
-| `stamp auto-reconcile` | `--period <interval>` | `-p` | ✓ | ✗ | ~ Pending |
+| `stamp auto-reconcile` | `--period <interval>` | `-p` | ✓ | ✓ | ✓ Complete |
 | `stamp list` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 
 ## UNIX Compliance
@@ -153,4 +153,4 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✓ |
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✓ |
 | 6 | 29 | Flag and Compliance Updates | ✓ |
-| 6 | 30 | `stamp auto-reconcile` Command | ~ Pending |
+| 6 | 30 | `stamp auto-reconcile` Command | ✓ |
