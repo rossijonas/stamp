@@ -72,6 +72,20 @@ Already up-to-date.
 ✓ updated packages via brew
 ```
 
+### Python tools (pipx / uv)
+
+```bash
+stamp update -m pipx
+```
+
+Runs `pipx upgrade-all` to upgrade all pipx-installed tools.
+
+```bash
+stamp update -m uv
+```
+
+Runs `uv tool upgrade --all` to upgrade all uv-managed tools.
+
 ### Go tools
 
 Batch update (`stamp update` without flags) reinstalls all go tools whose module path

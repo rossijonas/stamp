@@ -36,7 +36,7 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 ### Features
 
-**`[>]` Multi-Manager Wrapper** — Install, search, and remove packages across DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, and MacPorts &mdash; plus the `go` language toolchain &mdash; through a single CLI.
+**`[>]` Multi-Manager Wrapper** — Install, search, and remove packages across DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, and MacPorts &mdash; plus `pipx`, `uv`, and `go` language-specific package managers &mdash; through a single CLI.
 
 **`[+]` Cross-Platform** — Works on **Linux** &amp; **macOS** today. **Windows** support is planned.
 

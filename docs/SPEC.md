@@ -421,6 +421,40 @@ follows the `pipx` model — installing user-facing tools, not project dependenc
   joined with `/bin`).
 - Falls back to `$HOME/go/bin`.
 
+## Pipx Adapter
+
+The Pipx adapter supports `pipx install` for CLI tools from the Python ecosystem.
+
+### Package Names
+- Uses standard `ValidatePackageName` (simple names like `black`, `httpie`).
+- Names starting with `-` are rejected. Shell metacharacters rejected.
+
+### ListInstalled
+- Tries `pipx list --json` first (parses the `venvs` JSON object for package names).
+- Falls back to `pipx list` text parsing for older pipx installations.
+
+### Search / Doctor / Repos
+- Search and Doctor return errors. Repo operations: `AddRepo`/`RemoveRepo` error; `ListRepos` returns empty list.
+
+### Update
+- Single: `pipx upgrade <pkg>`. Batch: `pipx upgrade-all`.
+
+## Uv Adapter
+
+The Uv adapter supports `uv tool install` for CLI tools from the Python ecosystem.
+
+### Package Names
+- Uses standard `ValidatePackageName`. Simple names like `black`, `ruff`.
+
+### ListInstalled
+- Parses `uv tool list` output line-by-line. Package names are the first token on each non-indented line.
+
+### Search / Doctor / Repos
+- All return errors or empty (same pattern as pipx).
+
+### Update
+- Single: `uv tool upgrade <pkg>`. Batch: `uv tool upgrade --all`.
+
 ## Boundaries
 
 - **Always:** Use `context.Context` for all shell executions (`os/exec`).

@@ -63,6 +63,21 @@ For pre-existing packages (installed before `stamp init`), reinstall resolves th
 
 Stamp validates package names to prevent shell injection. Names must start with a letter, number, or underscore, and contain only safe characters (`a-zA-Z0-9_-.+`). Names starting with `-` are rejected.
 
+### Python tools (pipx)
+
+```bash
+stamp install black -m pipx
+```
+
+Installs Python CLI tools via `pipx install --yes <pkg>`. Requires `pipx` on PATH.
+
+```bash
+stamp install ruff -m uv
+```
+
+Alternatively, use `uv` (faster) via `uv tool install <pkg>`. Both adapters
+are independent — you can have both installed on the same system.
+
 ### Go tools
 
 ```bash

@@ -17,6 +17,8 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | Zypper | ✓ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
 | Pacman | ✓ Complete | All except repo mgmt | Arch Linux, sudo for write ops |
 | MacPorts | ✓ Complete | All except repo mgmt | macOS, sudo for write ops |
+| Pipx | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | pip-installable CLI tools, --yes for non-interactive, JSON listing with text fallback, no search/doctor/repo support |
+| Uv | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | Rust-based Python tool manager (uv tool subcommand), --force for reinstall, no search/doctor/repo support |
 | Go | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | go install with module path validation, no search/doctor/repo support, ListInstalled recovers module paths via binary metadata, batch update reinstalls recoverable paths, binary-name fallback for unrecoverable |
 
 ## CLI Commands
