@@ -14,6 +14,12 @@ Stops the active timer and deletes the timer files.
 stamp auto-reconcile off [flags]
 ```
 
+### Examples
+
+```
+  stamp auto-reconcile off
+```
+
 ### Options
 
 ```

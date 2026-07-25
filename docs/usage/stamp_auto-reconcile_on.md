@@ -16,6 +16,14 @@ On macOS: creates a launchd agent.
 stamp auto-reconcile on [flags]
 ```
 
+### Examples
+
+```
+  stamp auto-reconcile on
+  stamp auto-reconcile on --period hourly
+  stamp auto-reconcile on -p weekly
+```
+
 ### Options
 
 ```

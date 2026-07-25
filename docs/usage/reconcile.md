@@ -59,3 +59,23 @@ Limits drift detection to a single manager.
 4. Drift is auto-tracked into the manifest (or printed with `--dry-run`)
 
 Reconcile is fully deterministic — no prompts, no decisions. It's the safety net for when you forget to use Stamp.
+
+## Automated Reconcile
+
+Run reconcile automatically on a schedule so you never miss drift:
+
+```bash
+stamp auto-reconcile on                    # enable daily timer
+stamp auto-reconcile on --period hourly    # check every hour
+stamp auto-reconcile on -p weekly          # check once a week
+stamp auto-reconcile off                   # disable timer
+```
+
+### Platform support
+
+| OS | Timer system | Activation |
+|----|-------------|------------|
+| Linux | systemd user timer | `systemctl --user enable --now stamp-reconcile.timer` |
+| macOS | launchd agent | `launchctl load ~/Library/LaunchAgents/dev.gostamp.stamp-reconcile.plist` |
+
+The timer runs `stamp reconcile` at the configured interval and logs output to `/tmp/stamp-reconcile.log`. If your system doesn't support automatic timers (e.g., containers without systemd), you can install the timer files manually from the `contrib/` directory.
