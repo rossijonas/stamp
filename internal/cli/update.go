@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"sync"
 
@@ -19,17 +21,34 @@ func needsSudo(adapters []manager.Adapter) bool {
 	return false
 }
 
+func runUpdate(ctx context.Context, w io.Writer, a manager.Adapter, pkg string, prefix string) bool {
+	ctx = manager.WithOutputPrefix(ctx, prefix)
+	if err := a.Update(ctx, pkg); err != nil {
+		_, _ = fmt.Fprintf(w, "⚠ update failed for %s: %v\n", a.Name(), err)
+		return false
+	}
+	if pkg != "" {
+		_, _ = fmt.Fprintf(w, "updated %s via %s\n", pkg, a.Name())
+	} else {
+		_, _ = fmt.Fprintf(w, "updated packages via %s\n", a.Name())
+	}
+	return true
+}
+
 func newUpdateCmd() *cobra.Command {
-	var managerFlag string
+	var managerFlag, packageFlag string
+	var serial bool
 
 	cmd := &cobra.Command{
 		Use:     "update",
 		Aliases: []string{"upgrade"},
 		Short:   "Run system upgrades across all package managers",
-		Example: "  stamp update\n  stamp update -m apt\n  stamp upgrade",
+		Example: "  stamp update\n  stamp update -m apt\n  stamp update -p htop -m brew\n  stamp update --serial\n  stamp upgrade",
 		Long: `Run system upgrade commands for each available package manager.
 Updates and upgrades all packages to their latest versions.
-Use -m to scope to a single package manager.`,
+Use -m to scope to a single package manager.
+Use -p to update a single package (requires -m).
+Use --serial to run updates one manager at a time (default: parallel).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
@@ -50,6 +69,15 @@ Use -m to scope to a single package manager.`,
 				}
 			}
 
+			if packageFlag != "" {
+				if managerFlag == "" {
+					return fmt.Errorf("specify --manager to update a specific package")
+				}
+				if err := manager.ValidatePackageName(packageFlag); err != nil {
+					return err
+				}
+			}
+
 			if len(adapters) == 0 {
 				return fmt.Errorf("no package managers available")
 			}
@@ -67,26 +95,30 @@ Use -m to scope to a single package manager.`,
 
 			var hasErr bool
 			var mu sync.Mutex
-			var wg sync.WaitGroup
 
-			for _, a := range adapters {
-				a := a
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					ctx := manager.WithOutputPrefix(cmd.Context(), "["+a.Name()+"] ")
-					if err := a.Update(ctx); err != nil {
-						_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠ update failed for %s: %v\n", a.Name(), err)
-						mu.Lock()
+			if serial {
+				for _, a := range adapters {
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "▪ updating via %s...\n", a.Name())
+					if !runUpdate(cmd.Context(), cmd.ErrOrStderr(), a, packageFlag, "") {
 						hasErr = true
-						mu.Unlock()
-						return
 					}
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "updated packages via %s\n", a.Name())
-				}()
+				}
+			} else {
+				var wg sync.WaitGroup
+				for _, a := range adapters {
+					a := a
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						if !runUpdate(cmd.Context(), cmd.ErrOrStderr(), a, packageFlag, "["+a.Name()+"] ") {
+							mu.Lock()
+							hasErr = true
+							mu.Unlock()
+						}
+					}()
+				}
+				wg.Wait()
 			}
-
-			wg.Wait()
 
 			if hasErr {
 				return fmt.Errorf("one or more managers failed to update")
@@ -96,5 +128,7 @@ Use -m to scope to a single package manager.`,
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to update")
+	cmd.Flags().StringVarP(&packageFlag, "package", "p", "", "update a single package (requires --manager)")
+	cmd.Flags().BoolVarP(&serial, "serial", "s", false, "run updates one at a time (sequential)")
 	return cmd
 }

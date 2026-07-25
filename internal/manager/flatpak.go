@@ -188,8 +188,15 @@ func (m *Flatpak) Doctor(_ context.Context) (string, error) {
 }
 
 // Update runs the native flatpak update command.
-func (m *Flatpak) Update(ctx context.Context) error {
-	_, err := m.exec(WithStreamIO(ctx), "flatpak", "update", "-y")
+func (m *Flatpak) Update(ctx context.Context, pkg string) error {
+	args := []string{"update", "-y"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return err
+		}
+		args = append(args, pkg)
+	}
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", args...)
 	if err != nil {
 		return fmt.Errorf("failed to update flatpak: %w", err)
 	}

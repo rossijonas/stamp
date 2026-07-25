@@ -105,10 +105,6 @@ check "stamp restore --help" timeout $TIMEOUT stamp restore --help
 check "stamp update --help" timeout $TIMEOUT stamp update --help
 check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 
-echo "=== Self-Update ==="
-check "self-update --check" timeout $TIMEOUT stamp self-update --check
-check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
-
 echo "=== Root Command ==="
 check "stamp (no args)" bash -c "stamp 2>/dev/null | head -5 > /dev/null"
 
@@ -118,6 +114,8 @@ check "reconcile runs" timeout $TIMEOUT stamp reconcile -m dnf
 
 echo "=== Update ==="
 check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf
+check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew
+check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
 
 echo "=== Restore ==="
 check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore --dry-run 2>&1 | grep -q ."

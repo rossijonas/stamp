@@ -182,7 +182,7 @@ func (m *Mock) Doctor(_ context.Context) (string, error) {
 }
 
 // Update runs mock update — succeeds unless UpdateErr is set.
-func (m *Mock) Update(_ context.Context) error {
+func (m *Mock) Update(_ context.Context, _ string) error {
 	if m.UpdateErr != nil {
 		return m.UpdateErr
 	}

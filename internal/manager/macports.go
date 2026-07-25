@@ -146,7 +146,19 @@ func (m *MacPorts) Doctor(_ context.Context) (string, error) {
 }
 
 // Update runs selfupdate then upgrades outdated ports.
-func (m *MacPorts) Update(ctx context.Context) error {
+func (m *MacPorts) Update(ctx context.Context, pkg string) error {
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return err
+		}
+		args := sudoCmd("port", "upgrade", pkg)
+		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade %s: %w", pkg, err)
+		}
+		return nil
+	}
+
 	args := sudoCmd("port", "selfupdate")
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {

@@ -45,7 +45,7 @@ The complete surface area of the CLI, including aliases and flags.
 | `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. |
 | `stamp reconcile` | | `--dry-run, -d`, `--manager, -m <name>` | Detects drift since last snapshot and auto-tracks discovered packages and repositories. |
 | `stamp restore` | | `--dry-run, -d`, `--manager, -m <name>` | Reinstalls repos and packages on a new machine. |
-| `stamp update` | `upgrade` | `--manager, -m <name>` | Runs system upgrades across all managers in parallel. |
+| `stamp update` | `upgrade` | `--manager, -m <name>`, `--package, -p <pkg>`, `--serial, -s` | Runs system upgrades across all managers. Parallel by default. Use `-s` for serial, `-p` for single-package. |
 | `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>` | Lists all intentionally installed packages. |
 | `stamp doctor` | | `--json, -j`, `--manager, -m <name>` | Checks manager availability, manifest integrity, and UNIX compliance. |
 | `stamp self-update` | `self-upgrade` | `--check, -c` | Checks for and installs the latest version of `stamp`. |
@@ -288,15 +288,17 @@ Detailed specifications, execution behaviors, and business rules for every subco
 
 ### `stamp update` (alias `upgrade`)
 
-- **Usage:** Runs system upgrades across all available package managers in parallel.
-- **Flags:** `--manager`, `-m`
+- **Usage:** Runs system upgrades across all available package managers. Default is parallel.
+- **Flags:** `--manager, -m`, `--package, -p`, `--serial, -s`
 - **Behavior:**
   1. If `-m` is set: runs that single manager's native update/upgrade command.
-  2. If no `-m`: runs ALL available managers concurrently using `sync.WaitGroup`.
-  3. Each manager streams its native output to stderr.
-  4. Errors from one manager do NOT block others. All per-manager errors are printed. If any manager fails, the command exits non-zero.
-  5. No manifest or snapshot interaction — `update` only touches the system.
-- **Output:** `updated packages via <manager>` to stderr per manager. `⚠ update failed for <manager>: <error>` on failure.
+  2. If `-p <pkg>` is set (requires `-m`): updates only the specified package instead of all packages.
+  3. If `--serial` / `-s` is set: runs managers one at a time (sequential) instead of concurrently.
+  4. If no `-m`: runs ALL available managers concurrently using `sync.WaitGroup`.
+  5. Each manager streams its native output to stderr.
+  6. Errors from one manager do NOT block others. All per-manager errors are printed. If any manager fails, the command exits non-zero.
+  7. No manifest or snapshot interaction — `update` only touches the system.
+- **Output:** `updated packages via <manager>` or `updated <pkg> via <manager>` to stderr per manager. `⚠ update failed for <manager>: <error>` on failure.
 - **Exit code:** 0 if all managers succeed, 1 if any manager fails.
 
 ### `stamp self-update` (alias `self-upgrade`)

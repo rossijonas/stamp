@@ -66,7 +66,8 @@ type Adapter interface {
 	Doctor(ctx context.Context) (string, error)
 
 	// Update runs the native system upgrade command for this package manager.
-	Update(ctx context.Context) error
+	// If pkg is non-empty, updates only that package instead of all packages.
+	Update(ctx context.Context, pkg string) error
 }
 
 func init() {

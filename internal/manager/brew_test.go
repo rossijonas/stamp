@@ -289,7 +289,7 @@ func TestBrew_Operations(t *testing.T) {
 					require.NoError(t, err)
 				}
 			case "update":
-				err = manager.Update(ctx)
+				err = manager.Update(ctx, "")
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {

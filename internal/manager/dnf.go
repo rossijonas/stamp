@@ -156,8 +156,14 @@ func (m *DNF) Doctor(_ context.Context) (string, error) {
 }
 
 // Update runs the native system upgrade command.
-func (m *DNF) Update(ctx context.Context) error {
+func (m *DNF) Update(ctx context.Context, pkg string) error {
 	args := sudoCmd(m.cmd, "upgrade", "-y")
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return err
+		}
+		args = append(args, pkg)
+	}
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to update: %w", err)

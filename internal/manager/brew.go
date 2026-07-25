@@ -142,7 +142,19 @@ func (m *Brew) Doctor(ctx context.Context) (string, error) {
 }
 
 // Update runs brew update then brew upgrade (two-phase).
-func (m *Brew) Update(ctx context.Context) error {
+// If pkg is non-empty, upgrades only that package via brew upgrade <pkg>.
+func (m *Brew) Update(ctx context.Context, pkg string) error {
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return err
+		}
+		_, err := m.exec(WithStreamIO(ctx), "brew", "upgrade", pkg)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade %s: %w", pkg, err)
+		}
+		return nil
+	}
+
 	_, err := m.exec(WithStreamIO(ctx), "brew", "update")
 	if err != nil {
 		return fmt.Errorf("failed to update homebrew: %w", err)

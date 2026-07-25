@@ -10,6 +10,8 @@ Run system upgrades across all package managers
 Run system upgrade commands for each available package manager.
 Updates and upgrades all packages to their latest versions.
 Use -m to scope to a single package manager.
+Use -p to update a single package (requires -m).
+Use --serial to run updates one manager at a time (default: parallel).
 
 ```
 stamp update [flags]
@@ -20,6 +22,8 @@ stamp update [flags]
 ```
   stamp update
   stamp update -m apt
+  stamp update -p htop -m brew
+  stamp update --serial
   stamp upgrade
 ```
 
@@ -28,6 +32,8 @@ stamp update [flags]
 ```
   -h, --help             help for update
   -m, --manager string   package manager to update
+  -p, --package string   update a single package (requires --manager)
+  -s, --serial           run updates one at a time (sequential)
 ```
 
 ### Options inherited from parent commands
