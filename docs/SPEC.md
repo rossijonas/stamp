@@ -387,6 +387,37 @@ Idiomatic Go with strict error wrapping and interface-driven design for testabil
 - **Mocks:** Mock the `PackageManager` interface.
 - **Minimum:** 90% overall project coverage.
 
+## Go Adapter
+
+The Go adapter supports `go install <path>@latest` for installing end-user CLI tools. It
+follows the `pipx` model — installing user-facing tools, not project dependencies.
+
+### Package Names
+- Requires full module paths (e.g., `github.com/golangci/golangci-lint`).
+- Short names (e.g., `golangci-lint`) are rejected.
+- Module paths are validated via `ValidateModulePath` — blocked: empty, missing `/`,
+  or containing shell metacharacters.
+
+### ListInstalled (Name-space Contract)
+- Returns module paths when recoverable from binary metadata via `go version -m <bin>`.
+- Falls back to the binary name for stripped or old binaries.
+- Module paths are stored in the manifest and snapshot — enabling round-trip remove/info.
+
+### Search / Doctor / Repos
+- All three return errors (`not supported`). Search errors are printed as warnings to
+  stderr; valid results from other managers remain on stdout.
+
+### Update
+- Single package (`-p <module> -m go`): runs `go install <module>@latest`.
+- Batch (`stamp update`): lists installed binaries, recovers module paths, reinstalls
+  each one with `@latest`. Binaries without recoverable module paths are skipped.
+
+### GOBIN / GOPATH Resolution
+- Checks `go env GOBIN` first (returns the bin directory directly).
+- Falls back to `go env GOPATH` (uses the first entry of the colon-separated list
+  joined with `/bin`).
+- Falls back to `$HOME/go/bin`.
+
 ## Boundaries
 
 - **Always:** Use `context.Context` for all shell executions (`os/exec`).

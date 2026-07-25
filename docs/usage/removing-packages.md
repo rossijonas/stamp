@@ -40,6 +40,15 @@ All aliases behave identically.
 3. Removes the package from the manifest
 4. Saves the updated manifest
 
+### Go tools
+
+```bash
+stamp remove github.com/golangci/golangci-lint -m go
+```
+
+Go tools require the full module path and `-m go`. If the module was auto-tracked by
+`stamp reconcile`, use the same module path shown in `stamp list`.
+
 ### Error handling
 
 If the package is not in the manifest and no `-m` is provided:

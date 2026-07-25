@@ -65,6 +65,11 @@ Each script validates a common set of features:
 - MacPorts adapter implemented but not tested in CI (no macOS Docker runner available).
 - Coverage relies on unit tests (mocked exec) and manual testing on real macOS machines.
 
+### Go toolchain
+- Go is not installed in any Docker image — go adapter integration tests are not run in CI.
+- Coverage relies on unit tests (`internal/manager/go_test.go`: 24 tests covering install, remove,
+  info, list, update, GOBIN/GOPATH resolution, module path recovery, search error handling).
+
 ### What's NOT tested in integration tests
 - **`stamp reconcile` on all distros**: Only tested on Ubuntu, Fedora, CentOS, Debian, Rocky.
 - **`stamp restore` on all distros**: Only tested on Ubuntu, Fedora, CentOS, Rocky, Debian.

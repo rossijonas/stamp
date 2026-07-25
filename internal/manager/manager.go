@@ -22,6 +22,34 @@ func ValidatePackageName(pkg string) error {
 	return nil
 }
 
+var validModulePathRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_\-\.\+/]*$`)
+
+// ValidateModulePath ensures the module path is safe for go install.
+// Allows full module paths (e.g., github.com/example/tool) but blocks
+// shell metacharacters via the regex character class.
+func ValidateModulePath(pkg string) error {
+	if len(pkg) == 0 {
+		return fmt.Errorf("invalid module path: cannot be empty")
+	}
+	if !strings.Contains(pkg, "/") {
+		return fmt.Errorf("go install requires a full module path (e.g., github.com/example/tool)")
+	}
+	if !validModulePathRegex.MatchString(pkg) {
+		return fmt.Errorf("invalid module path %q: contains invalid characters", pkg)
+	}
+	return nil
+}
+
+// ValidatePackageForManager dispatches to the correct validation function
+// for the given manager name. Go adapters use ValidateModulePath; all
+// others use ValidatePackageName.
+func ValidatePackageForManager(managerName, pkg string) error {
+	if managerName == "go" {
+		return ValidateModulePath(pkg)
+	}
+	return ValidatePackageName(pkg)
+}
+
 // RepositoryInfo holds the name and URL of a third-party repository.
 type RepositoryInfo struct {
 	Name string `json:"name"`
