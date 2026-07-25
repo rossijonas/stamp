@@ -359,3 +359,11 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 6 | 39f | CLI validation: delegate to ValidatePackageForManager | ✓ |
 | 6 | 39g | Integration tests (unit coverage only — Go not in Docker) | ✓ |
 | 6 | 39h | Docs: SPEC, FEATURE_MATRIX, usage pages, landing page | ✓ |
+| 6 | 40 | Pipx adapter (Python CLI tools via pipx) | ✓ Complete |
+| 6 | 40a | pipx.go: all Adapter methods, JSON + text list parsing | ✓ |
+| 6 | 40b | pipx_test.go: table-driven tests for all operations | ✓ |
+| 6 | 40c | Detection in root.go + docs | ✓ |
+| 6 | 41 | Uv adapter (Python CLI tools via uv tool) | ✓ Complete |
+| 6 | 41a | uv.go: all Adapter methods, uv tool list parsing | ✓ |
+| 6 | 41b | uv_test.go: table-driven tests for all operations | ✓ |
+| 6 | 41c | Detection in root.go + docs | ✓ |

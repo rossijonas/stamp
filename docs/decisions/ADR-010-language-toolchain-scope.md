@@ -34,17 +34,27 @@ model.
 
 | Ecosystem | Tool installer (stamp) | Dependency manager (NOT stamp) |
 |-----------|----------------------|-------------------------------|
-| Python | `pipx install <tool>` | `pip install <lib>` |
+| Python | `pipx install <tool>` / `uv tool install <tool>` | `pip install <lib>` |
 | Go | `go install <path>@latest` | `go get <path>` |
 | Rust | `cargo install <tool>` | `cargo add <dep>` |
 | JavaScript | `npm install -g <tool>` / `bun install -g <tool>` | `npm install --save <dep>` |
 
-### Adapter Implementation Priority
+### Adapter Naming Convention
 
-1. **Go** (`go install`) — stamp is written in Go; dogfooding own ecosystem
-2. **Python** (`pipx` / `uv tool`) — most requested, widely used for CLI tools
-3. **Rust** (`cargo install`) — growing ecosystem of CLI tools
-4. **JavaScript** (`npm -g` / `bun -g`) — most complex, least scope-creep risk
+Each tool installer is registered as its own adapter under its own binary name (e.g.,
+`pipx`, `uv`, `go`, `cargo`, `npm`). Adapters are never named after the ecosystem
+("python", "rust") — stamp installs via specific package managers, not programming
+languages. This is consistent with OS-level adapters (`dnf`, `brew`, `flatpak`) which
+are named after the tool, not the OS.
+
+### Adapter Implementation Status
+
+| Priority | Ecosystem | Adapter(s) | Status |
+|----------|-----------|------------|--------|
+| 1 | **Go** | `go` | ✓ Complete |
+| 2 | **Python** | `pipx`, `uv` | ✓ Complete |
+| 3 | **Rust** | `cargo` | ⚠ Planned |
+| 4 | **JavaScript** | `npm`, `bun` | ⚠ Planned |
 
 ## Alternatives Considered
 

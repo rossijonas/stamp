@@ -33,17 +33,52 @@ If you are an AI agent working in this repository, you **MUST** adhere to the fo
 <!-- lean-ctx -->
 ## lean-ctx
 
-lean-ctx is active — the MCP tools replace native equivalents.
-Full rules: LEAN-CTX.md (open on demand — do not auto-load).
+lean-ctx is active — MCP tools replace native equivalents for file I/O and shell.
+Full rules: LEAN-CTX.md
+
+**What lean-ctx handles:**
+- File reads/writes → `ctx_read` / `ctx_patch`
+- Shell commands → `ctx_shell`
+- Grep/glob → `ctx_search` / `ctx_glob`
+- Directory structure → `ctx_tree`
+
+**What lean-ctx does NOT handle** (use tokensave or codegraph instead):
+- Code understanding / "how does X work"
+- Call graph / impact analysis
+- Symbol search across the full codebase
+
 <!-- /lean-ctx -->
 
-<!-- CODEGRAPH_START -->
-## CodeGraph
+## Tool Priority for Code Tasks
 
-In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the repo root), reach for it BEFORE grep/find or reading files when you need to understand or locate code:
+Three graph tools are available. Use this order — do not guess:
 
-- **MCP tool** (when available): `codegraph_explore` answers most code questions in one call — the relevant symbols' verbatim source plus the call paths between them, including dynamic-dispatch hops grep can't follow. Name a file or symbol in the query to read its current line-numbered source. If it's listed but deferred, load it by name via tool search.
-- **Shell** (always works): `codegraph explore "<symbol names or question>"` prints the same output.
+| Priority | Tool | When |
+|----------|------|------|
+| **1st** | `tokensave_context` | ANY code question — pre-indexed AST, sub-millisecond |
+| **2nd** | `codegraph_explore` | tokensave doesn't answer (flow questions, verbatim source) |
+| **3rd** | `ctx_compose` (lean-ctx) | Both above stale or unavailable (BM25 fallback) |
 
-If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
-<!-- CODEGRAPH_END -->
+**Specific tokensave tools by intent:**
+
+| Intent | Tool |
+|--------|------|
+| "What is X / where is X defined" | `tokensave_search` → `tokensave_body` |
+| "How does flow X→Y work" | `tokensave_callers` / `tokensave_callees` / `tokensave_call_chain` |
+| "What breaks if I change this" | `tokensave_impact` |
+| "What tests cover this" | `tokensave_test_map` / `tokensave_affected` |
+| "Which functions are untested/hot" | `tokensave_test_risk` / `tokensave_complexity` |
+| "All definitions in a file" | `tokensave_entities` |
+| "Dead code / unused imports" | `tokensave_dead_code` / `tokensave_unused_imports` |
+
+**Test impact workflow (use after every change):**
+```
+tokensave_affected(files=[changed_files]) → run tests
+```
+
+## Go stdlib / library API lookups
+
+For Go stdlib or third-party Go library API docs:
+`context7_resolve-library-id` → `context7_query-docs`
+
+Prefer this over guessing API signatures from training data.
