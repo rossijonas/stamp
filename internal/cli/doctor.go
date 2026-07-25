@@ -77,6 +77,7 @@ func buildManagersReport(adapters []manager.Adapter) []managerStatus {
 		{"dnf", "Default system manager (Fedora/RHEL, alias yum)"},
 		{"brew", "User-space manager"},
 		{"flatpak", "Sandboxed application distribution"},
+		{"go", "Language toolchain — go install"},
 	}
 
 	managers := make([]managerStatus, 0, len(knownManagers))

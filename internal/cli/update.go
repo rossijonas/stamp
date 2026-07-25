@@ -73,7 +73,8 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 				if managerFlag == "" {
 					return fmt.Errorf("specify --manager to update a specific package")
 				}
-				if err := manager.ValidatePackageName(packageFlag); err != nil {
+				// adapters has been filtered to a single entry for managerFlag
+				if err := manager.ValidatePackageForManager(adapters[0].Name(), packageFlag); err != nil {
 					return err
 				}
 			}

@@ -72,6 +72,17 @@ Already up-to-date.
 ✓ updated packages via brew
 ```
 
+### Go tools
+
+Batch update (`stamp update` without flags) reinstalls all go tools whose module path
+is recoverable from the binary metadata. Tools installed before the Go module system,
+or with stripped binaries, may be skipped. Use `-p <module> -m go` to update a single
+go tool explicitly:
+
+```bash
+stamp update -p github.com/golangci/golangci-lint -m go
+```
+
 ### Error handling
 
 If one manager fails, others continue. The command exits with a non-zero status:

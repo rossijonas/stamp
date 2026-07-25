@@ -115,6 +115,7 @@ func detectAdapters() []manager.Adapter {
 		detect("pacman", func() manager.Adapter { return manager.NewPacman() })
 	}
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })
+	detect("go", func() manager.Adapter { return manager.NewGo() })
 	if runtime.GOOS == "darwin" {
 		detect("port", func() manager.Adapter { return manager.NewMacPorts() })
 	}

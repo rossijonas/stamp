@@ -63,6 +63,19 @@ For pre-existing packages (installed before `stamp init`), reinstall resolves th
 
 Stamp validates package names to prevent shell injection. Names must start with a letter, number, or underscore, and contain only safe characters (`a-zA-Z0-9_-.+`). Names starting with `-` are rejected.
 
+### Go tools
+
+```bash
+stamp install github.com/golangci/golangci-lint -m go
+```
+
+Go tools require a full module path (e.g., `github.com/example/tool`) and the `-m go` flag.
+The go adapter is not in the default precedence, so `-m go` is always required. Short names
+like `golangci-lint` are rejected — Stamp cannot derive the module path from a binary name.
+
+Go tools are installed via `go install <module>@latest`. Search, doctor, and repo management
+are not supported for the go adapter.
+
 ### Error handling
 
 If a package is not found, Stamp prints a clear error:

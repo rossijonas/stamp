@@ -51,8 +51,12 @@ stamp ls
 
 | Column | Description |
 |--------|-------------|
-| Package name | The name of the installed package |
+| Package name | The name of the installed package or module path |
 | Manager | The package manager used to install it (in parentheses) |
 | Note | Any user-provided note (shown after em dash if present) |
+
+Go tools appear as module paths (e.g., `github.com/golangci/golangci-lint`) when the path
+is recoverable from the binary metadata. If the module path is not recoverable, the binary
+name is shown instead.
 
 Only intentionally installed packages appear in the list — no dependency noise.

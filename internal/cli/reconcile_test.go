@@ -473,6 +473,29 @@ func TestReconcile_ManifestSaveError(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to save manifest")
 }
 
+func TestReconcile_GoAdapter(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "go",
+			InstalledPkgs: []string{"github.com/golangci/golangci-lint", "github.com/example/tool"},
+		},
+	}
+
+	// Old snapshot has no go packages → full drift detected
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "go", Packages: []string{}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 2 new package(s)")
+	assert.Contains(t, output, "github.com/golangci/golangci-lint (go)")
+	assert.Contains(t, output, "github.com/example/tool (go)")
+}
+
 // setupSnapshots saves snapshots to {tmpDir}/stamp/snapshots/ and returns tmpDir.
 func setupSnapshots(t *testing.T, snaps []state.Snapshot) string {
 	t.Helper()

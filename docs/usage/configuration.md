@@ -36,6 +36,16 @@ The `precedence` array defines the priority order. When a package exists in mult
 precedence = ["dnf", "flatpak", "brew"]
 ```
 
+The go adapter is not included in the default precedence because go module paths (which
+always contain `/`) do not match standard package name validation. Use the `-m go` flag
+explicitly when working with go tools. To auto-route go module paths, add a rule:
+
+```toml
+[[rules]]
+pattern = "github\\.com/.*"
+prefer = "go"
+```
+
 #### rules
 
 The `[[rules]]` table allows regex-based routing for specific package name patterns. Each rule has a `pattern` (POSIX regex) and a `prefer` (manager name).

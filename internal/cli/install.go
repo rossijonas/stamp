@@ -27,14 +27,14 @@ func newInstallCmd() *cobra.Command {
 			}
 			pkgName := args[0]
 
-			if err := manager.ValidatePackageName(pkgName); err != nil {
-				return fmt.Errorf("invalid package name: %w", err)
-			}
-
 			r := NewResolver(app.adapters, app.config)
 			adapter, err := r.Resolve(pkgName, managerFlag)
 			if err != nil {
 				return fmt.Errorf("cannot resolve package manager: %w", err)
+			}
+
+			if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
+				return fmt.Errorf("invalid package name: %w", err)
 			}
 
 			if err := adapter.Install(cmd.Context(), pkgName); err != nil {
@@ -163,6 +163,7 @@ func newSearchCmd() *cobra.Command {
 			for _, a := range targets {
 				pkgs, err := a.Search(cmd.Context(), query)
 				if err != nil {
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s search: %v\n", a.Name(), err)
 					continue
 				}
 				for _, p := range pkgs {

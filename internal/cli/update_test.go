@@ -167,6 +167,13 @@ func TestUpdateCmd_SinglePackage_NoManager(t *testing.T) {
 	assert.Contains(t, err.Error(), "specify --manager")
 }
 
+func TestUpdateCmd_GoSinglePackage(t *testing.T) {
+	adapters := []manager.Adapter{&mockAdapter{name: "go"}}
+	buf, err := execUpdateCmd(t, []string{"update", "-p", "github.com/example/tool", "-m", "go"}, adapters)
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "updated github.com/example/tool via go")
+}
+
 func TestUpdateCmd_SinglePackage_InvalidName(t *testing.T) {
 	adapters := []manager.Adapter{&mockAdapter{name: "brew"}}
 	_, err := execUpdateCmd(t, []string{"update", "-p", "-htop", "-m", "brew"}, adapters)

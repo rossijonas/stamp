@@ -507,6 +507,22 @@ func TestInstallCmd_InvalidName(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid package name")
 }
 
+func TestInstallCmd_GoModulePath(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"install", "github.com/example/tool", "-m", "go"},
+		[]manager.Adapter{&mockAdapter{name: "go"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "installed github.com/example/tool via go")
+}
+
+func TestInstallCmd_GoShortName_Rejected(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"install", "tool", "-m", "go"},
+		[]manager.Adapter{&mockAdapter{name: "go"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "full module path")
+}
+
 func TestAliasesWork(t *testing.T) {
 	t.Parallel()
 	for _, alias := range []struct{ cmd, pkg string }{

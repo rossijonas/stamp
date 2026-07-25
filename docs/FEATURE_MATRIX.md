@@ -17,6 +17,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | Zypper | ✓ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
 | Pacman | ✓ Complete | All except repo mgmt | Arch Linux, sudo for write ops |
 | MacPorts | ✓ Complete | All except repo mgmt | macOS, sudo for write ops |
+| Go | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | go install with module path validation, no search/doctor/repo support, ListInstalled recovers module paths via binary metadata, batch update reinstalls recoverable paths, binary-name fallback for unrecoverable |
 
 ## CLI Commands
 
@@ -154,3 +155,4 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✓ |
 | 6 | 29 | Flag and Compliance Updates | ✓ |
 | 6 | 30 | `stamp auto-reconcile` Command | ✓ |
+| 6 | 31 | Go toolchain adapter (go install) | ✓ |

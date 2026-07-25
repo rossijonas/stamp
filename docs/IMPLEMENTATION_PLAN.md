@@ -350,3 +350,12 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 4 | 36 | Snap package manager adapter (#47) | ✓ Complete |
 | 4 | 37 | Pacman package manager adapter (Arch Linux) (#49) | ✓ Complete |
 | 4 | 38 | MacPorts package manager adapter (macOS) (#48) | ✓ Complete |
+| 6 | 39 | Go adapter code review fixes | ✓ Complete |
+| 6 | 39a | goBinDir: GOBIN + multi-entry GOPATH resolution | ✓ |
+| 6 | 39b | Remove: os.Stat + os.Remove instead of exec rm | ✓ |
+| 6 | 39c | ListInstalled: recover module paths via go version -m | ✓ |
+| 6 | 39d | Update: batch reinstall for recoverable module paths | ✓ |
+| 6 | 39e | Search: error instead of fake results, warning on stderr | ✓ |
+| 6 | 39f | CLI validation: delegate to ValidatePackageForManager | ✓ |
+| 6 | 39g | Integration tests (unit coverage only — Go not in Docker) | ✓ |
+| 6 | 39h | Docs: SPEC, FEATURE_MATRIX, usage pages, landing page | ✓ |
