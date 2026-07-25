@@ -118,6 +118,7 @@ check "reconcile runs" timeout $TIMEOUT stamp reconcile -m dnf
 
 echo "=== Update ==="
 check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf
+check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
 
 echo "=== Restore ==="
 check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore --dry-run 2>&1 | grep -q ."

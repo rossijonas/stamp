@@ -148,3 +148,56 @@ func TestUpdateCmd_WithManifestNotRequired(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "updated packages via brew")
 }
+
+func TestUpdateCmd_SinglePackage(t *testing.T) {
+	adapters := []manager.Adapter{
+		&mockAdapter{name: "brew"},
+		&mockAdapter{name: "dnf"},
+	}
+	buf, err := execUpdateCmd(t, []string{"update", "-p", "htop", "-m", "brew"}, adapters)
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "updated htop via brew")
+	assert.NotContains(t, buf.String(), "dnf")
+}
+
+func TestUpdateCmd_SinglePackage_NoManager(t *testing.T) {
+	adapters := []manager.Adapter{&mockAdapter{name: "brew"}}
+	_, err := execUpdateCmd(t, []string{"update", "-p", "htop"}, adapters)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "specify --manager")
+}
+
+func TestUpdateCmd_SinglePackage_InvalidName(t *testing.T) {
+	adapters := []manager.Adapter{&mockAdapter{name: "brew"}}
+	_, err := execUpdateCmd(t, []string{"update", "-p", "-htop", "-m", "brew"}, adapters)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+func TestUpdateCmd_Serial(t *testing.T) {
+	adapters := []manager.Adapter{
+		&mockAdapter{name: "brew"},
+		&mockAdapter{name: "dnf"},
+	}
+	buf, err := execUpdateCmd(t, []string{"update", "--serial"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "▪ updating via brew")
+	assert.Contains(t, output, "▪ updating via dnf")
+	assert.Contains(t, output, "updated packages via brew")
+	assert.Contains(t, output, "updated packages via dnf")
+}
+
+func TestUpdateCmd_Serial_OneFails(t *testing.T) {
+	adapters := []manager.Adapter{
+		&mockAdapter{name: "brew"},
+		&mockAdapter{name: "dnf", err: assert.AnError},
+		&mockAdapter{name: "flatpak"},
+	}
+	buf, err := execUpdateCmd(t, []string{"update", "--serial"}, adapters)
+	require.Error(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "updated packages via brew")
+	assert.Contains(t, output, "⚠ update failed for dnf")
+	assert.Contains(t, output, "updated packages via flatpak")
+}

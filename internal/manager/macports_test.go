@@ -217,7 +217,7 @@ func TestMacPorts_Operations(t *testing.T) {
 				_, err = manager.Doctor(ctx)
 				require.Error(t, err)
 			case "update":
-				err = manager.Update(ctx)
+				err = manager.Update(ctx, "")
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {

@@ -38,7 +38,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp hello` | | ✓ | ✓ | ✓ Prints ASCII logo + suggested next steps | ✓ Complete |
 | `stamp setup` | `hello` | ✓ | ✓ | ✓ Interactive wizard for completions, man, init, doctor | ✓ Complete |
 | `stamp init` | | ✓ | ✓ | ✓ Creates dirs + manifest + snapshots | ✓ Complete |
-| `stamp update` | `upgrade` | ✓ | ✓ | ✓ errgroup concurrency + --manager flag | ✓ Complete |
+| `stamp update` | `upgrade` | ✓ | ✓ | ✓ errgroup concurrency + --manager + --package + --serial flags | ✓ Complete |
 | `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 | `stamp self-update` | `self-upgrade` | ✓ | ✓ | ✓ Atomic binary replacement + SHA-256 verification + post-update hooks | ✓ Complete |
 | `stamp auto-reconcile on\|off` | | ✓ | ✗ | ✗ | ~ Pending |
@@ -89,6 +89,8 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp repo list` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 | `stamp doctor` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 | `stamp update` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp update` | `--package <pkg>` | `-p` | ✓ | ✓ | ✓ Complete |
+| `stamp update` | `--serial` | `-s` | ✓ | ✓ | ✓ Complete |
 | `stamp auto-reconcile` | `--period <interval>` | `-p` | ✓ | ✗ | ~ Pending |
 | `stamp list` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 

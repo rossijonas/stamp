@@ -85,6 +85,7 @@ check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 echo "=== Self-Update ==="
 check "self-update --check" timeout $TIMEOUT stamp self-update --check
 check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
+check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
 
 echo "=== Root Command ==="
 check "stamp (no args)" bash -c "stamp 2>/dev/null | head -5 > /dev/null"

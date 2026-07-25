@@ -99,7 +99,7 @@ func TestMockManagerErrors(t *testing.T) {
 	_, err = mock.ListRepos(ctx)
 	require.ErrorIs(t, err, expectedErr)
 
-	err = mock.Update(ctx)
+	err = mock.Update(ctx, "")
 	require.ErrorIs(t, err, expectedErr)
 }
 

@@ -127,8 +127,14 @@ func (m *Zypper) Doctor(_ context.Context) (string, error) {
 }
 
 // Update runs a full system upgrade via zypper.
-func (m *Zypper) Update(ctx context.Context) error {
+func (m *Zypper) Update(ctx context.Context, pkg string) error {
 	args := sudoCmd(m.cmd, "update", "-y")
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return err
+		}
+		args = append(args, pkg)
+	}
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to update: %w", err)

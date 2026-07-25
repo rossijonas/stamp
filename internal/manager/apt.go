@@ -169,7 +169,20 @@ func (m *APT) Doctor(_ context.Context) (string, error) {
 }
 
 // Update runs apt update then apt upgrade (two-phase).
-func (m *APT) Update(ctx context.Context) error {
+// If pkg is non-empty, updates only that package via apt install --only-upgrade.
+func (m *APT) Update(ctx context.Context, pkg string) error {
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return err
+		}
+		args := sudoCmd(m.cmd, "install", "--only-upgrade", "-y", pkg)
+		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+		if err != nil {
+			return fmt.Errorf("failed to update %s: %w", pkg, err)
+		}
+		return nil
+	}
+
 	args := sudoCmd(m.cmd, "update")
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {

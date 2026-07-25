@@ -107,7 +107,7 @@ func TestMockErrors(t *testing.T) {
 	err = mock.RemoveRepo(ctx, "repo")
 	require.ErrorIs(t, err, expectedErr)
 
-	err = mock.Update(ctx)
+	err = mock.Update(ctx, "")
 	require.ErrorIs(t, err, expectedErr)
 
 	_, err = mock.Doctor(ctx)

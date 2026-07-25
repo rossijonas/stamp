@@ -140,6 +140,7 @@ check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
 
 echo "=== Update ==="
 check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf
+check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
 
 echo "=== Alias Tests ==="
 check "install via add alias" timeout $TIMEOUT stamp add hello -m dnf

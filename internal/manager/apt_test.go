@@ -162,7 +162,7 @@ func TestAPT_Operations(t *testing.T) {
 					assert.Equal(t, tt.mockOutput, res)
 				}
 			case "update":
-				err = manager.Update(ctx)
+				err = manager.Update(ctx, "")
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {
@@ -343,7 +343,7 @@ func TestAPT_Update_Phase2Fails(t *testing.T) {
 		return nil, assert.AnError // upgrade fails
 	}
 
-	err := manager.Update(context.Background())
+	err := manager.Update(context.Background(), "")
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
 }
@@ -357,7 +357,7 @@ func TestAPT_Update_Phase1Fails(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	err := manager.Update(context.Background())
+	err := manager.Update(context.Background(), "")
 	require.Error(t, err)
 	assert.Equal(t, 1, calls) // update should fail before upgrade is called
 }

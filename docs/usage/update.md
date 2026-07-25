@@ -31,6 +31,22 @@ stamp update -m apt
 ✓ updated packages via apt
 ```
 
+### Single package
+
+Update only one specific package instead of all packages:
+
+```bash
+stamp update -p htop -m apt
+```
+
+```text
+[apt] Reading package lists... Done
+[apt] Upgrading: 1 packages
+✓ updated htop via apt
+```
+
+The `-m` / `--manager` flag is required when using `-p`.
+
 ### Aliases
 
 ```bash

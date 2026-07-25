@@ -123,8 +123,16 @@ func (m *Pacman) Doctor(_ context.Context) (string, error) {
 }
 
 // Update syncs and upgrades all packages via pacman.
-func (m *Pacman) Update(ctx context.Context) error {
-	args := sudoCmd("pacman", "-Syu", "--noconfirm")
+func (m *Pacman) Update(ctx context.Context, pkg string) error {
+	var args []string
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return err
+		}
+		args = sudoCmd("pacman", "-S", "--noconfirm", pkg)
+	} else {
+		args = sudoCmd("pacman", "-Syu", "--noconfirm")
+	}
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to update: %w", err)
