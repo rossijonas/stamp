@@ -28,7 +28,7 @@
   }
 
   // Sidebar accordion
-  document.querySelectorAll('.accordion-toggle').forEach(function(toggle) {
+  document.querySelectorAll('.accordion-toggle, .sidebar-sub-toggle').forEach(function(toggle) {
     toggle.addEventListener('click', function() {
       var expanded = this.getAttribute('aria-expanded') === 'true';
       this.setAttribute('aria-expanded', !expanded);
@@ -49,12 +49,13 @@
     if (linkPath === currentPath || linkPath === currentPath.replace('.html', '') || currentPath.endsWith(linkPath.replace('.html', ''))) {
       link.classList.add('active');
       var body = link.closest('.accordion-body');
-      if (body) {
+      while (body) {
         body.style.display = 'block';
         var toggle = body.previousElementSibling;
-        if (toggle && toggle.classList.contains('accordion-toggle')) {
+        if (toggle && (toggle.classList.contains('accordion-toggle') || toggle.classList.contains('sidebar-sub-toggle'))) {
           toggle.setAttribute('aria-expanded', 'true');
         }
+        body = body.parentElement ? body.parentElement.closest('.accordion-body') : null;
       }
     }
   });
