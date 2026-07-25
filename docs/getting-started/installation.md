@@ -22,11 +22,11 @@ Download the pre-built binary for your platform from the latest release.
 ```bash
 # Linux x86_64
 curl -fsSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_linux_amd64.tar.gz | tar xz
-sudo mv stamp /usr/local/bin/
+mv stamp ~/.local/bin/
 
 # macOS (Apple Silicon)
 curl -fsSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_darwin_arm64.tar.gz | tar xz
-sudo mv stamp /usr/local/bin/
+mv stamp ~/.local/bin/
 ```
 
 Replace `linux_amd64` with `darwin_amd64` (Intel Mac) or `linux_arm64` (ARM Linux) as needed.
@@ -37,7 +37,22 @@ Replace `linux_amd64` with `darwin_amd64` (Intel Mac) or `linux_arm64` (ARM Linu
 git clone https://github.com/rossijonas/stamp.git
 cd stamp
 go build -o bin/stamp ./cmd/stamp
-sudo cp bin/stamp /usr/local/bin/
+cp bin/stamp ~/.local/bin/
+```
+
+### PATH Setup
+
+Stamp installs to `~/.local/bin/` by default. If this directory is not in your `$PATH`, add it:
+
+```bash
+# Bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# Zsh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+
+# Fish
+fish_add_path "$HOME/.local/bin"
 ```
 
 ### Platform notes
