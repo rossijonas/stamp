@@ -98,6 +98,8 @@ func restoreSaveSnapshots(ctx context.Context, w io.Writer, adapters []manager.A
 	if err != nil {
 		return
 	}
+	printSnapshotWarnings(w, currentSnaps)
+
 	for _, s := range currentSnaps {
 		if err := state.Save(snapDir, s); err != nil {
 			_, _ = fmt.Fprintf(w, "warning: failed to save snapshot for %s: %v\n", s.Manager, err)

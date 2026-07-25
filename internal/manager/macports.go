@@ -182,9 +182,9 @@ func (m *MacPorts) RemoveRepo(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported for macports")
 }
 
-// ListRepos returns an error since repo management is not supported for MacPorts.
+// ListRepos returns an empty list since macports has no concept of repositories.
 func (m *MacPorts) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
-	return nil, fmt.Errorf("not supported for macports")
+	return nil, nil
 }
 
 var _ Adapter = (*MacPorts)(nil)

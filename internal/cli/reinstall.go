@@ -75,6 +75,8 @@ tracked in the manifest, resolve the manager and track it.`,
 			if err == nil {
 				currentSnaps, err := state.Current(cmd.Context(), app.adapters)
 				if err == nil {
+					printSnapshotWarnings(cmd.ErrOrStderr(), currentSnaps)
+
 					for _, s := range currentSnaps {
 						_ = state.Save(snapDir, s)
 					}

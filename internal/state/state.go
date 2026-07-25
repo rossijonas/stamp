@@ -22,6 +22,7 @@ type Snapshot struct {
 	Manager      string                   `json:"manager"`
 	Packages     []string                 `json:"packages"`
 	Repositories []manager.RepositoryInfo `json:"repositories,omitempty"`
+	Warnings     []string                 `json:"-"` // non-fatal errors from live adapter calls
 	UpdatedAt    time.Time                `json:"updated_at"`
 }
 
@@ -166,16 +167,20 @@ func Current(ctx context.Context, adapters []manager.Adapter) ([]Snapshot, error
 				ch <- result{err: fmt.Errorf("failed to list installed for %s: %w", a.Name(), err)}
 				return
 			}
+			var repoWarnings []string
 			repos, err := a.ListRepos(ctx)
 			if err != nil {
-				ch <- result{err: fmt.Errorf("failed to list repositories for %s: %w", a.Name(), err)}
-				return
+				// Non-fatal: repo listing may be unsupported or transient.
+				// Use empty list — reconcile sees no repo drift for this adapter.
+				repoWarnings = append(repoWarnings, fmt.Sprintf("failed to list repositories: %v", err))
+				repos = nil
 			}
 			ch <- result{
 				snap: Snapshot{
 					Manager:      a.Name(),
 					Packages:     packages,
 					Repositories: repos,
+					Warnings:     repoWarnings,
 					UpdatedAt:    time.Now(),
 				},
 			}

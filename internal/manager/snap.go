@@ -157,9 +157,9 @@ func (m *Snap) RemoveRepo(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported for snap")
 }
 
-// ListRepos returns an error since snap has no concept of repositories.
+// ListRepos returns an empty list since snap has no concept of repositories.
 func (m *Snap) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
-	return nil, fmt.Errorf("not supported for snap")
+	return nil, nil
 }
 
 // Compile-time interface check.

@@ -485,6 +485,23 @@ func TestDiffSorted(t *testing.T) {
 	assert.ElementsMatch(t, []string{"a", "b"}, removed)
 }
 
+func TestCurrent_ListReposError_NonFatal(t *testing.T) {
+	ctx := context.Background()
+	mock := &manager.Mock{
+		ManagerName:   "dnf",
+		InstalledPkgs: []string{"htop", "curl"},
+		ListReposErr:  errors.New("list repos failed"),
+	}
+	snaps, err := Current(ctx, []manager.Adapter{mock})
+	require.NoError(t, err)
+	require.Len(t, snaps, 1)
+	assert.ElementsMatch(t, []string{"htop", "curl"}, snaps[0].Packages)
+	assert.Empty(t, snaps[0].Repositories)
+	require.Len(t, snaps[0].Warnings, 1)
+	assert.Contains(t, snaps[0].Warnings[0], "failed to list repositories")
+	assert.Contains(t, snaps[0].Warnings[0], "list repos failed")
+}
+
 func TestCurrent_AllFail(t *testing.T) {
 	ctx := context.Background()
 	mock := &manager.Mock{

@@ -150,9 +150,9 @@ func (m *Pacman) RemoveRepo(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported for pacman")
 }
 
-// ListRepos returns an error since repo management is not supported for pacman.
+// ListRepos returns an empty list since pacman has no concept of repositories.
 func (m *Pacman) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
-	return nil, fmt.Errorf("not supported for pacman")
+	return nil, nil
 }
 
 var _ Adapter = (*Pacman)(nil)

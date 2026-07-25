@@ -90,6 +90,7 @@ the confirmation prompt.`,
 			if err != nil {
 				return fmt.Errorf("failed to take baseline snapshot: %w", err)
 			}
+			printSnapshotWarnings(cmd.ErrOrStderr(), snaps)
 
 			for _, s := range snaps {
 				if err := state.Save(snapDir, s); err != nil {
