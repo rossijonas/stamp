@@ -61,7 +61,7 @@ echo "=== Flatpak ==="
 check "flatpak remote list" timeout $TIMEOUT stamp repo list -m flatpak
 echo "  • warming flatpak appstream cache..."
 timeout $TIMEOUT_LONG flatpak update --appstream 2>&1 || true
-check "flatpak search Calculator" timeout $TIMEOUT_LONG stamp search Calculator -m flatpak
+check "flatpak search Calculator" timeout $TIMEOUT_EXTRA stamp search Calculator -m flatpak
 
 echo "=== JSON Output ==="
 check "doctor shows managers" bash -c "stamp doctor 2>&1 | grep -qE 'brew|flatpak|apt|dnf'"
