@@ -39,13 +39,13 @@ func renderDoctorTTY(w io.Writer, d *doctorReport, noColor bool) {
 	} else {
 		_, _ = fmt.Fprintln(w, "  NO_COLOR: ✗ Not set")
 	}
-	_, _ = fmt.Fprintf(w, "  Version:  stamp %s\n", d.Version)
+	_, _ = fmt.Fprintf(w, "  Version:  stamp v%s\n", d.Version)
 
 	if d.ManPage.Installed {
 		if d.ManPage.Matches {
 			_, _ = fmt.Fprintf(w, "  Man Page: ✓ Up to date (%s)\n", d.ManPage.Version)
 		} else {
-			_, _ = fmt.Fprintf(w, "  Man Page: ⚠ Outdated (installed %s, current %s) — run 'stamp man install'\n", d.ManPage.Version, d.Version)
+			_, _ = fmt.Fprintf(w, "  Man Page: ⚠ Outdated (installed %s, current v%s) — run 'stamp man install'\n", d.ManPage.Version, d.Version)
 		}
 	} else {
 		_, _ = fmt.Fprintln(w, "  Man Page: ✗ Not found — run 'stamp man install'")
