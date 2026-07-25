@@ -148,6 +148,7 @@ check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
 
 echo "=== Update ==="
 check "update runs" timeout $TIMEOUT_LONG stamp update -m apt
+check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew
 check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
 check "reconcile --yes flag" timeout $TIMEOUT stamp reconcile -y -m apt
 
