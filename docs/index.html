@@ -31,12 +31,12 @@ title: Stamp
     </div>
     <div class="pane" id="tab-release" style="display:none">
       <span class="prompt">$</span> curl -fsSL https://github.com/rossijonas/stamp/releases/latest/download/stamp_linux_amd64.tar.gz | tar xz<br>
-      <span class="prompt">$</span> sudo mv stamp /usr/local/bin/
+      <span class="prompt">$</span> mv stamp ~/.local/bin/
     </div>
     <div class="pane" id="tab-source" style="display:none">
       <span class="prompt">$</span> git clone https://github.com/rossijonas/stamp.git<br>
       <span class="prompt">$</span> cd stamp && go build -o bin/stamp ./cmd/stamp<br>
-      <span class="prompt">$</span> sudo cp bin/stamp /usr/local/bin/
+      <span class="prompt">$</span> cp bin/stamp ~/.local/bin/
     </div>
   </div>
 

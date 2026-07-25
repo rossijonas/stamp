@@ -2,7 +2,10 @@
 set -eu
 
 REPO="rossijonas/stamp"
-INSTALL_DIR="${STAMP_INSTALL_DIR:-/usr/local/bin}"
+
+# Default to user-local bin (XDG). Override with STAMP_INSTALL_DIR for system-wide install.
+DEFAULT_INSTALL_DIR="${HOME}/.local/bin"
+INSTALL_DIR="${STAMP_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 BINARY="stamp"
 
 # ─── Help ───
@@ -14,11 +17,11 @@ for arg in "$@"; do
       echo "Usage: curl -fsSL https://gostamp.dev/install | sh"
       echo ""
       echo "Environment variables:"
-      echo "  STAMP_INSTALL_DIR  Install directory (default: /usr/local/bin)"
+      echo "  STAMP_INSTALL_DIR  Install directory (default: ~/.local/bin)"
       echo ""
       echo "Examples:"
       echo "  curl -fsSL https://gostamp.dev/install | sh"
-      echo "  curl -fsSL https://gostamp.dev/install | STAMP_INSTALL_DIR=~/.local/bin sh"
+      echo "  curl -fsSL https://gostamp.dev/install | STAMP_INSTALL_DIR=/usr/local/bin sh"
       exit 0
       ;;
   esac
@@ -123,6 +126,12 @@ echo "▪ Verifying checksum..."
 echo "▪ Extracting..."
 tar -xzf "$TMPDIR/$TARBALL" -C "$TMPDIR"
 
+# ─── Legacy detection ───
+if [ -x /usr/local/bin/stamp ] && [ "$INSTALL_DIR" != "/usr/local/bin" ]; then
+	echo "  ⚠ stamp also found at /usr/local/bin/stamp"
+	echo "    Remove it to avoid confusion: sudo rm /usr/local/bin/stamp"
+fi
+
 # ─── Install ───
 echo "▪ Installing to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR" 2>/dev/null || true
@@ -140,4 +149,17 @@ fi
 
 echo ""
 echo "✓ Stamp $VERSION installed to $INSTALL_DIR/$BINARY"
+
+# ─── PATH check ───
+case ":${PATH}:" in
+*:"${INSTALL_DIR}":*) ;;
+*)
+	echo "  Warning: $INSTALL_DIR is not in your PATH."
+	echo "  To add it:"
+	echo "    Bash: echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
+	echo "    Zsh:  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc"
+	echo "    Fish: fish_add_path \"\$HOME/.local/bin\""
+	;;
+esac
+
 echo "  Run 'stamp doctor' to verify."
