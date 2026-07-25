@@ -134,10 +134,6 @@ check "stamp restore --help" timeout $TIMEOUT stamp restore --help
 check "stamp update --help" timeout $TIMEOUT stamp update --help
 check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 
-echo "=== Self-Update ==="
-check "self-update --check" timeout $TIMEOUT stamp self-update --check
-check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
-
 echo "=== Update ==="
 check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf
 check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew

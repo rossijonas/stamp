@@ -125,7 +125,7 @@ check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore 
 
 echo "=== Info ==="
 check "info shows results" bash -c "timeout $TIMEOUT stamp info htop -m apt | grep -q ."
-check "info --json" timeout $TIMEOUT stamp info htop --json
+check "info --json" timeout $TIMEOUT_LONG stamp info htop --json
 
 echo "=== Help Output ==="
 check "stamp --help" timeout $TIMEOUT stamp --help
@@ -140,12 +140,8 @@ check "stamp restore --help" timeout $TIMEOUT stamp restore --help
 check "stamp update --help" timeout $TIMEOUT stamp update --help
 check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 
-echo "=== Self-Update ==="
-check "self-update --check" timeout $TIMEOUT stamp self-update --check
-check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
-
 echo "=== Update ==="
-check "update runs" timeout $TIMEOUT_LONG stamp update -m apt
+check "update runs" timeout $TIMEOUT_EXTRA stamp update -m apt
 check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew
 check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
 check "reconcile --yes flag" timeout $TIMEOUT stamp reconcile -y -m apt

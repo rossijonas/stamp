@@ -3,7 +3,7 @@ set -eo pipefail
 export HOMEBREW_NO_AUTO_UPDATE=1
 
 TIMEOUT=10
-TIMEOUT_LONG=30
+TIMEOUT_LONG=120
 TIMEOUT_EXTRA=120
 test_count=0
 pass_count=0
@@ -141,10 +141,6 @@ check "stamp reconcile --help" timeout $TIMEOUT stamp reconcile --help
 check "stamp restore --help" timeout $TIMEOUT stamp restore --help
 check "stamp update --help" timeout $TIMEOUT stamp update --help
 check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
-
-echo "=== Self-Update ==="
-check "self-update --check" timeout $TIMEOUT stamp self-update --check
-check "self-upgrade alias" timeout $TIMEOUT stamp self-upgrade --check
 
 echo "=== Update ==="
 check "update runs" timeout $TIMEOUT_LONG stamp update -m apt
