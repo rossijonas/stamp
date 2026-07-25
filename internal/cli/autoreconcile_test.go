@@ -16,11 +16,15 @@ func TestAutoReconcile_On_Linux(t *testing.T) {
 	currentOS = "linux"
 	defer func() { currentOS = oldOS }()
 
+	tmpDir := t.TempDir()
+	binPath := filepath.Join(tmpDir, "stamp")
+	//nolint:gosec // test fixture needs execute bit for EvalSymlinks
+	require.NoError(t, os.WriteFile(binPath, []byte("x"), 0755))
+
 	oldExec := osExecutable
-	osExecutable = func() (string, error) { return "/usr/local/bin/stamp", nil }
+	osExecutable = func() (string, error) { return binPath, nil }
 	defer func() { osExecutable = oldExec }()
 
-	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
 	_ = os.Setenv("HOME", tmpDir)
 	_ = os.Unsetenv("XDG_CONFIG_HOME")
@@ -55,7 +59,7 @@ func TestAutoReconcile_On_Linux(t *testing.T) {
 	//nolint:gosec // temp files in isolated test directory
 	serviceData, err := os.ReadFile(servicePath)
 	require.NoError(t, err)
-	assert.Contains(t, string(serviceData), "/usr/local/bin/stamp reconcile")
+	assert.Contains(t, string(serviceData), "stamp reconcile")
 
 	//nolint:gosec // temp files in isolated test directory
 	timerData, err := os.ReadFile(timerPath)
@@ -278,12 +282,16 @@ func TestAutoReconcile_On_Period_Hourly(t *testing.T) {
 	currentOS = "linux"
 	defer func() { currentOS = oldOS }()
 
+	tmpDir := t.TempDir()
+	binPath := filepath.Join(tmpDir, "stamp")
+	//nolint:gosec // test fixture needs execute bit for EvalSymlinks
+	require.NoError(t, os.WriteFile(binPath, []byte("x"), 0755))
+
 	oldExec := osExecutable
-	osExecutable = func() (string, error) { return "/usr/local/bin/stamp", nil }
+	osExecutable = func() (string, error) { return binPath, nil }
 	defer func() { osExecutable = oldExec }()
 
 	_ = os.Unsetenv("XDG_CONFIG_HOME")
-	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
 	_ = os.Setenv("HOME", tmpDir)
 	defer func() { _ = os.Setenv("HOME", oldHome) }()
