@@ -95,13 +95,19 @@ fi
 echo "  Latest: $VERSION"
 
 # ─── Download ───
-TARBALL="stamp_${VERSION#v}_${OS}_${ARCH}.tar.gz"
+TARBALL="stamp_${VERSION}_${OS}_${ARCH}.tar.gz"
 TARBALL_URL="https://github.com/$REPO/releases/download/$VERSION/$TARBALL"
 CHECKSUMS_URL="https://github.com/$REPO/releases/download/$VERSION/checksums.txt"
 
 echo "▪ Downloading $TARBALL..."
-download "$TARBALL_URL" "$TMPDIR/stamp.tar.gz"
-download "$CHECKSUMS_URL" "$TMPDIR/checksums.txt"
+download "$TARBALL_URL" "$TMPDIR/$TARBALL" || {
+  echo "Error: failed to download $TARBALL"
+  exit 1
+}
+download "$CHECKSUMS_URL" "$TMPDIR/checksums.txt" || {
+  echo "Error: failed to download checksums.txt"
+  exit 1
+}
 
 # ─── Verify SHA-256 ───
 echo "▪ Verifying checksum..."
@@ -115,7 +121,7 @@ echo "▪ Verifying checksum..."
 
 # ─── Extract ───
 echo "▪ Extracting..."
-tar -xzf "$TMPDIR/stamp.tar.gz" -C "$TMPDIR"
+tar -xzf "$TMPDIR/$TARBALL" -C "$TMPDIR"
 
 # ─── Install ───
 echo "▪ Installing to $INSTALL_DIR..."
@@ -133,5 +139,5 @@ else
 fi
 
 echo ""
-echo "✅ Stamp $VERSION installed to $INSTALL_DIR/$BINARY"
+echo "✓ Stamp $VERSION installed to $INSTALL_DIR/$BINARY"
 echo "  Run 'stamp doctor' to verify."
