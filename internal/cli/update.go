@@ -37,15 +37,18 @@ func runUpdate(ctx context.Context, w io.Writer, a manager.Adapter, pkg string, 
 
 func newUpdateCmd() *cobra.Command {
 	var managerFlag, packageFlag string
-	var serial bool
+	var serial, checkOnly bool
 
 	cmd := &cobra.Command{
 		Use:     "update",
 		Aliases: []string{"upgrade"},
 		Short:   "Run system upgrades across all package managers",
-		Example: "  stamp update\n  stamp update -m apt\n  stamp update -p htop -m brew\n  stamp update --serial\n  stamp upgrade",
-		Long: `Run system upgrade commands for each available package manager.
-Updates and upgrades all packages to their latest versions.
+		Example: "  stamp update\n  stamp update --check\n  stamp update -m apt\n  stamp update -p htop -m brew\n  stamp update --serial\n  stamp upgrade",
+		Long: `Run system upgrade commands for each available package manager using a safe two-phase (check + confirm) flow.
+
+By default, checks for available updates, displays them, and prompts for confirmation before upgrading.
+Use --check to only run the check phase (dry-run).
+Use -y to skip the check phase and auto-confirm for maximum speed.
 Use -m to scope to a single package manager.
 Use -p to update a single package (requires -m).
 Use --serial to run updates one manager at a time (default: parallel).`,
@@ -131,5 +134,6 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to update")
 	cmd.Flags().StringVarP(&packageFlag, "package", "p", "", "update a single package (requires --manager)")
 	cmd.Flags().BoolVarP(&serial, "serial", "s", false, "run updates one at a time (sequential)")
+	cmd.Flags().BoolVarP(&checkOnly, "check", "c", false, "check for available updates without applying them")
 	return cmd
 }

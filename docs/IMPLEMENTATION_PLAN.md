@@ -367,3 +367,9 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 6 | 41a | uv.go: all Adapter methods, uv tool list parsing | ✓ |
 | 6 | 41b | uv_test.go: table-driven tests for all operations | ✓ |
 | 6 | 41c | Detection in root.go + docs | ✓ |
+| 6 | 42 | Two-phase update check + confirm | ~ Planned |
+| 6 | 42a | CheckUpdate interface + UpdateInfo type | ~ |
+| 6 | 42b | 12 adapter implementations (CheckUpdate) | ~ |
+| 6 | 42c | CLI update.go rework with --check and prompt | ~ |
+| 6 | 42d | ADR-011: update check + confirm | ✓ |
+| 6 | 42e | Docs: SPEC, FEATURE_MATRIX, usage/update.md | ✓ |

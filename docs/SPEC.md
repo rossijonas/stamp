@@ -288,16 +288,26 @@ Detailed specifications, execution behaviors, and business rules for every subco
 
 ### `stamp update` (alias `upgrade`)
 
-- **Usage:** Runs system upgrades across all available package managers. Default is parallel.
-- **Flags:** `--manager, -m`, `--package, -p`, `--serial, -s`
+- **Usage:** Runs system upgrades across all available package managers using a safe two-phase (check + confirm) flow.
+- **Flags:** `--manager, -m`, `--package, -p`, `--serial, -s`, `--check, -c`
 - **Behavior:**
-  1. If `-m` is set: runs that single manager's native update/upgrade command.
-  2. If `-p <pkg>` is set (requires `-m`): updates only the specified package instead of all packages.
-  3. If `--serial` / `-s` is set: runs managers one at a time (sequential) instead of concurrently.
-  4. If no `-m`: runs ALL available managers concurrently using `sync.WaitGroup`.
-  5. Each manager streams its native output to stderr.
-  6. Errors from one manager do NOT block others. All per-manager errors are printed. If any manager fails, the command exits non-zero.
-  7. No manifest or snapshot interaction — `update` only touches the system.
+  1. **Check Phase:**
+     a. If `-y` is set: the check phase is **skipped** entirely for performance.
+     b. Otherwise: runs a serialized, non-mutating check across all target package managers by calling `CheckUpdate`.
+     c. If an adapter natively supports update-checking (e.g. `dnf`, `apt`, `brew`, `flatpak`), it queries the native package manager and lists the available version deltas.
+     d. If an adapter does not support update-checking (e.g. `pipx`, `uv`, `go`), it returns an unsupported error. The CLI catches this and prints a short info notice (e.g. `pipx: cannot preview updates`) instead of aborting.
+     e. If `--check` / `-c` is set: the command displays the check results/notices and exits 0 immediately without performing any upgrades.
+  2. **Confirm Phase:**
+     a. If `-y` is set: the confirmation prompt is skipped.
+     b. Otherwise: the CLI displays the aggregated list of available updates/warnings and prompts the user to confirm. If rejected, exits 0.
+  3. **Run Phase:**
+     a. If `-m` is set: runs that single manager's native upgrade command.
+     b. If `-p <pkg>` is set (requires `-m`): updates only the specified package instead of all packages.
+     c. If `--serial` / `-s` is set: runs upgrades one manager at a time (sequential).
+     d. Otherwise: runs upgrades concurrently using `sync.WaitGroup` for speed.
+  4. Each manager streams its native output to stderr during execution.
+  5. Errors from one manager do NOT block others. If any manager fails, the command exits non-zero.
+  6. No manifest or snapshot interaction — `update` only touches the system.
 - **Output:** `updated packages via <manager>` or `updated <pkg> via <manager>` to stderr per manager. `⚠ update failed for <manager>: <error>` on failure.
 - **Exit code:** 0 if all managers succeed, 1 if any manager fails.
 

@@ -41,7 +41,7 @@ This document tracks all SPEC.md commands, flags, and compliance items against t
 | `stamp hello` | | ✓ | ✓ | ✓ Prints ASCII logo + suggested next steps | ✓ Complete |
 | `stamp setup` | `hello` | ✓ | ✓ | ✓ Interactive wizard for completions, man, init, doctor | ✓ Complete |
 | `stamp init` | | ✓ | ✓ | ✓ Creates dirs + manifest + snapshots | ✓ Complete |
-| `stamp update` | `upgrade` | ✓ | ✓ | ✓ errgroup concurrency + --manager + --package + --serial flags | ✓ Complete |
+| `stamp update` | `upgrade` | ✓ | ✓ | ✓ Two-phase check + confirm, --check flag, -y skips check, parallel execution, --serial flag | ✓ Complete |
 | `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 | `stamp self-update` | `self-upgrade` | ✓ | ✓ | ✓ Atomic binary replacement + SHA-256 verification + post-update hooks | ✓ Complete |
 | `stamp auto-reconcile on\|off` | | ✓ | ✓ | ✓ systemd/launchd timer, --period flag | ✓ Complete |
