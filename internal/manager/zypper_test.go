@@ -276,3 +276,23 @@ func TestZypperParseSearch(t *testing.T) {
 		})
 	}
 }
+
+func TestZypper_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewZypper()
+	manager.exec = mockExecutorHelper("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+}
+
+func TestParseZypperListUpdates(t *testing.T) {
+	t.Parallel()
+	input := []byte("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\nv | main | git | 2.43.0 | 2.43.2\n")
+	updates := parseZypperListUpdates(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "git", updates[1].Package)
+}

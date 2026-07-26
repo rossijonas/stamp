@@ -300,6 +300,17 @@ func TestBrew_Operations(t *testing.T) {
 	}
 }
 
+func TestParseBrewOutdatedJSON(t *testing.T) {
+	t.Parallel()
+	input := []byte(`{"formulae":[{"name":"htop","installed_versions":["3.2.1"],"current_version":"3.2.2"}]}`)
+	updates, err := parseBrewOutdatedJSON(input)
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}
+
 func TestBrew_ListRepos(t *testing.T) {
 	t.Parallel()
 	manager := NewBrew()
@@ -310,6 +321,19 @@ func TestBrew_ListRepos(t *testing.T) {
 	require.Len(t, repos, 2)
 	assert.Equal(t, "aovestdipaperino/tap", repos[0].Name)
 	assert.Equal(t, "yvgude/lean-ctx", repos[1].Name)
+}
+
+func TestBrew_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewBrew()
+	manager.exec = mockExecutorHelper(`{"formulae":[{"name":"htop","installed_versions":["3.2.1"],"current_version":"3.2.2"}]}`, nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }
 
 func TestBrew_ListReposError(t *testing.T) {

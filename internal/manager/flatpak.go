@@ -202,3 +202,36 @@ func (m *Flatpak) Update(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// CheckUpdate runs flatpak remote-ls --updates to list available updates.
+func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"flatpak", "remote-ls", "--updates", "--columns=application,version"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+	return parseFlatpakUpdates(out), nil
+}
+
+func parseFlatpakUpdates(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 || bytes.Equal(bytes.ToLower(trimmed), []byte("application\tversion")) {
+			continue
+		}
+		fields := bytes.Fields(trimmed)
+		if len(fields) == 0 {
+			continue
+		}
+		name := string(fields[0])
+		result = append(result, UpdateInfo{Package: name})
+	}
+	return result
+}

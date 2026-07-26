@@ -158,6 +158,11 @@ func (m *Pipx) Update(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// CheckUpdate returns an error since pipx has no check-update command.
+func (m *Pipx) CheckUpdate(_ context.Context, _ string) ([]UpdateInfo, error) {
+	return nil, fmt.Errorf("%w", ErrCheckUnsupported)
+}
+
 // AddRepo returns an error since pipx has no concept of repositories.
 func (m *Pipx) AddRepo(_ context.Context, _, _ string) error {
 	return fmt.Errorf("not supported for pipx")

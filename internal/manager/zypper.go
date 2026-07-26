@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Zypper implements the Adapter interface for the openSUSE/SLES Zypper package manager.
@@ -155,6 +156,41 @@ func (m *Zypper) RemoveRepo(_ context.Context, _ string) error {
 // ListRepos returns an empty list until native zypper repo listing is implemented (ADR-008).
 func (m *Zypper) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
+}
+
+// CheckUpdate runs zypper list-updates to show available updates.
+func (m *Zypper) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"zypper", "list-updates"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+	return parseZypperListUpdates(out), nil
+}
+
+func parseZypperListUpdates(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := strings.TrimSpace(string(line))
+		if len(trimmed) == 0 || strings.HasPrefix(trimmed, "S") || strings.HasPrefix(trimmed, "-") {
+			continue
+		}
+		fields := strings.Fields(trimmed)
+		if len(fields) < 5 {
+			continue
+		}
+		// Format: S | Repository | Name | Current | Available
+		// fields: ["v", "|", "main", "|", "htop", "|", "3.2.1", "|", "3.2.2"]
+		// Name is at index 4
+		result = append(result, UpdateInfo{Package: fields[4]})
+	}
+	return result
 }
 
 var _ Adapter = (*Zypper)(nil)

@@ -468,6 +468,14 @@ func TestValidateModulePath(t *testing.T) {
 	}
 }
 
+func TestGo_CheckUpdate_Unsupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewGo()
+	_, err := mgr.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCheckUnsupported)
+}
+
 func TestGo_GoBinDir_AllErrors(t *testing.T) {
 	mgr := NewGo()
 	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {

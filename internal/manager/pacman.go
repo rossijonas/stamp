@@ -155,4 +155,51 @@ func (m *Pacman) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
 }
 
+// CheckUpdate runs pacman -Qu to list available updates.
+// pacman -Qu exits 1 when no updates are available (success path).
+func (m *Pacman) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"pacman", "-Qu"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		if exitCodeFromError(err) == 1 {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+	return parsePacmanQu(out), nil
+}
+
+func parsePacmanQu(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 {
+			continue
+		}
+		// Format: "pkg oldversion -> newversion"
+		parts := bytes.SplitN(trimmed, []byte(" -> "), 2)
+		if len(parts) != 2 {
+			continue
+		}
+		nameAndCurrent := bytes.Fields(parts[0])
+		if len(nameAndCurrent) == 0 {
+			continue
+		}
+		name := string(nameAndCurrent[0])
+		currentVer := ""
+		if len(nameAndCurrent) > 1 {
+			currentVer = string(nameAndCurrent[1])
+		}
+		avail := strings.TrimSpace(string(parts[1]))
+		result = append(result, UpdateInfo{Package: name, CurrentVersion: currentVer, AvailableVersion: avail})
+	}
+	return result
+}
+
 var _ Adapter = (*Pacman)(nil)

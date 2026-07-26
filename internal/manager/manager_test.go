@@ -198,6 +198,32 @@ func TestPrefixWriter_PartialLine(t *testing.T) {
 	assert.Equal(t, "[x] partial\n", buf.String())
 }
 
+func TestValidatePackageForManager(t *testing.T) {
+	t.Parallel()
+	// go adapter uses ValidateModulePath
+	err := ValidatePackageForManager("go", "tool")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "full module path")
+
+	// other adapters use ValidatePackageName
+	err = ValidatePackageForManager("brew", "htop")
+	require.NoError(t, err)
+
+	err = ValidatePackageForManager("brew", "-invalid")
+	require.Error(t, err)
+}
+
+func TestExitCodeFromError(t *testing.T) {
+	t.Parallel()
+	// Non-exit error
+	code := exitCodeFromError(assert.AnError)
+	assert.Equal(t, -1, code)
+
+	// No error
+	code = exitCodeFromError(nil)
+	assert.Equal(t, -1, code)
+}
+
 func TestPrefixWriter_EmptyInput(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer

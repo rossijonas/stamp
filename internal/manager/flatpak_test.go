@@ -365,3 +365,23 @@ func TestFlatpak_ListInstalledBothFail(t *testing.T) {
 	_, err := manager.ListInstalled(context.Background())
 	require.Error(t, err)
 }
+
+func TestFlatpak_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = mockExecutorHelper("com.spotify.Client\t1.2.3\norg.gimp.GIMP\t2.10.36\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "com.spotify.Client", updates[0].Package)
+}
+
+func TestParseFlatpakUpdates(t *testing.T) {
+	t.Parallel()
+	input := []byte("Application\tVersion\ncom.spotify.Client\t1.2.3\norg.gimp.GIMP\t2.10.36\n")
+	updates := parseFlatpakUpdates(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "com.spotify.Client", updates[0].Package)
+	assert.Equal(t, "org.gimp.GIMP", updates[1].Package)
+}

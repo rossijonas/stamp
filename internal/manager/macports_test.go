@@ -309,3 +309,24 @@ func TestParsePortSearch(t *testing.T) {
 		})
 	}
 }
+
+func TestMacPorts_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewMacPorts()
+	manager.exec = mockExecutorHelper("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+}
+
+func TestParsePortOutdated(t *testing.T) {
+	t.Parallel()
+	input := []byte("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n")
+	updates := parsePortOutdated(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}

@@ -27,6 +27,8 @@ type Mock struct {
 	DoctorResult   string
 	DoctorErr      error
 	UpdateErr      error
+	CheckUpdateErr error
+	CheckUpdates   []UpdateInfo
 }
 
 // Name returns the package manager identifier.
@@ -187,4 +189,23 @@ func (m *Mock) Update(_ context.Context, _ string) error {
 		return m.UpdateErr
 	}
 	return nil
+}
+
+// CheckUpdate returns mock update info or error.
+func (m *Mock) CheckUpdate(_ context.Context, pkg string) ([]UpdateInfo, error) {
+	if m.CheckUpdateErr != nil {
+		return nil, m.CheckUpdateErr
+	}
+	if pkg != "" {
+		for _, u := range m.CheckUpdates {
+			if u.Package == pkg {
+				return []UpdateInfo{u}, nil
+			}
+		}
+		return nil, nil
+	}
+	if m.CheckUpdates != nil {
+		return slices.Clone(m.CheckUpdates), nil
+	}
+	return nil, nil
 }

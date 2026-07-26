@@ -201,6 +201,14 @@ func TestUv_Operations(t *testing.T) {
 	}
 }
 
+func TestUv_CheckUpdate_Unsupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	_, err := mgr.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCheckUnsupported)
+}
+
 func TestUv_UnsupportedOperations(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()

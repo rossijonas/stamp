@@ -197,3 +197,50 @@ func (m *APT) Update(ctx context.Context, pkg string) error {
 
 	return nil
 }
+
+// CheckUpdate returns a list of upgradable packages for apt.
+// Uses "apt list --upgradable" even for apt-get (apt-get has no list subcommand).
+func (m *APT) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"apt", "list", "--upgradable"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+	return parseAPTUpgradable(out), nil
+}
+
+func parseAPTUpgradable(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 || bytes.HasPrefix(trimmed, []byte("Listing")) {
+			continue
+		}
+		fields := bytes.Fields(trimmed)
+		if len(fields) < 2 {
+			continue
+		}
+		// Format: "htop/stable 1.2.3 amd64 [upgradable from: 1.2.2]"
+		pkgField := fields[0]
+		idx := bytes.IndexByte(pkgField, '/')
+		if idx <= 0 {
+			continue
+		}
+		name := string(pkgField[:idx])
+		availVer := string(fields[1])
+		currentVer := ""
+		for i, f := range fields {
+			if string(f) == "from:" && i+1 < len(fields) {
+				currentVer = strings.TrimRight(string(fields[i+1]), "]")
+			}
+		}
+		result = append(result, UpdateInfo{Package: name, CurrentVersion: currentVer, AvailableVersion: availVer})
+	}
+	return result
+}

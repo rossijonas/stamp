@@ -4,6 +4,7 @@ package manager
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -164,4 +165,46 @@ func (m *Brew) Update(ctx context.Context, pkg string) error {
 		return fmt.Errorf("failed to upgrade packages: %w", err)
 	}
 	return nil
+}
+
+type brewOutdatedJSON struct {
+	Formulae []brewFormula `json:"formulae"`
+}
+
+type brewFormula struct {
+	Name              string   `json:"name"`
+	InstalledVersions []string `json:"installed_versions"`
+	CurrentVersion    string   `json:"current_version"`
+}
+
+// CheckUpdate runs brew outdated --json to list available updates.
+func (m *Brew) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"brew", "outdated", "--json"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = []string{"brew", "outdated", "--json", pkg}
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+	return parseBrewOutdatedJSON(out)
+}
+
+func parseBrewOutdatedJSON(output []byte) ([]UpdateInfo, error) {
+	var data brewOutdatedJSON
+	if err := json.Unmarshal(output, &data); err != nil {
+		return nil, err
+	}
+	var result []UpdateInfo
+	for _, f := range data.Formulae {
+		cur := ""
+		if len(f.InstalledVersions) > 0 {
+			cur = f.InstalledVersions[0]
+		}
+		result = append(result, UpdateInfo{Package: f.Name, CurrentVersion: cur, AvailableVersion: f.CurrentVersion})
+	}
+	return result, nil
 }

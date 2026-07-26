@@ -170,3 +170,43 @@ func (m *DNF) Update(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// CheckUpdate runs dnf check-update to list available updates.
+// dnf check-update exits 100 when updates exist — that's success.
+func (m *DNF) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{m.cmd, "check-update"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		if exitCodeFromError(err) != 100 {
+			return nil, fmt.Errorf("failed to check updates: %w", err)
+		}
+	}
+	return parseDNFCheckUpdate(out), nil
+}
+
+func parseDNFCheckUpdate(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 {
+			continue
+		}
+		fields := bytes.Fields(trimmed)
+		if len(fields) < 2 {
+			continue
+		}
+		// Format: "pkg.arch version repo"
+		name := string(fields[0])
+		if dotIdx := strings.Index(name, "."); dotIdx > 0 {
+			name = name[:dotIdx]
+		}
+		result = append(result, UpdateInfo{Package: name, CurrentVersion: string(fields[1])})
+	}
+	return result
+}

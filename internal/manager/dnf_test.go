@@ -453,6 +453,17 @@ func TestDNF_ListRepos_MissingDir(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestParseDNFCheckUpdate(t *testing.T) {
+	t.Parallel()
+	input := []byte("htop.x86_64 3.2.1 updates\ngit.noarch 2.43.0 updates\n")
+	updates := parseDNFCheckUpdate(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "git", updates[1].Package)
+	assert.Equal(t, "2.43.0", updates[1].CurrentVersion)
+}
+
 func TestDNF_ListInstalledFallback(t *testing.T) {
 	t.Parallel()
 	calls := 0
@@ -483,6 +494,20 @@ func TestDNF_ListInstalledFallbackError(t *testing.T) {
 	_, err := manager.ListInstalled(context.Background())
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
+}
+
+func TestDNF_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf")
+	// dnf check-update exits 100 when updates exist
+	manager.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		assert.Contains(t, args, "check-update")
+		return []byte("htop.x86_64 3.2.1 updates\n"), nil
+	}
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
 }
 
 func TestDNF_ListRepos_ThroughAdapter(t *testing.T) {

@@ -230,6 +230,11 @@ func (m *Go) Update(ctx context.Context, pkg string) error {
 	return lastErr
 }
 
+// CheckUpdate returns an error since go has no check-update command.
+func (m *Go) CheckUpdate(_ context.Context, _ string) ([]UpdateInfo, error) {
+	return nil, fmt.Errorf("%w", ErrCheckUnsupported)
+}
+
 // AddRepo returns an error since go has no concept of repositories.
 func (m *Go) AddRepo(_ context.Context, _, _ string) error {
 	return fmt.Errorf("not supported for go")

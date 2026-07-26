@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 )
 
 // MacPorts implements the Adapter interface for MacPorts on macOS.
@@ -185,6 +186,45 @@ func (m *MacPorts) RemoveRepo(_ context.Context, _ string) error {
 // ListRepos returns an empty list since macports has no concept of repositories.
 func (m *MacPorts) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
+}
+
+// CheckUpdate runs port outdated to list available updates.
+func (m *MacPorts) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"port", "outdated"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+	return parsePortOutdated(out), nil
+}
+
+func parsePortOutdated(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 || !bytes.Contains(trimmed, []byte(" < ")) {
+			continue
+		}
+		// Output: "pkg @old_version < new_version"
+		parts := bytes.SplitN(trimmed, []byte(" < "), 2)
+		if len(parts) != 2 {
+			continue
+		}
+		nameAndVer := bytes.TrimSpace(parts[0])
+		avail := strings.TrimSpace(string(parts[1]))
+		// nameAndVer: "pkg @1.2.3"
+		atIdx := bytes.LastIndexByte(nameAndVer, '@')
+		name := string(bytes.TrimSpace(nameAndVer[:atIdx]))
+		curVer := string(bytes.TrimSpace(nameAndVer[atIdx+1:]))
+		result = append(result, UpdateInfo{Package: name, CurrentVersion: curVer, AvailableVersion: avail})
+	}
+	return result
 }
 
 var _ Adapter = (*MacPorts)(nil)
