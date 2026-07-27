@@ -135,6 +135,11 @@ func TestZypper_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -223,6 +228,13 @@ func TestZypper_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			case "addrepo":
 				err = manager.AddRepo(ctx, "repo", "")
 				require.Error(t, err)
@@ -275,6 +287,15 @@ func TestZypperParseSearch(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
+}
+
+func TestZypper_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewZypper()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestZypper_CheckUpdate(t *testing.T) {

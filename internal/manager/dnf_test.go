@@ -180,6 +180,11 @@ func TestDNF_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -300,6 +305,13 @@ func TestDNF_Operations(t *testing.T) {
 				}
 			case "update":
 				err = manager.Update(ctx, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {
@@ -494,6 +506,16 @@ func TestDNF_ListInstalledFallbackError(t *testing.T) {
 	_, err := manager.ListInstalled(context.Background())
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
+}
+
+func TestDNF_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf")
+	// Plain error (not exit 100) → wrapped error
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestDNF_CheckUpdate(t *testing.T) {

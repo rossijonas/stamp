@@ -135,6 +135,11 @@ func TestMacPorts_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -218,6 +223,13 @@ func TestMacPorts_Operations(t *testing.T) {
 				require.Error(t, err)
 			case "update":
 				err = manager.Update(ctx, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {
@@ -308,6 +320,15 @@ func TestParsePortSearch(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
+}
+
+func TestMacPorts_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewMacPorts()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestMacPorts_CheckUpdate(t *testing.T) {

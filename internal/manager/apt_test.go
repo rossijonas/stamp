@@ -79,6 +79,11 @@ func TestAPT_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "install validation error",
 			operation:   "install",
 			pkgName:     "-invalid",
@@ -163,6 +168,13 @@ func TestAPT_Operations(t *testing.T) {
 				}
 			case "update":
 				err = manager.Update(ctx, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {
@@ -360,6 +372,15 @@ func TestAPT_Update_Phase1Fails(t *testing.T) {
 	err := manager.Update(context.Background(), "")
 	require.Error(t, err)
 	assert.Equal(t, 1, calls) // update should fail before upgrade is called
+}
+
+func TestAPT_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewAPT("apt")
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestAPT_CheckUpdate(t *testing.T) {

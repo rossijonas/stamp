@@ -170,6 +170,11 @@ func TestBrew_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:       "doctor success",
 			operation:  "doctor",
 			mockOutput: "mock doctor: all good",
@@ -295,6 +300,13 @@ func TestBrew_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 		})
 	}
@@ -321,6 +333,15 @@ func TestBrew_ListRepos(t *testing.T) {
 	require.Len(t, repos, 2)
 	assert.Equal(t, "aovestdipaperino/tap", repos[0].Name)
 	assert.Equal(t, "yvgude/lean-ctx", repos[1].Name)
+}
+
+func TestBrew_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewBrew()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestBrew_CheckUpdate(t *testing.T) {
