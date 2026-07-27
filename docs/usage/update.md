@@ -48,7 +48,6 @@ stamp update --check
 ▪ Checking for updates...
   apt: curl 7.88.1 → 7.88.3
   brew: lazygit 0.40.0 → 0.41.0
-  ✓ No updates applied (--check mode)
 ```
 
 ### Skip Check (Auto-Confirm)
