@@ -24,7 +24,17 @@ By default, running `stamp update` performs a serialized check across all packag
 
 Proceed with updates? [Y/n]: y
 
-▪ Authentication required for system package managers
+▪ sudo password:
+▪ Checking for updates...
+  apt: curl 7.88.1 → 7.88.3
+  apt: git 2.43.0 → 2.43.2
+  dnf: htop 3.2.1 → 3.2.2
+  brew: lazygit 0.40.0 → 0.41.0
+  pipx: cannot preview updates (unsupported)
+  uv: cannot preview updates (unsupported)
+
+Proceed with updates? [Y/n]: y
+
 [apt] Reading package lists... Done
 [apt] Upgrading: 2 packages
 [dnf] Upgrading: 1 package
@@ -38,9 +48,8 @@ Managers that do not support a native "list upgrades" command (like `go`, `pipx`
 
 To ensure accuracy, the check phase automatically refreshes package metadata
 for managers that don't do it themselves. This includes `brew update`, `apt update`,
-`zypper refresh`, `pacman -Sy`, and `port selfupdate` — all via cached `sudo`
-credentials. A single sudo prompt at the start covers both the check refresh
-and the run phase. Managers like `dnf` refresh metadata as part of their check
+`zypper refresh`, `pacman -Sy`, and `port selfupdate` — all via `sudo -S` with the password cached at startup. A single sudo prompt at
+the start covers both the check refresh and the run phase. Managers like `dnf` refresh metadata as part of their check
 command and need no separate step.
 
 ### Check Only (Dry-Run)

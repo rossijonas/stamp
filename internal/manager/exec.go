@@ -82,16 +82,19 @@ func defaultExecutor(ctx context.Context, name string, args ...string) ([]byte, 
 	//nolint:gosec // execution is restricted to hardcoded manager names
 	cmd := exec.CommandContext(ctx, name, args...)
 
+	// Pipe sudo password if cached (applies to both StreamIO and non-StreamIO paths)
+	if name == "sudo" && len(sudoPassword) > 0 {
+		pw := make([]byte, len(sudoPassword)+1)
+		copy(pw, sudoPassword)
+		pw[len(pw)-1] = '\n'
+		cmd.Stdin = bytes.NewReader(pw)
+	}
+
 	if isStreamIO(ctx) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		if name == "sudo" && len(sudoPassword) > 0 {
-			pw := make([]byte, len(sudoPassword)+1)
-			copy(pw, sudoPassword)
-			pw[len(pw)-1] = '\n'
-			cmd.Stdin = bytes.NewReader(pw)
-		} else {
+		if cmd.Stdin == nil {
 			cmd.Stdin = os.Stdin
 		}
 
