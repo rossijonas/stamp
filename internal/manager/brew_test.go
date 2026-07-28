@@ -341,7 +341,7 @@ func TestBrew_CheckUpdateExecError(t *testing.T) {
 	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to check updates")
+	assert.Contains(t, err.Error(), "failed to update homebrew")
 }
 
 func TestBrew_CheckUpdate(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 )
 
 // Flatpak implements the Adapter interface for Flatpak.
@@ -203,9 +204,10 @@ func (m *Flatpak) Update(ctx context.Context, pkg string) error {
 	return nil
 }
 
-// CheckUpdate runs flatpak remote-ls --updates to list available updates.
+// CheckUpdate runs flatpak update --no-deploy to check available updates.
+// Falls back to ErrCheckUnsupported if the flag isn't available (older flatpak).
 func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
-	args := []string{"flatpak", "remote-ls", "--updates", "--columns=application,version"}
+	args := []string{"flatpak", "update", "--no-deploy", "-y"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return nil, err
@@ -214,24 +216,23 @@ func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, er
 	}
 	out, err := m.exec(ctx, args[0], args[1:]...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check updates: %w", err)
+		return nil, fmt.Errorf("%w", ErrCheckUnsupported)
 	}
-	return parseFlatpakUpdates(out), nil
+	return parseFlatpakDryRun(out), nil
 }
 
-func parseFlatpakUpdates(output []byte) []UpdateInfo {
+func parseFlatpakDryRun(output []byte) []UpdateInfo {
 	var result []UpdateInfo
 	for _, line := range bytes.Split(output, []byte("\n")) {
-		trimmed := bytes.TrimSpace(line)
-		if len(trimmed) == 0 || bytes.Equal(bytes.ToLower(trimmed), []byte("application\tversion")) {
+		trimmed := string(bytes.TrimSpace(line))
+		if !strings.HasPrefix(trimmed, "Updates for '") {
 			continue
 		}
-		fields := bytes.Fields(trimmed)
-		if len(fields) == 0 {
-			continue
+		// "Updates for 'com.spotify.Client' in remote 'flathub'"
+		parts := strings.Split(trimmed, "'")
+		if len(parts) >= 2 && parts[1] != "" {
+			result = append(result, UpdateInfo{Package: parts[1]})
 		}
-		name := string(fields[0])
-		result = append(result, UpdateInfo{Package: name})
 	}
 	return result
 }

@@ -190,6 +190,11 @@ func (m *MacPorts) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 
 // CheckUpdate runs port outdated to list available updates.
 func (m *MacPorts) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	syncArgs := sudoCmd("port", "selfupdate")
+	_, err := m.exec(ctx, syncArgs[0], syncArgs[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sync ports tree: %w", err)
+	}
 	args := []string{"port", "outdated"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {

@@ -82,18 +82,18 @@ func defaultExecutor(ctx context.Context, name string, args ...string) ([]byte, 
 	//nolint:gosec // execution is restricted to hardcoded manager names
 	cmd := exec.CommandContext(ctx, name, args...)
 
-	// Graceful cancellation handling (SIGINT instead of SIGKILL)
-	cmd.Cancel = func() error {
-		if cmd.Process != nil {
-			return cmd.Process.Signal(os.Interrupt)
-		}
-		return nil
-	}
-
 	if isStreamIO(ctx) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
+
+		if name == "sudo" && len(sudoPassword) > 0 {
+			pw := make([]byte, len(sudoPassword)+1)
+			copy(pw, sudoPassword)
+			pw[len(pw)-1] = '\n'
+			cmd.Stdin = bytes.NewReader(pw)
+		} else {
+			cmd.Stdin = os.Stdin
+		}
 
 		if prefix := getOutputPrefix(ctx); prefix != "" {
 			cmd.Stdout = &prefixWriter{prefix: prefix, w: os.Stdout}

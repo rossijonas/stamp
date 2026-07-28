@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/rossijonas/stamp/internal/manager"
 )
@@ -21,7 +25,8 @@ type checkResult struct {
 
 func needsSudo(adapters []manager.Adapter) bool {
 	for _, a := range adapters {
-		if a.Name() == "dnf" {
+		switch a.Name() {
+		case "dnf", "apt", "zypper", "pacman", "macports", "snap":
 			return true
 		}
 	}
@@ -128,6 +133,24 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 			app := appFromCtx(cmd)
 			errOut := cmd.ErrOrStderr()
 
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
+
+			// SIGINT handler: restore terminal state and cancel context
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGINT)
+			go func() {
+				<-sigCh
+				signal.Stop(sigCh)
+				_, _ = fmt.Fprintln(errOut)
+				if stty, err := exec.LookPath("stty"); err == nil {
+					//nolint:gosec // stty path comes from LookPath, not user input
+					_ = exec.Command(stty, "echo").Run()
+				}
+				cancel()
+			}()
+			defer signal.Stop(sigCh)
+
 			if checkOnly && app.yes {
 				return fmt.Errorf("--check and --yes are mutually exclusive")
 			}
@@ -161,9 +184,22 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 				return fmt.Errorf("no package managers available")
 			}
 
+			// Pre-run: sudo re-auth (caches password for all sudo commands via sudo -S)
+			if needsSudo(adapters) && isTerminal(cmd.InOrStdin()) {
+				_, _ = fmt.Fprint(errOut, "▪ sudo password: ")
+				//nolint:gosec // uintptr -> int conversion is safe on all target platforms
+				pw, err := term.ReadPassword(int(os.Stdin.Fd()))
+				_, _ = fmt.Fprintln(errOut)
+				if err != nil {
+					return fmt.Errorf("failed to read sudo password: %w", err)
+				}
+				manager.SetSudoPassword(pw)
+				defer manager.ClearSudoPassword()
+			}
+
 			// Check phase (skipped when -y)
 			if !app.yes {
-				results := runCheck(cmd.Context(), adapters, packageFlag, errOut)
+				results := runCheck(ctx, adapters, packageFlag, errOut)
 
 				if checkOnly {
 					return nil
@@ -200,20 +236,8 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 				}
 			}
 
-			// Pre-run: sudo re-auth
-			if needsSudo(adapters) && isTerminal(cmd.InOrStdin()) {
-				_, _ = fmt.Fprintln(errOut, "▪ Authentication required for system package managers")
-				sudo := exec.CommandContext(cmd.Context(), "sudo", "-v")
-				sudo.Stdin = cmd.InOrStdin()
-				sudo.Stderr = errOut
-				sudo.Stdout = errOut
-				if err := sudo.Run(); err != nil {
-					return fmt.Errorf("sudo authentication failed: %w", err)
-				}
-			}
-
 			// Run phase
-			if runUpdates(cmd.Context(), errOut, adapters, packageFlag, serial) {
+			if runUpdates(ctx, errOut, adapters, packageFlag, serial) {
 				return fmt.Errorf("one or more managers failed to update")
 			}
 			return nil

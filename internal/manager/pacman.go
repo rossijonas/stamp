@@ -158,6 +158,11 @@ func (m *Pacman) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 // CheckUpdate runs pacman -Qu to list available updates.
 // pacman -Qu exits 1 when no updates are available (success path).
 func (m *Pacman) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	syncArgs := sudoCmd("pacman", "-Sy")
+	_, err := m.exec(ctx, syncArgs[0], syncArgs[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sync databases: %w", err)
+	}
 	args := []string{"pacman", "-Qu"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {

@@ -2,10 +2,12 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // Go implements the Adapter interface for the Go toolchain (go install).
@@ -218,16 +220,26 @@ func (m *Go) Update(ctx context.Context, pkg string) error {
 	if err != nil {
 		return fmt.Errorf("failed to list go binaries for update: %w", err)
 	}
-	var lastErr error
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errs []error
 	for _, mod := range pkgs {
 		if !strings.Contains(mod, "/") {
 			continue
 		}
-		if err := m.Install(ctx, mod); err != nil {
-			lastErr = err
-		}
+		mod := mod
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := m.Install(ctx, mod); err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+			}
+		}()
 	}
-	return lastErr
+	wg.Wait()
+	return errors.Join(errs...)
 }
 
 // CheckUpdate returns an error since go has no check-update command.

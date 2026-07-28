@@ -201,7 +201,13 @@ func (m *APT) Update(ctx context.Context, pkg string) error {
 // CheckUpdate returns a list of upgradable packages for apt.
 // Uses "apt list --upgradable" even for apt-get (apt-get has no list subcommand).
 func (m *APT) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
-	args := []string{"apt", "list", "--upgradable"}
+	// Refresh package lists first — apt list --upgradable uses stale data otherwise
+	args := sudoCmd(m.cmd, "update")
+	_, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update package lists: %w", err)
+	}
+	args = []string{"apt", "list", "--upgradable"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return nil, err

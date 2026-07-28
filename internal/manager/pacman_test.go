@@ -298,7 +298,7 @@ func TestPacman_CheckUpdateExecError(t *testing.T) {
 	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to check updates")
+	assert.Contains(t, err.Error(), "failed to sync databases")
 }
 
 func TestPacman_CheckUpdate(t *testing.T) {

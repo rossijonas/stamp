@@ -160,6 +160,11 @@ func (m *Zypper) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 
 // CheckUpdate runs zypper list-updates to show available updates.
 func (m *Zypper) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	refreshArgs := sudoCmd("zypper", "refresh")
+	_, err := m.exec(ctx, refreshArgs[0], refreshArgs[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh repositories: %w", err)
+	}
 	args := []string{"zypper", "list-updates"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {

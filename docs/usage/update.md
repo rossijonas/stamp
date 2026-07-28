@@ -36,6 +36,13 @@ Proceed with updates? [Y/n]: y
 
 Managers that do not support a native "list upgrades" command (like `go`, `pipx`, `uv`) will print a short notice and continue safely.
 
+To ensure accuracy, the check phase automatically refreshes package metadata
+for managers that don't do it themselves. This includes `brew update`, `apt update`,
+`zypper refresh`, `pacman -Sy`, and `port selfupdate` — all via cached `sudo`
+credentials. A single sudo prompt at the start covers both the check refresh
+and the run phase. Managers like `dnf` refresh metadata as part of their check
+command and need no separate step.
+
 ### Check Only (Dry-Run)
 
 Use `--check` or `-c` to check for available updates without applying them:

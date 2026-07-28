@@ -22,17 +22,39 @@ func NewDNF(cmd string) *DNF {
 	}
 }
 
-// stdIn is overridable in tests to simulate pipe vs TTY.
+// stdIn is overridable in tests to simulate pipe vs TTY for sudo decisions.
 var stdIn = os.Stdin
 
+// sudoPassword caches the password for sudo -S when provided by the CLI layer.
+var sudoPassword []byte
+
+// SetSudoPassword stores a password for use with sudo -S.
+// The password is cleared automatically via ClearSudoPassword after the run phase.
+func SetSudoPassword(pw []byte) {
+	sudoPassword = pw
+}
+
+// ClearSudoPassword zeros and releases the cached sudo password.
+func ClearSudoPassword() {
+	if sudoPassword != nil {
+		clear(sudoPassword)
+		sudoPassword = nil
+	}
+}
+
 // sudoCmd builds a sudo command that is TTY-aware.
-// In non-interactive environments (CI/pipes), adds -n to fail fast.
-// In interactive terminals, omits -n so sudo can prompt for a password.
+// When a password is cached via SetSudoPassword, appends -S and the executor pipes it to stdin.
+// In non-interactive environments (CI/pipes) without a cached password, adds -n to fail fast.
+// In interactive terminals without a cached password, omits extra flags so sudo prompts normally.
 func sudoCmd(args ...string) []string {
 	cmd := []string{"sudo"}
-	stat, err := stdIn.Stat()
-	if err == nil && stat.Mode()&os.ModeCharDevice == 0 {
-		cmd = append(cmd, "-n")
+	if sudoPassword != nil {
+		cmd = append(cmd, "-S")
+	} else {
+		stat, err := stdIn.Stat()
+		if err == nil && stat.Mode()&os.ModeCharDevice == 0 {
+			cmd = append(cmd, "-n")
+		}
 	}
 	return append(cmd, args...)
 }

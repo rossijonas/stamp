@@ -590,5 +590,6 @@ func TestSudoCmd_StatError(t *testing.T) {
 	defer func() { stdIn = oldStdin }()
 
 	result := sudoCmd("update")
+	// Stat returns error on closed pipe → original behavior: no -n (interactive assumed)
 	assert.Equal(t, []string{"sudo", "update"}, result)
 }

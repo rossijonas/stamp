@@ -378,30 +378,32 @@ func TestFlatpak_ListInstalledBothFail(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestFlatpak_CheckUpdateExecError(t *testing.T) {
-	t.Parallel()
-	manager := NewFlatpak()
-	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to check updates")
-}
-
 func TestFlatpak_CheckUpdate(t *testing.T) {
 	t.Parallel()
 	manager := NewFlatpak()
-	manager.exec = mockExecutorHelper("com.spotify.Client\t1.2.3\norg.gimp.GIMP\t2.10.36\n", nil)
+	out := "Looking for updates…\nUpdates for 'com.spotify.Client' in remote 'flathub'\nUpdates for 'org.gimp.GIMP' in remote 'flathub'\nNothing to update.\n"
+	manager.exec = mockExecutorHelper(out, nil)
 
 	updates, err := manager.CheckUpdate(context.Background(), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "com.spotify.Client", updates[0].Package)
+	assert.Equal(t, "org.gimp.GIMP", updates[1].Package)
 }
 
-func TestParseFlatpakUpdates(t *testing.T) {
+func TestFlatpak_CheckUpdate_Unsupported(t *testing.T) {
 	t.Parallel()
-	input := []byte("Application\tVersion\ncom.spotify.Client\t1.2.3\norg.gimp.GIMP\t2.10.36\n")
-	updates := parseFlatpakUpdates(input)
+	manager := NewFlatpak()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCheckUnsupported)
+}
+
+func TestParseFlatpakDryRun(t *testing.T) {
+	t.Parallel()
+	input := []byte("Looking for updates…\nUpdates for 'com.spotify.Client' in remote 'flathub'\nUpdates for 'org.gimp.GIMP' in remote 'flathub'\nNothing to update.\n")
+	updates := parseFlatpakDryRun(input)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "com.spotify.Client", updates[0].Package)
 	assert.Equal(t, "org.gimp.GIMP", updates[1].Package)

@@ -179,6 +179,10 @@ type brewFormula struct {
 
 // CheckUpdate runs brew outdated --json to list available updates.
 func (m *Brew) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	_, err := m.exec(ctx, "brew", "update")
+	if err != nil {
+		return nil, fmt.Errorf("failed to update homebrew: %w", err)
+	}
 	args := []string{"brew", "outdated", "--json"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
