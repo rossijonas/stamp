@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 )
 
 // Flatpak implements the Adapter interface for Flatpak.
@@ -201,4 +202,37 @@ func (m *Flatpak) Update(ctx context.Context, pkg string) error {
 		return fmt.Errorf("failed to update flatpak: %w", err)
 	}
 	return nil
+}
+
+// CheckUpdate runs flatpak update --no-deploy to check available updates.
+// Falls back to ErrCheckUnsupported if the flag isn't available (older flatpak).
+func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"flatpak", "update", "--no-deploy", "-y"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("%w", ErrCheckUnsupported)
+	}
+	return parseFlatpakDryRun(out), nil
+}
+
+func parseFlatpakDryRun(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := string(bytes.TrimSpace(line))
+		if !strings.HasPrefix(trimmed, "Updates for '") {
+			continue
+		}
+		// "Updates for 'com.spotify.Client' in remote 'flathub'"
+		parts := strings.Split(trimmed, "'")
+		if len(parts) >= 2 && parts[1] != "" {
+			result = append(result, UpdateInfo{Package: parts[1]})
+		}
+	}
+	return result
 }

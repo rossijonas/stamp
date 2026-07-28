@@ -79,6 +79,11 @@ func TestAPT_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "install validation error",
 			operation:   "install",
 			pkgName:     "-invalid",
@@ -163,6 +168,13 @@ func TestAPT_Operations(t *testing.T) {
 				}
 			case "update":
 				err = manager.Update(ctx, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {
@@ -362,6 +374,45 @@ func TestAPT_Update_Phase1Fails(t *testing.T) {
 	assert.Equal(t, 1, calls) // update should fail before upgrade is called
 }
 
+func TestAPT_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewAPT("apt")
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to update package lists")
+}
+
+func TestAPT_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewAPT("apt")
+	manager.exec = mockExecutorHelper("htop/stable 3.2.2 amd64 [upgradable from: 3.2.1]\ngit/stable 2.43.2 amd64 [upgradable from: 2.43.0]\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}
+
+func TestAPT_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewAPT("apt")
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // apt update succeeds
+		}
+		return nil, assert.AnError // apt list --upgradable fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
 func TestAPT_RemoveRepo_NoFile(t *testing.T) {
 	// Not parallel — modifies package-level lookPath
 	oldLookPath := lookPath
@@ -503,4 +554,16 @@ func TestParseDPKGQueryInstalled(t *testing.T) {
 	expected := []string{"htop", "jq"}
 	result := parseDPKGQueryInstalled(input)
 	assert.ElementsMatch(t, expected, result)
+}
+
+func TestParseAPTUpgradable(t *testing.T) {
+	t.Parallel()
+	input := []byte("Listing...\nhtop/stable 3.2.2 amd64 [upgradable from: 3.2.1]\ngit/stable 2.43.2 amd64 [upgradable from: 2.43.0]\n")
+	updates := parseAPTUpgradable(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+	assert.Equal(t, "git", updates[1].Package)
+	assert.NotEmpty(t, updates[1].AvailableVersion)
 }

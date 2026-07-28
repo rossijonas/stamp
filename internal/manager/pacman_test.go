@@ -129,6 +129,11 @@ func TestPacman_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -217,6 +222,13 @@ func TestPacman_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			case "addrepo":
 				err = manager.AddRepo(ctx, "repo", "")
 				require.Error(t, err)
@@ -277,4 +289,54 @@ func TestParsePacmanSearch(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
+}
+
+func TestPacman_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewPacman()
+	// Plain error (not exit 1) → wrapped error
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to sync databases")
+}
+
+func TestPacman_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewPacman()
+	manager.exec = mockExecutorHelper("htop 3.2.1 -> 3.2.2\ngit 2.43.0 -> 2.43.2\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}
+
+func TestPacman_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewPacman()
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // pacman -Sy succeeds
+		}
+		return nil, assert.AnError // pacman -Qu fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestParsePacmanQu(t *testing.T) {
+	t.Parallel()
+	input := []byte("htop 3.2.1 -> 3.2.2\ngit 2.43.0 -> 2.43.2\n")
+	updates := parsePacmanQu(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }

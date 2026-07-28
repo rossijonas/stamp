@@ -141,6 +141,11 @@ func (m *UvTool) Update(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// CheckUpdate returns an error since uv has no check-update command.
+func (m *UvTool) CheckUpdate(_ context.Context, _ string) ([]UpdateInfo, error) {
+	return nil, fmt.Errorf("%w", ErrCheckUnsupported)
+}
+
 // AddRepo returns an error since uv has no concept of repositories.
 func (m *UvTool) AddRepo(_ context.Context, _, _ string) error {
 	return fmt.Errorf("not supported for uv")

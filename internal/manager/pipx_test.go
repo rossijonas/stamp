@@ -223,6 +223,14 @@ func TestPipx_Operations(t *testing.T) {
 	}
 }
 
+func TestPipx_CheckUpdate_Unsupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	_, err := mgr.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCheckUnsupported)
+}
+
 func TestPipx_UnsupportedOperations(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()

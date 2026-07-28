@@ -165,6 +165,11 @@ func TestFlatpak_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -290,6 +295,13 @@ func TestFlatpak_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 		})
 	}
@@ -364,4 +376,35 @@ func TestFlatpak_ListInstalledBothFail(t *testing.T) {
 
 	_, err := manager.ListInstalled(context.Background())
 	require.Error(t, err)
+}
+
+func TestFlatpak_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	out := "Looking for updates…\nUpdates for 'com.spotify.Client' in remote 'flathub'\nUpdates for 'org.gimp.GIMP' in remote 'flathub'\nNothing to update.\n"
+	manager.exec = mockExecutorHelper(out, nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "com.spotify.Client", updates[0].Package)
+	assert.Equal(t, "org.gimp.GIMP", updates[1].Package)
+}
+
+func TestFlatpak_CheckUpdate_Unsupported(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCheckUnsupported)
+}
+
+func TestParseFlatpakDryRun(t *testing.T) {
+	t.Parallel()
+	input := []byte("Looking for updates…\nUpdates for 'com.spotify.Client' in remote 'flathub'\nUpdates for 'org.gimp.GIMP' in remote 'flathub'\nNothing to update.\n")
+	updates := parseFlatpakDryRun(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "com.spotify.Client", updates[0].Package)
+	assert.Equal(t, "org.gimp.GIMP", updates[1].Package)
 }

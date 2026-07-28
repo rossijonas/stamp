@@ -135,6 +135,11 @@ func TestZypper_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -223,6 +228,13 @@ func TestZypper_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			case "addrepo":
 				err = manager.AddRepo(ctx, "repo", "")
 				require.Error(t, err)
@@ -275,4 +287,50 @@ func TestZypperParseSearch(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
+}
+
+func TestZypper_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewZypper()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to refresh repositories")
+}
+
+func TestZypper_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewZypper()
+	manager.exec = mockExecutorHelper("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+}
+
+func TestZypper_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewZypper()
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // zypper refresh succeeds
+		}
+		return nil, assert.AnError // zypper list-updates fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestParseZypperListUpdates(t *testing.T) {
+	t.Parallel()
+	input := []byte("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\nv | main | git | 2.43.0 | 2.43.2\n")
+	updates := parseZypperListUpdates(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "git", updates[1].Package)
 }

@@ -135,6 +135,11 @@ func TestSnap_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -223,6 +228,13 @@ func TestSnap_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			case "addrepo":
 				err = manager.AddRepo(ctx, "repo", "")
 				require.Error(t, err)
@@ -281,4 +293,33 @@ func TestParseSnapTabular(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
+}
+
+func TestSnap_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewSnap()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestSnap_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewSnap()
+	manager.exec = mockExecutorHelper("htop                 3.2.2     123   stable\ngit                  2.43.2    456   stable\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+}
+
+func TestParseSnapRefreshList(t *testing.T) {
+	t.Parallel()
+	input := []byte("Name                 Version   Rev   Latest\nhtop                 3.2.2     123   stable\ngit                  2.43.2    456   stable\n")
+	updates := parseSnapRefreshList(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "git", updates[1].Package)
 }

@@ -19,9 +19,11 @@ import (
 
 // mockAdapter is a test implementation of manager.Adapter.
 type mockAdapter struct {
-	name          string
-	err           error
-	searchResults []string // when nil, defaults to []string{q + "-found"}
+	name            string
+	err             error
+	searchResults   []string
+	checkUpdates    []manager.UpdateInfo
+	checkUpdatesErr error
 }
 
 func (m *mockAdapter) Name() string                                      { return m.name }
@@ -47,6 +49,15 @@ func (m *mockAdapter) Doctor(_ context.Context) (string, error) {
 	return "mock doctor: all good", m.err
 }
 func (m *mockAdapter) Update(_ context.Context, _ string) error { return m.err }
+func (m *mockAdapter) CheckUpdate(_ context.Context, _ string) ([]manager.UpdateInfo, error) {
+	if m.checkUpdatesErr != nil {
+		return nil, m.checkUpdatesErr
+	}
+	if m.checkUpdates != nil {
+		return m.checkUpdates, nil
+	}
+	return nil, nil
+}
 
 // execCmd builds a root with injected mock adapters and isolated temp paths, executes, returns output.
 func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Buffer, error) {

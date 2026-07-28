@@ -170,6 +170,11 @@ func TestBrew_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:       "doctor success",
 			operation:  "doctor",
 			mockOutput: "mock doctor: all good",
@@ -295,9 +300,27 @@ func TestBrew_Operations(t *testing.T) {
 				} else {
 					require.NoError(t, err)
 				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 		})
 	}
+}
+
+func TestParseBrewOutdatedJSON(t *testing.T) {
+	t.Parallel()
+	input := []byte(`{"formulae":[{"name":"htop","installed_versions":["3.2.1"],"current_version":"3.2.2"}]}`)
+	updates, err := parseBrewOutdatedJSON(input)
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }
 
 func TestBrew_ListRepos(t *testing.T) {
@@ -310,6 +333,45 @@ func TestBrew_ListRepos(t *testing.T) {
 	require.Len(t, repos, 2)
 	assert.Equal(t, "aovestdipaperino/tap", repos[0].Name)
 	assert.Equal(t, "yvgude/lean-ctx", repos[1].Name)
+}
+
+func TestBrew_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewBrew()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to update homebrew")
+}
+
+func TestBrew_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewBrew()
+	manager.exec = mockExecutorHelper(`{"formulae":[{"name":"htop","installed_versions":["3.2.1"],"current_version":"3.2.2"}]}`, nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}
+
+func TestBrew_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	manager := NewBrew()
+	call := 0
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // brew update succeeds
+		}
+		return nil, assert.AnError // brew outdated --json fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestBrew_ListReposError(t *testing.T) {

@@ -406,6 +406,9 @@ func TestSelfUpdate_ExecutableError(t *testing.T) {
 	Version = "1.0.0"
 	defer func() { Version = oldVersion }()
 
+	// Set up mock server to avoid live GitHub API rate limit (HTTP 403)
+	setupSelfUpdateServer(t, "v2.0.0", "stamp.tar.gz", []byte("content"))
+
 	root := NewRootCmd(WithAdapters(nil), WithConfigPath(""), WithManifestPath(""))
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)

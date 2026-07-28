@@ -3,7 +3,9 @@ package manager
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"os/exec"
 	"regexp"
 	"strings"
 )
@@ -56,6 +58,27 @@ type RepositoryInfo struct {
 	URL  string `json:"url,omitempty"`
 }
 
+// UpdateInfo holds the package name and version details for available updates.
+type UpdateInfo struct {
+	Package          string `json:"package"`
+	CurrentVersion   string `json:"current_version,omitempty"`
+	AvailableVersion string `json:"available_version,omitempty"`
+}
+
+// ErrCheckUnsupported is returned by CheckUpdate when the adapter has no native
+// "check for updates" command (e.g. pipx, uv, go).
+var ErrCheckUnsupported = errors.New("check not supported")
+
+// exitCodeFromError attempts to extract a process exit code from an error.
+// Returns -1 if the error is not an *exec.ExitError or has no process state.
+func exitCodeFromError(err error) int {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitCode()
+	}
+	return -1
+}
+
 // Adapter abstracts operations for different underlying package managers
 // like dnf, brew, and flatpak.
 type Adapter interface {
@@ -96,6 +119,12 @@ type Adapter interface {
 	// Update runs the native system upgrade command for this package manager.
 	// If pkg is non-empty, updates only that package instead of all packages.
 	Update(ctx context.Context, pkg string) error
+
+	// CheckUpdate returns a list of available updates for this manager.
+	// If pkg is non-empty, scopes the check to that package.
+	// Returns err = nil + empty slice if up to date.
+	// Returns ErrCheckUnsupported if the manager has no native check command.
+	CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error)
 }
 
 func init() {

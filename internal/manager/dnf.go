@@ -22,17 +22,39 @@ func NewDNF(cmd string) *DNF {
 	}
 }
 
-// stdIn is overridable in tests to simulate pipe vs TTY.
+// stdIn is overridable in tests to simulate pipe vs TTY for sudo decisions.
 var stdIn = os.Stdin
 
+// sudoPassword caches the password for sudo -S when provided by the CLI layer.
+var sudoPassword []byte
+
+// SetSudoPassword stores a password for use with sudo -S.
+// The password is cleared automatically via ClearSudoPassword after the run phase.
+func SetSudoPassword(pw []byte) {
+	sudoPassword = pw
+}
+
+// ClearSudoPassword zeros and releases the cached sudo password.
+func ClearSudoPassword() {
+	if sudoPassword != nil {
+		clear(sudoPassword)
+		sudoPassword = nil
+	}
+}
+
 // sudoCmd builds a sudo command that is TTY-aware.
-// In non-interactive environments (CI/pipes), adds -n to fail fast.
-// In interactive terminals, omits -n so sudo can prompt for a password.
+// When a password is cached via SetSudoPassword, appends -S and the executor pipes it to stdin.
+// In non-interactive environments (CI/pipes) without a cached password, adds -n to fail fast.
+// In interactive terminals without a cached password, omits extra flags so sudo prompts normally.
 func sudoCmd(args ...string) []string {
 	cmd := []string{"sudo"}
-	stat, err := stdIn.Stat()
-	if err == nil && stat.Mode()&os.ModeCharDevice == 0 {
-		cmd = append(cmd, "-n")
+	if sudoPassword != nil {
+		cmd = append(cmd, "-S")
+	} else {
+		stat, err := stdIn.Stat()
+		if err == nil && stat.Mode()&os.ModeCharDevice == 0 {
+			cmd = append(cmd, "-n")
+		}
 	}
 	return append(cmd, args...)
 }
@@ -169,4 +191,44 @@ func (m *DNF) Update(ctx context.Context, pkg string) error {
 		return fmt.Errorf("failed to update: %w", err)
 	}
 	return nil
+}
+
+// CheckUpdate runs dnf check-update to list available updates.
+// dnf check-update exits 100 when updates exist — that's success.
+func (m *DNF) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{m.cmd, "check-update"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		if exitCodeFromError(err) != 100 {
+			return nil, fmt.Errorf("failed to check updates: %w", err)
+		}
+	}
+	return parseDNFCheckUpdate(out), nil
+}
+
+func parseDNFCheckUpdate(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 {
+			continue
+		}
+		fields := bytes.Fields(trimmed)
+		if len(fields) < 2 {
+			continue
+		}
+		// Format: "pkg.arch version repo"
+		name := string(fields[0])
+		if dotIdx := strings.Index(name, "."); dotIdx > 0 {
+			name = name[:dotIdx]
+		}
+		result = append(result, UpdateInfo{Package: name, CurrentVersion: string(fields[1])})
+	}
+	return result
 }

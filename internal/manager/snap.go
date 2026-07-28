@@ -162,5 +162,38 @@ func (m *Snap) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
 }
 
+// CheckUpdate runs snap refresh --list to show available updates.
+func (m *Snap) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	args := []string{"snap", "refresh", "--list"}
+	if pkg != "" {
+		if err := ValidatePackageName(pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+	return parseSnapRefreshList(out), nil
+}
+
+func parseSnapRefreshList(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 || bytes.HasPrefix(trimmed, []byte("Name")) {
+			continue
+		}
+		fields := bytes.Fields(trimmed)
+		if len(fields) < 2 {
+			continue
+		}
+		name := string(fields[0])
+		result = append(result, UpdateInfo{Package: name})
+	}
+	return result
+}
+
 // Compile-time interface check.
 var _ Adapter = (*Snap)(nil)

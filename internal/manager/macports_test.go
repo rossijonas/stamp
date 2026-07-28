@@ -135,6 +135,11 @@ func TestMacPorts_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -218,6 +223,13 @@ func TestMacPorts_Operations(t *testing.T) {
 				require.Error(t, err)
 			case "update":
 				err = manager.Update(ctx, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {
@@ -308,4 +320,51 @@ func TestParsePortSearch(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
+}
+
+func TestMacPorts_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewMacPorts()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to sync ports tree")
+}
+
+func TestMacPorts_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewMacPorts()
+	manager.exec = mockExecutorHelper("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n", nil)
+
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+}
+
+func TestMacPorts_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewMacPorts()
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // port selfupdate succeeds
+		}
+		return nil, assert.AnError // port outdated fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestParsePortOutdated(t *testing.T) {
+	t.Parallel()
+	input := []byte("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n")
+	updates := parsePortOutdated(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }

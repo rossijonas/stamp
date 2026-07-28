@@ -134,6 +134,37 @@ func TestMock_InstallInvalidName(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestMock_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "brew",
+		CheckUpdates: []UpdateInfo{
+			{Package: "htop", CurrentVersion: "3.2.1", AvailableVersion: "3.2.2"},
+		},
+	}
+	updates, err := mock.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+
+	// Scoped to a package
+	updates, err = mock.CheckUpdate(context.Background(), "htop")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+
+	// Non-existent package
+	updates, err = mock.CheckUpdate(context.Background(), "missing")
+	require.NoError(t, err)
+	assert.Empty(t, updates)
+
+	// Error case
+	mock.CheckUpdateErr = assert.AnError
+	_, err = mock.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+}
+
 func TestMock_SearchInvalidName(t *testing.T) {
 	t.Parallel()
 	mock := &Mock{ManagerName: "test"}

@@ -180,6 +180,11 @@ func TestDNF_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:      "update single package",
+			operation: "update_single",
+			pkgName:   "htop",
+		},
+		{
 			name:        "doctor not supported",
 			operation:   "doctor",
 			expectedErr: true,
@@ -300,6 +305,13 @@ func TestDNF_Operations(t *testing.T) {
 				}
 			case "update":
 				err = manager.Update(ctx, "")
+				if tt.expectedErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			case "update_single":
+				err = manager.Update(ctx, tt.pkgName)
 				if tt.expectedErr {
 					require.Error(t, err)
 				} else {
@@ -453,6 +465,17 @@ func TestDNF_ListRepos_MissingDir(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestParseDNFCheckUpdate(t *testing.T) {
+	t.Parallel()
+	input := []byte("htop.x86_64 3.2.1 updates\ngit.noarch 2.43.0 updates\n")
+	updates := parseDNFCheckUpdate(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "git", updates[1].Package)
+	assert.Equal(t, "2.43.0", updates[1].CurrentVersion)
+}
+
 func TestDNF_ListInstalledFallback(t *testing.T) {
 	t.Parallel()
 	calls := 0
@@ -483,6 +506,30 @@ func TestDNF_ListInstalledFallbackError(t *testing.T) {
 	_, err := manager.ListInstalled(context.Background())
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
+}
+
+func TestDNF_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf")
+	// Plain error (not exit 100) → wrapped error
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestDNF_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf")
+	// dnf check-update exits 100 when updates exist
+	manager.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		assert.Contains(t, args, "check-update")
+		return []byte("htop.x86_64 3.2.1 updates\n"), nil
+	}
+	updates, err := manager.CheckUpdate(context.Background(), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
 }
 
 func TestDNF_ListRepos_ThroughAdapter(t *testing.T) {
@@ -543,5 +590,32 @@ func TestSudoCmd_StatError(t *testing.T) {
 	defer func() { stdIn = oldStdin }()
 
 	result := sudoCmd("update")
+	// Stat returns error on closed pipe → original behavior: no -n (interactive assumed)
 	assert.Equal(t, []string{"sudo", "update"}, result)
+}
+
+func TestSudoCmd_WithPassword(t *testing.T) {
+	defer ClearSudoPassword()
+	SetSudoPassword([]byte("secret"))
+
+	result := sudoCmd("install", "-y", "htop")
+	assert.Equal(t, []string{"sudo", "-S", "install", "-y", "htop"}, result)
+}
+
+func TestSudoCmd_PasswordOverridesNonTTY(t *testing.T) {
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	_ = w.Close()
+	defer func() { _ = r.Close() }()
+
+	oldStdin := stdIn
+	stdIn = r
+	defer func() { stdIn = oldStdin }()
+
+	defer ClearSudoPassword()
+	SetSudoPassword([]byte("secret"))
+
+	// Password present → -S, even in non-TTY (not -n)
+	result := sudoCmd("update")
+	assert.Equal(t, []string{"sudo", "-S", "update"}, result)
 }

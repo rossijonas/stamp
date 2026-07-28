@@ -27,6 +27,9 @@ func (t *testAdapter) RemoveRepo(_ context.Context, _ string) error             
 func (t *testAdapter) Info(_ context.Context, _ string) (string, error)              { return "", nil }
 func (t *testAdapter) Doctor(_ context.Context) (string, error)                      { return "mock doctor: all good", nil }
 func (t *testAdapter) Update(_ context.Context, _ string) error                      { return nil }
+func (t *testAdapter) CheckUpdate(_ context.Context, _ string) ([]manager.UpdateInfo, error) {
+	return nil, nil
+}
 
 func TestResolver_Tier1ExplicitOverride(t *testing.T) {
 	t.Parallel()

@@ -7,8 +7,11 @@ Run system upgrades across all package managers
 
 ### Synopsis
 
-Run system upgrade commands for each available package manager.
-Updates and upgrades all packages to their latest versions.
+Run system upgrade commands for each available package manager using a safe two-phase (check + confirm) flow.
+
+By default, checks for available updates, displays them, and prompts for confirmation before upgrading.
+Use --check to only run the check phase (dry-run).
+Use -y to skip the check phase and auto-confirm for maximum speed.
 Use -m to scope to a single package manager.
 Use -p to update a single package (requires -m).
 Use --serial to run updates one manager at a time (default: parallel).
@@ -21,6 +24,7 @@ stamp update [flags]
 
 ```
   stamp update
+  stamp update --check
   stamp update -m apt
   stamp update -p htop -m brew
   stamp update --serial
@@ -30,6 +34,7 @@ stamp update [flags]
 ### Options
 
 ```
+  -c, --check            check for available updates without applying them
   -h, --help             help for update
   -m, --manager string   package manager to update
   -p, --package string   update a single package (requires --manager)
