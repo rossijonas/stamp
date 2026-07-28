@@ -323,3 +323,137 @@ func TestParseSnapRefreshList(t *testing.T) {
 	assert.Equal(t, "htop", updates[0].Package)
 	assert.Equal(t, "git", updates[1].Package)
 }
+
+func TestSnap_Clean(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewSnap()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			// snap list (active revisions)
+			return []byte("Name\tVersion\tRev\tTracking\nhtop\t1.1\t6\tstable\n"), nil
+		case 2:
+			// snap list --all (all revisions)
+			return []byte("Name\tVersion\tRev\tTracking\nhtop\t1.0\t5\tstable\nhtop\t1.1\t6\tstable\n"), nil
+		case 3:
+			// snap remove --revision 5 (inactive)
+			return []byte(""), nil
+		default:
+			return nil, assert.AnError
+		}
+	}
+	result, err := m.Clean(context.Background(), false)
+	require.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Contains(t, result[0], "rev 5")
+	assert.Equal(t, 3, call)
+}
+
+func TestSnap_ProvidesNotSupported(t *testing.T) {
+	t.Parallel()
+	m := NewSnap()
+	_, err := m.Provides(context.Background(), "htop")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestSnap_AutoRemoveNotSupported(t *testing.T) {
+	t.Parallel()
+	m := NewSnap()
+	_, err := m.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestSnap_CleanDryRun(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewSnap()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			// snap list (active)
+			return []byte("Name\tVersion\tRev\tTracking\nhtop\t1.1\t6\tstable\n"), nil
+		case 2:
+			// snap list --all
+			return []byte("Name\tVersion\tRev\tTracking\nhtop\t1.0\t5\tstable\nhtop\t1.1\t6\tstable\n"), nil
+		default:
+			return nil, assert.AnError
+		}
+	}
+	result, err := m.Clean(context.Background(), true)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Contains(t, result[0], "rev 5")
+	assert.Equal(t, 2, call)
+}
+
+func TestSnap_Clean_NoInactive(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewSnap()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			return []byte("Name\tVersion\tRev\tTracking\nhtop\t1.1\t6\tstable\n"), nil
+		case 2:
+			return []byte("Name\tVersion\tRev\tTracking\nhtop\t1.1\t6\tstable\n"), nil
+		default:
+			return nil, assert.AnError
+		}
+	}
+	result, err := m.Clean(context.Background(), false)
+	require.NoError(t, err)
+	assert.Empty(t, result)
+	assert.Equal(t, 2, call)
+}
+
+func TestSnap_Clean_ActiveListError(t *testing.T) {
+	t.Parallel()
+	m := NewSnap()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list active snaps")
+}
+
+func TestSnap_Clean_AllListError(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewSnap()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte("Name\tVersion\tRev\tTracking\nhtop\t1.1\t6\tstable\n"), nil
+		}
+		return nil, assert.AnError
+	}
+	_, err := m.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list all snap revisions")
+}
+
+func TestParseSnapRevisions(t *testing.T) {
+	t.Parallel()
+	input := []byte("Name\tVersion\tRev\tTracking\nhtop\t1.0\t5\tstable\ncore\t2.0\t10\tstable\n")
+	result := parseSnapRevisions(input)
+	assert.Len(t, result, 2)
+	assert.Equal(t, "5", result["htop"])
+	assert.Equal(t, "10", result["core"])
+}
+
+func TestParseSnapRevisions_Empty(t *testing.T) {
+	t.Parallel()
+	result := parseSnapRevisions([]byte("Name\tVersion\tRev\tTracking\n"))
+	assert.Empty(t, result)
+}
+
+func TestParseSnapRevisions_SkipsHeader(t *testing.T) {
+	t.Parallel()
+	result := parseSnapRevisions([]byte("Name\tVersion\tRev\tTracking\nhtop\t1.0\t5\tstable\n"))
+	assert.Equal(t, "5", result["htop"])
+}

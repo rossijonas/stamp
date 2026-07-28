@@ -177,3 +177,18 @@ func (m *Pipx) RemoveRepo(_ context.Context, _ string) error {
 func (m *Pipx) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
 }
+
+// Provides returns an error since pipx has no provides command.
+func (m *Pipx) Provides(_ context.Context, _ string) ([]string, error) {
+	return nil, fmt.Errorf("%w: provides not supported for pipx", ErrNotSupported)
+}
+
+// AutoRemove returns an error since pipx has no autoremove command.
+func (m *Pipx) AutoRemove(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: autoremove not supported for pipx", ErrNotSupported)
+}
+
+// Clean returns an error since pipx has no cache clean command.
+func (m *Pipx) Clean(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: clean not supported for pipx", ErrNotSupported)
+}

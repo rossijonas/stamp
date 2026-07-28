@@ -368,3 +368,44 @@ func TestParsePortOutdated(t *testing.T) {
 	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
 	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }
+
+func TestMacPorts_ProvidesError(t *testing.T) {
+	t.Parallel()
+	m := NewMacPorts()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Provides(context.Background(), "htop")
+	require.Error(t, err)
+}
+
+func TestMacPorts_AutoRemoveDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewMacPorts()
+	m.exec = mockExecutorHelper("", nil)
+	pkgs, err := m.AutoRemove(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, pkgs)
+}
+
+func TestMacPorts_AutoRemove(t *testing.T) {
+	t.Parallel()
+	m := NewMacPorts()
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestMacPorts_Clean(t *testing.T) {
+	t.Parallel()
+	m := NewMacPorts()
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.Clean(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestMacPorts_CleanDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewMacPorts()
+	result, err := m.Clean(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}

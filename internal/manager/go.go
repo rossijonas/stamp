@@ -261,3 +261,18 @@ func (m *Go) RemoveRepo(_ context.Context, _ string) error {
 func (m *Go) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
 }
+
+// Provides returns an error since go has no provides command.
+func (m *Go) Provides(_ context.Context, _ string) ([]string, error) {
+	return nil, fmt.Errorf("%w: provides not supported for go", ErrNotSupported)
+}
+
+// AutoRemove returns an error since go has no autoremove command.
+func (m *Go) AutoRemove(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: autoremove not supported for go", ErrNotSupported)
+}
+
+// Clean returns an error since go has no cache clean command.
+func (m *Go) Clean(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: clean not supported for go", ErrNotSupported)
+}

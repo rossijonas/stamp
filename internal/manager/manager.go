@@ -69,6 +69,10 @@ type UpdateInfo struct {
 // "check for updates" command (e.g. pipx, uv, go).
 var ErrCheckUnsupported = errors.New("check not supported")
 
+// ErrNotSupported is returned by adapter methods that are not supported
+// by a particular package manager (e.g. provides, autoremove).
+var ErrNotSupported = errors.New("not supported")
+
 // exitCodeFromError attempts to extract a process exit code from an error.
 // Returns -1 if the error is not an *exec.ExitError or has no process state.
 func exitCodeFromError(err error) int {
@@ -125,6 +129,22 @@ type Adapter interface {
 	// Returns err = nil + empty slice if up to date.
 	// Returns ErrCheckUnsupported if the manager has no native check command.
 	CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error)
+
+	// Provides searches for which package provides the given file.
+	// Returns the raw output lines from the native command.
+	// Returns ErrNotSupported if the manager has no provides command.
+	Provides(ctx context.Context, query string) ([]string, error)
+
+	// AutoRemove removes orphaned/unused dependencies.
+	// If dryRun is true, returns the list of packages that would be removed
+	// without actually removing them.
+	// Returns ErrNotSupported if the manager has no autoremove command.
+	AutoRemove(ctx context.Context, dryRun bool) ([]string, error)
+
+	// Clean removes locally cached package files (e.g. download cache).
+	// If dryRun is true, returns what would be cleaned without deleting.
+	// Returns ErrNotSupported if the manager has no cache clean command.
+	Clean(ctx context.Context, dryRun bool) ([]string, error)
 }
 
 func init() {

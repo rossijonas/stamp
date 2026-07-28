@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/rossijonas/stamp/internal/manager"
 	"github.com/rossijonas/stamp/internal/manifest"
@@ -22,16 +23,11 @@ var lookPath = exec.LookPath
 
 // isTerminal reports whether the given reader is connected to a terminal.
 // Declared as a variable so it can be overridden in tests.
+// Uses term.IsTerminal for consistency with term.ReadPassword — if this
+// returns true, ReadPassword on the same fd will succeed.
 var isTerminal = func(r io.Reader) bool {
 	f, ok := r.(*os.File)
-	if !ok {
-		return false
-	}
-	stat, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return stat.Mode()&os.ModeCharDevice != 0
+	return ok && term.IsTerminal(int(f.Fd()))
 }
 
 type ctxKey struct{}
@@ -124,6 +120,8 @@ func detectAdapters() []manager.Adapter {
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })
 	detect("pipx", func() manager.Adapter { return manager.NewPipx() })
 	detect("uv", func() manager.Adapter { return manager.NewUv() })
+	detect("npm", func() manager.Adapter { return manager.NewNpm() })
+	detect("cargo", func() manager.Adapter { return manager.NewCargo() })
 	detect("go", func() manager.Adapter { return manager.NewGo() })
 	if runtime.GOOS == "darwin" {
 		detect("port", func() manager.Adapter { return manager.NewMacPorts() })
@@ -254,6 +252,9 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newListCmd())
+	root.AddCommand(newProvidesCmd())
+	root.AddCommand(newAutoremoveCmd())
+	root.AddCommand(newCleanCmd())
 	root.AddCommand(newManCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newSelfUpdateCmd())

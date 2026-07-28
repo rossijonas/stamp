@@ -250,3 +250,38 @@ func parseAPTUpgradable(output []byte) []UpdateInfo {
 	}
 	return result
 }
+
+// Provides runs dpkg -S to find which package owns a file.
+func (m *APT) Provides(ctx context.Context, query string) ([]string, error) {
+	out, err := m.exec(ctx, "dpkg", "-S", query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find provides for %s: %w", query, err)
+	}
+	return parseLines(out), nil
+}
+
+// AutoRemove removes orphaned packages via apt autoremove.
+func (m *APT) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd("apt", "autoremove", "-y")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to autoremove: %w", err)
+	}
+	return nil, nil
+}
+
+// Clean runs apt clean to clear the package cache.
+func (m *APT) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd("apt", "clean")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clean apt cache: %w", err)
+	}
+	return nil, nil
+}

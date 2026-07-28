@@ -9,26 +9,32 @@ import (
 
 // Mock is a dummy implementation of Adapter for testing.
 type Mock struct {
-	ManagerName    string
-	InstalledPkgs  []string
-	InstalledRepos []RepositoryInfo
-	AvailablePkgs  []string
-	TrackedRepos   []string
-	ListErr        error
-	ListReposErr   error
-	InstallErr     error
-	ReinstallErr   error
-	RemoveErr      error
-	SearchErr      error
-	AddRepoErr     error
-	RemoveRepoErr  error
-	InfoErr        error
-	InfoResult     string
-	DoctorResult   string
-	DoctorErr      error
-	UpdateErr      error
-	CheckUpdateErr error
-	CheckUpdates   []UpdateInfo
+	ManagerName      string
+	InstalledPkgs    []string
+	InstalledRepos   []RepositoryInfo
+	AvailablePkgs    []string
+	TrackedRepos     []string
+	ListErr          error
+	ListReposErr     error
+	InstallErr       error
+	ReinstallErr     error
+	RemoveErr        error
+	SearchErr        error
+	AddRepoErr       error
+	RemoveRepoErr    error
+	InfoErr          error
+	InfoResult       string
+	DoctorResult     string
+	DoctorErr        error
+	UpdateErr        error
+	CheckUpdateErr   error
+	CheckUpdates     []UpdateInfo
+	ProvidesErr      error
+	ProvidesResult   []string
+	AutoRemoveErr    error
+	AutoRemoveResult []string
+	CleanErr         error
+	CleanResult      []string
 }
 
 // Name returns the package manager identifier.
@@ -206,6 +212,49 @@ func (m *Mock) CheckUpdate(_ context.Context, pkg string) ([]UpdateInfo, error) 
 	}
 	if m.CheckUpdates != nil {
 		return slices.Clone(m.CheckUpdates), nil
+	}
+	return nil, nil
+}
+
+// Provides returns mock provides result or error.
+func (m *Mock) Provides(_ context.Context, query string) ([]string, error) {
+	// No package name validation — provides queries are file paths, not package names
+	if m.ProvidesErr != nil {
+		return nil, m.ProvidesErr
+	}
+	if m.ProvidesResult != nil {
+		return slices.Clone(m.ProvidesResult), nil
+	}
+	if m.AvailablePkgs != nil {
+		var results []string
+		for _, p := range m.AvailablePkgs {
+			if strings.Contains(p, query) {
+				results = append(results, p)
+			}
+		}
+		return results, nil
+	}
+	return nil, nil
+}
+
+// AutoRemove returns mock autoremove result or error.
+func (m *Mock) AutoRemove(_ context.Context, _ bool) ([]string, error) {
+	if m.AutoRemoveErr != nil {
+		return nil, m.AutoRemoveErr
+	}
+	if m.AutoRemoveResult != nil {
+		return slices.Clone(m.AutoRemoveResult), nil
+	}
+	return nil, nil
+}
+
+// Clean returns mock clean result or error.
+func (m *Mock) Clean(_ context.Context, _ bool) ([]string, error) {
+	if m.CleanErr != nil {
+		return nil, m.CleanErr
+	}
+	if m.CleanResult != nil {
+		return slices.Clone(m.CleanResult), nil
 	}
 	return nil, nil
 }

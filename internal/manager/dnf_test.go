@@ -619,3 +619,43 @@ func TestSudoCmd_PasswordOverridesNonTTY(t *testing.T) {
 	result := sudoCmd("update")
 	assert.Equal(t, []string{"sudo", "-S", "update"}, result)
 }
+
+func TestDNF_ProvidesError(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Provides(context.Background(), "/usr/bin/htop")
+	require.Error(t, err)
+}
+
+func TestDNF_AutoRemove(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestDNF_AutoRemoveDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	pkgs, err := m.AutoRemove(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, pkgs)
+}
+
+func TestDNF_Clean(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.Clean(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestDNF_CleanDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	result, err := m.Clean(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}

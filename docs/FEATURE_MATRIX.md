@@ -13,7 +13,7 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | :--- | :---: | :--- | :--- |
 | DNF / YUM | ✓ Complete | All | Fedora/RHEL, sudo for write ops, yum alias |
 | APT / apt-get | ✓ Complete | All | Debian/Ubuntu, sudo for write ops, dpkg-query fallback, add-apt-repository for PPAs |
-| Brew | ✓ Complete | All | macOS, user-space, two-phase update |
+| Brew | ✓ Complete | All | macOS, user-space, two-phase update, cask support for GUI apps |
 | Flatpak | ✓ Complete | All | Linux sandboxed, -y flag |
 | Snap | ✓ Complete | All except repo mgmt | Ubuntu, Linux (universal), sudo for write ops |
 | Zypper | ✓ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
@@ -22,6 +22,8 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | Pipx | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | pip-installable CLI tools, --yes for non-interactive, JSON listing with text fallback, no search/doctor/repo support |
 | Uv | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | Rust-based Python tool manager (uv tool subcommand), --force for reinstall, no search/doctor/repo support |
 | Go | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | go install with module path validation, no search/doctor/repo support, ListInstalled recovers module paths via binary metadata, batch update reinstalls recoverable paths, binary-name fallback for unrecoverable |
+| Npm | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | Node.js package manager for globally installed CLI tools, no search/doctor/repo support, user-space |
+| Cargo | ✓ Complete | Install, Remove, Search, Info, ListInstalled, Update (single + batch) | Rust crate installer via cargo install, native search/info via crates.io, --force for reinstall, no doctor/repo support, user-space |
 
 ## CLI Commands
 

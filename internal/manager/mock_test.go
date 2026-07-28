@@ -134,6 +134,96 @@ func TestMock_InstallInvalidName(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestMock_Provides(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:    "test",
+		ProvidesResult: []string{"htop (test)"},
+	}
+
+	results, err := mock.Provides(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop (test)"}, results)
+}
+
+func TestMock_ProvidesError(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "test",
+		ProvidesErr: assert.AnError,
+	}
+
+	_, err := mock.Provides(context.Background(), "htop")
+	require.Error(t, err)
+}
+
+func TestMock_AutoRemove(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:      "test",
+		AutoRemoveResult: []string{"orphan1", "orphan2"},
+	}
+
+	results, err := mock.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"orphan1", "orphan2"}, results)
+}
+
+func TestMock_AutoRemoveError(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:   "test",
+		AutoRemoveErr: assert.AnError,
+	}
+
+	_, err := mock.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+}
+
+func TestMock_Provides_FilePaths(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "test"}
+	// Provides queries accept file paths, not just package names
+	result, err := mock.Provides(context.Background(), "/usr/bin/htop")
+	require.NoError(t, err)
+	assert.Empty(t, result)
+}
+
+func TestMock_AutoRemoveDryRun(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:      "test",
+		AutoRemoveResult: []string{"orphan1"},
+	}
+
+	results, err := mock.AutoRemove(context.Background(), true)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"orphan1"}, results)
+}
+
+func TestMock_Clean(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "test",
+		CleanResult: []string{"cleaned 1.2MB"},
+	}
+
+	results, err := mock.Clean(context.Background(), false)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"cleaned 1.2MB"}, results)
+}
+
+func TestMock_CleanError(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "test",
+		CleanErr:    assert.AnError,
+	}
+
+	_, err := mock.Clean(context.Background(), false)
+	require.Error(t, err)
+}
+
 func TestMock_CheckUpdate(t *testing.T) {
 	t.Parallel()
 	mock := &Mock{

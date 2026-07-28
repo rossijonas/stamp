@@ -408,3 +408,35 @@ func TestParseFlatpakDryRun(t *testing.T) {
 	assert.Equal(t, "com.spotify.Client", updates[0].Package)
 	assert.Equal(t, "org.gimp.GIMP", updates[1].Package)
 }
+
+func TestFlatpak_ProvidesNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	_, err := mgr.Provides(context.Background(), "firefox")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestFlatpak_AutoRemove(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	mgr.exec = mockExecutorHelper("", nil)
+	_, err := mgr.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestFlatpak_AutoRemoveDryRun(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	pkgs, err := mgr.AutoRemove(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, pkgs)
+}
+
+func TestFlatpak_CleanNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	_, err := mgr.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

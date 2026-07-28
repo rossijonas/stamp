@@ -232,3 +232,38 @@ func parseDNFCheckUpdate(output []byte) []UpdateInfo {
 	}
 	return result
 }
+
+// Provides runs dnf provides to find which package owns a file.
+func (m *DNF) Provides(ctx context.Context, query string) ([]string, error) {
+	out, err := m.exec(ctx, m.cmd, "provides", query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find provides for %s: %w", query, err)
+	}
+	return parseLines(out), nil
+}
+
+// AutoRemove removes orphaned packages via dnf autoremove.
+func (m *DNF) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd(m.cmd, "autoremove", "-y")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to autoremove: %w", err)
+	}
+	return nil, nil
+}
+
+// Clean runs dnf clean all to clear the package cache.
+func (m *DNF) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd(m.cmd, "clean", "all")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clean dnf cache: %w", err)
+	}
+	return nil, nil
+}

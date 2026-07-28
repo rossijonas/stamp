@@ -133,6 +133,50 @@ func (m *Paru) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
 }
 
+// Provides runs pacman -F <query> (via paru) to find which package owns a file.
+func (m *Paru) Provides(ctx context.Context, query string) ([]string, error) {
+	out, err := m.exec(ctx, "pacman", "-F", query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find provides for %s: %w", query, err)
+	}
+	return parseLines(out), nil
+}
+
+// AutoRemove lists orphans and removes them via pacman.
+func (m *Paru) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	out, err := m.exec(ctx, "pacman", "-Qdtq")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list orphans: %w", err)
+	}
+	orphans := parseLines(out)
+	if len(orphans) == 0 {
+		return nil, nil
+	}
+	if dryRun {
+		return orphans, nil
+	}
+	args := sudoCmd("pacman", "-Rs", "--noconfirm")
+	args = append(args, orphans...)
+	_, err = m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove orphans: %w", err)
+	}
+	return orphans, nil
+}
+
+// Clean runs paru -Sc to clear the package cache.
+func (m *Paru) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd("paru", "-Sc", "--noconfirm")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clean paru cache: %w", err)
+	}
+	return nil, nil
+}
+
 // CheckUpdate runs paru -Qu to list available updates.
 // paru -Qu exits 1 when no updates are available (success path).
 func (m *Paru) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {

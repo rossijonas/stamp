@@ -21,6 +21,8 @@ stamp [flags]
 ### SEE ALSO
 
 * [stamp auto-reconcile](stamp_auto-reconcile.html)	 - Manage automated reconcile timer
+* [stamp autoremove](stamp_autoremove.html)	 - Remove orphaned packages and unused dependencies
+* [stamp clean](stamp_clean.html)	 - Clean package caches and temporary files
 * [stamp completion](stamp_completion.html)	 - Generate and install shell completion script
 * [stamp doctor](stamp_doctor.html)	 - Diagnose system configuration and manifest health
 * [stamp info](stamp_info.html)	 - Show package information across managers
@@ -28,6 +30,7 @@ stamp [flags]
 * [stamp install](stamp_install.html)	 - Install a package and record intent
 * [stamp list](stamp_list.html)	 - List all intentionally installed packages
 * [stamp man](stamp_man.html)	 - Manage stamp troff man pages
+* [stamp provides](stamp_provides.html)	 - Find which package provides a given file
 * [stamp reconcile](stamp_reconcile.html)	 - Detect packages installed outside stamp and add them to the manifest
 * [stamp reinstall](stamp_reinstall.html)	 - Reinstall a package and record it in the manifest
 * [stamp remove](stamp_remove.html)	 - Remove a package and untrack it
