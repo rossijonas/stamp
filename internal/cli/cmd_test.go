@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -179,8 +180,74 @@ func TestNewRootCmd_CustomPaths(t *testing.T) {
 func TestDetectAdapters_Runs(t *testing.T) {
 	t.Parallel()
 	adapters := detectAdapters()
-	// Should return a slice (possibly empty) without error
 	assert.NotNil(t, adapters)
+}
+
+func TestDetectAdapters_ParuPreferredOverPacman(t *testing.T) {
+	// When paru is found, pacman should NOT be loaded
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+	lookPath = func(name string) (string, error) {
+		if name == "paru" {
+			return "/usr/bin/paru", nil
+		}
+		return "", fmt.Errorf("not found: %s", name)
+	}
+
+	adapters := detectAdapters()
+	hasParu := false
+	hasPacman := false
+	for _, a := range adapters {
+		if a.Name() == "paru" {
+			hasParu = true
+		}
+		if a.Name() == "pacman" {
+			hasPacman = true
+		}
+	}
+	assert.True(t, hasParu, "paru should be detected when paru binary is present")
+	assert.False(t, hasPacman, "pacman should NOT be detected when paru is present")
+}
+
+func TestDetectAdapters_FallbackToPacman(t *testing.T) {
+	// When only pacman is found, it should still be loaded
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+	lookPath = func(name string) (string, error) {
+		if name == "pacman" {
+			return "/usr/bin/pacman", nil
+		}
+		return "", fmt.Errorf("not found: %s", name)
+	}
+
+	adapters := detectAdapters()
+	hasParu := false
+	hasPacman := false
+	for _, a := range adapters {
+		if a.Name() == "paru" {
+			hasParu = true
+		}
+		if a.Name() == "pacman" {
+			hasPacman = true
+		}
+	}
+	assert.False(t, hasParu, "paru should NOT be detected when only pacman binary is present")
+	assert.True(t, hasPacman, "pacman should be detected when pacman binary is present")
+}
+
+func TestDetectAdapters_NeitherParuNorPacman(t *testing.T) {
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+	lookPath = func(name string) (string, error) {
+		return "", fmt.Errorf("not found: %s", name)
+	}
+
+	adapters := detectAdapters()
+	for _, a := range adapters {
+		if a.Name() == "paru" || a.Name() == "pacman" {
+			t.Fatalf("neither paru nor pacman should be detected: got %s", a.Name())
+		}
+	}
 }
 
 // --- Command structure tests ---

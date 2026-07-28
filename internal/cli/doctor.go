@@ -78,6 +78,7 @@ func buildManagersReport(adapters []manager.Adapter) []managerStatus {
 		{"brew", "User-space manager"},
 		{"flatpak", "Sandboxed application distribution"},
 		{"go", "Language toolchain — go install"},
+		{"paru", "AUR helper for Arch Linux (replaces pacman)"},
 	}
 
 	managers := make([]managerStatus, 0, len(knownManagers))

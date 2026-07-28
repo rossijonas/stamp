@@ -26,7 +26,7 @@ type checkResult struct {
 func needsSudo(adapters []manager.Adapter) bool {
 	for _, a := range adapters {
 		switch a.Name() {
-		case "dnf", "apt", "zypper", "pacman", "macports", "snap":
+		case "dnf", "apt", "zypper", "pacman", "paru", "macports", "snap":
 			return true
 		}
 	}
