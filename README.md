@@ -48,6 +48,10 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 **`[#]` Unified Repository Management** — Add, remove, and list third-party repositories &mdash; PPAs, taps, remotes &mdash; across all managers with the same interface.
 
+**`[@]` Familiar Features** — Homebrew casks, file-to-package resolution, orphan cleanup, cache management, version pinning &mdash; stamp brings your native package manager's best features into one CLI. [See the full list &rarr;](docs/usage/special-features.md)
+
+**`[%]` Speaks Your Language** — `stamp show` like `apt show`, `stamp outdated` like `brew outdated`, `stamp tap` like `brew tap` &mdash; every command has aliases matching your favorite tool's syntax. [See the aliases matrix &rarr;](docs/usage/aliases.md)
+
 **`[?]` Self-Contained Docs** — Built-in man pages (`stamp man install`), shell completions, and auto-generated CLI reference docs.
 
 **`[!]` Context Preservation** — Add `--note` to any install so you remember *why* you needed a package six months later.
