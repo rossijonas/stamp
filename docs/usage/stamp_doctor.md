@@ -40,5 +40,4 @@ stamp doctor [flags]
 ### SEE ALSO
 
 * [stamp](stamp.html)	 - A lightweight yet powerful tool that wraps many package managers into one
-* [Feature × Manager Support Matrix](../history/feature-per-manager-matrix.html) — which Stamp features work with each manager
 
