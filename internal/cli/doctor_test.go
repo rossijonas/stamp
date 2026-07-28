@@ -42,7 +42,7 @@ func TestDoctor_JSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, runtime.GOOS, report.System)
-	assert.Len(t, report.PackageManagers, 5)
+	assert.Len(t, report.PackageManagers, 12)
 
 	names := make(map[string]bool)
 	for _, m := range report.PackageManagers {
@@ -50,9 +50,16 @@ func TestDoctor_JSON(t *testing.T) {
 	}
 	assert.True(t, names["apt"])
 	assert.True(t, names["dnf"])
-	assert.True(t, names["brew"])
+	assert.True(t, names["pacman"])
+	assert.True(t, names["paru"])
+	assert.True(t, names["zypper"])
+	assert.True(t, names["snap"])
 	assert.True(t, names["flatpak"])
+	assert.True(t, names["brew"])
+	assert.True(t, names["macports"])
 	assert.True(t, names["go"])
+	assert.True(t, names["pipx"])
+	assert.True(t, names["uv"])
 
 	assert.NotEmpty(t, report.Manifest.Path)
 	assert.False(t, report.NoColor) // NO_COLOR not set in tests

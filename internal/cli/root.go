@@ -17,6 +17,9 @@ import (
 	"github.com/rossijonas/stamp/internal/manifest"
 )
 
+// lookPath is overridable in tests to simulate binary presence.
+var lookPath = exec.LookPath
+
 // isTerminal reports whether the given reader is connected to a terminal.
 // Declared as a variable so it can be overridden in tests.
 var isTerminal = func(r io.Reader) bool {
@@ -96,23 +99,27 @@ func WithManifestPath(p string) RootOption {
 func detectAdapters() []manager.Adapter {
 	adapters := make([]manager.Adapter, 0)
 	detect := func(bin string, fn func() manager.Adapter) {
-		if _, err := exec.LookPath(bin); err == nil {
+		if _, err := lookPath(bin); err == nil {
 			adapters = append(adapters, fn())
 		}
 	}
 	if runtime.GOOS == "linux" {
-		if _, err := exec.LookPath("dnf"); err == nil {
+		if _, err := lookPath("dnf"); err == nil {
 			adapters = append(adapters, manager.NewDNF("dnf"))
-		} else if _, err := exec.LookPath("yum"); err == nil {
+		} else if _, err := lookPath("yum"); err == nil {
 			adapters = append(adapters, manager.NewDNF("yum"))
 		}
-		if _, err := exec.LookPath("apt"); err == nil {
+		if _, err := lookPath("apt"); err == nil {
 			adapters = append(adapters, manager.NewAPT("apt"))
 		}
 		detect("flatpak", func() manager.Adapter { return manager.NewFlatpak() })
 		detect("snap", func() manager.Adapter { return manager.NewSnap() })
 		detect("zypper", func() manager.Adapter { return manager.NewZypper() })
-		detect("pacman", func() manager.Adapter { return manager.NewPacman() })
+		if _, err := lookPath("paru"); err == nil {
+			adapters = append(adapters, manager.NewParu())
+		} else if _, err := lookPath("pacman"); err == nil {
+			adapters = append(adapters, manager.NewPacman())
+		}
 	}
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })
 	detect("pipx", func() manager.Adapter { return manager.NewPipx() })

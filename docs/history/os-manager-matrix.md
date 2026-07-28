@@ -11,7 +11,8 @@
 | **Snap** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | - | - |
 | **Flatpak** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | - | - |
 | **Brew** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | - |
-| **Pacman** | - | - | - | - | - | ✓ | - | - | - |
+| **Paru** | - | - | - | - | - | ✓* | - | - | - |
+| **Pacman** | - | - | - | - | - | ✓* | - | - | - |
 | **MacPorts** | - | - | - | - | - | - | - | ✓ | |
 | **Winget** | - | - | - | - | - | - | - | - | |
 | **Chocolatey** | - | - | - | - | - | - | - | - | |
@@ -29,6 +30,16 @@
 | `npm` | ~ | ~ | ~ | ~ | ~ | ~ | ~ | ~ | ~ |
 
 ✓ = Implemented  
+✓* = Implemented with conditions  
 ~ = Planned  
 – = Not available on this OS  
-*(blank)* = Not implemented or not planned
+*(blank)* = Not implemented or not planned  
+
+### Conditions
+
+1. **Paru** replaces **Pacman** when both are detected on Arch Linux.  
+   If Paru is not found, Stamp falls back to Pacman.
+
+### See Also
+
+- [Feature × Manager Support Matrix](feature-per-manager-matrix.html) — which Stamp features work with each manager

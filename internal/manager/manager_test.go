@@ -121,6 +121,7 @@ func TestResolveManager(t *testing.T) {
 		{name: "dnf identity", input: "dnf", expected: "dnf"},
 		{name: "brew identity", input: "brew", expected: "brew"},
 		{name: "yum alias to dnf", input: "yum", expected: "dnf"},
+		{name: "pacman identity", input: "pacman", expected: "pacman"},
 		{name: "unknown pass-through", input: "flatpak", expected: "flatpak"},
 		{name: "empty string", input: "", expected: ""},
 	}

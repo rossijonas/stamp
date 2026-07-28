@@ -52,7 +52,7 @@ title: Stamp
       <span class="feature-icon">[&gt;]</span>
       <div>
         <h3>Multi-Manager Wrapper</h3>
-        <p>Install, search, and remove packages across DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, and MacPorts &mdash; plus <code>pipx</code>, <code>uv</code>, and <code>go</code> language-specific package managers &mdash; through a single CLI.</p>
+        <p>Install, search, and remove packages across <strong>12 supported package managers</strong> (DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, Paru, MacPorts, Pipx, Uv, and Go) through a single CLI. <a href="{{ '/history/feature-per-manager-matrix.html' | relative_url }}">See per-manager feature support →</a></p>
       </div>
     </div>
     <div class="feature-item">
@@ -141,6 +141,38 @@ title: Stamp
     <h3>Keep everything fresh</h3>
     <pre><span class="prompt">$</span> stamp update                   # update all managers
 <span class="prompt">$</span> stamp self-update              # update stamp itself</pre>
+  </div>
+
+  <div class="usage-example">
+    <h3>Diagnose your system</h3>
+    <pre><span class="prompt">$</span> stamp doctor
+
+▪ System Diagnosis (Stamp Doctor)
+
+Package Managers:
+  Name       Status     Path                   Details
+  apt        ✓ Active   /usr/bin/apt           Default system manager (Debian/Ubuntu)
+  dnf        ✓ Active   /usr/bin/dnf           Default system manager (Fedora/RHEL, alias yum)
+  pacman     ✗ Not Found -                     Package manager for Arch Linux
+  paru       ✗ Not Found -                     AUR helper for Arch Linux (replaces pacman)
+  zypper     ✗ Not Found -                     Package manager for openSUSE/SLES
+  snap       ✓ Active   /usr/bin/snap          Universal Linux package manager
+  flatpak    ✓ Active   /usr/bin/flatpak       Sandboxed application distribution
+  brew       ✓ Active   /home/user/.linuxbrew/bin/brew User-space manager
+  macports   ✗ Not Found -                     Package manager for macOS
+  go         ✓ Active   /usr/local/go/bin/go   Language toolchain — go install
+  pipx       ✗ Not Found -                     Python tool installer
+  uv         ✗ Not Found -                     Python package manager
+
+Manifest Integrity:
+  Path:   /home/user/.config/stamp/manifest.toml
+  Status: ✓ Healthy (42 package(s))
+
+UNIX Compliance:
+  NO_COLOR: ✗ Not set
+  Version:  stamp v0.24.0
+  Man Page: ✓ Up to date (v0.24.0)
+  Completions: ✓ Installed (bash, zsh)</pre>
   </div>
 
   <p style="text-align: center; margin-top: 2.5rem;">

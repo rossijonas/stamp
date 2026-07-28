@@ -73,10 +73,27 @@ The complete surface area of the CLI, including aliases and flags.
 
 ### Supported Package Managers
 
-- **DNF / YUM** (Fedora/RHEL)
-- **APT / apt-get** (Debian/Ubuntu) — new!
-- **Brew** (macOS)
-- **Flatpak** (Linux, sandboxed)
+#### System Managers
+
+| Manager | OS | Notes |
+| :--- | :--- | :--- |
+| **DNF / YUM** | Fedora/RHEL/CentOS | DNF preferred, YUM fallback when DNF unavailable |
+| **APT / apt-get** | Debian/Ubuntu | |
+| **Paru** | Arch Linux | Preferred when both Paru and Pacman are installed |
+| **Pacman** | Arch Linux | Fallback when Paru not installed |
+| **Zypper** | openSUSE/SLES | |
+| **Snap** | Linux (universal) | |
+| **Flatpak** | Linux (sandboxed) | |
+| **Brew** | macOS, Linux | User-space, no sudo for most operations |
+| **MacPorts** | macOS | |
+
+#### Language Toolchain Managers
+
+| Manager | Scope | Notes |
+| :--- | :--- | :--- |
+| `go install` | Go binaries | Full module paths required |
+| `pipx` | Python CLI tools | |
+| `uv` | Python CLI tools | Faster alternative to pipx |
 
 ## Package Manager Resolution Engine
 

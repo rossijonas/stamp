@@ -75,9 +75,16 @@ func buildManagersReport(adapters []manager.Adapter) []managerStatus {
 	}{
 		{"apt", "Default system manager (Debian/Ubuntu)"},
 		{"dnf", "Default system manager (Fedora/RHEL, alias yum)"},
-		{"brew", "User-space manager"},
+		{"pacman", "Package manager for Arch Linux"},
+		{"paru", "AUR helper for Arch Linux (replaces pacman)"},
+		{"zypper", "Package manager for openSUSE/SLES"},
+		{"snap", "Universal Linux package manager"},
 		{"flatpak", "Sandboxed application distribution"},
+		{"brew", "User-space manager"},
+		{"macports", "Package manager for macOS"},
 		{"go", "Language toolchain — go install"},
+		{"pipx", "Python tool installer"},
+		{"uv", "Python package manager"},
 	}
 
 	managers := make([]managerStatus, 0, len(knownManagers))
