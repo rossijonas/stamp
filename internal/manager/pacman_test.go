@@ -314,6 +314,23 @@ func TestPacman_CheckUpdate(t *testing.T) {
 	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }
 
+func TestPacman_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewPacman()
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // pacman -Sy succeeds
+		}
+		return nil, assert.AnError // pacman -Qu fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
 func TestParsePacmanQu(t *testing.T) {
 	t.Parallel()
 	input := []byte("htop 3.2.1 -> 3.2.2\ngit 2.43.0 -> 2.43.2\n")

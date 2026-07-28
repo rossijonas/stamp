@@ -342,6 +342,23 @@ func TestMacPorts_CheckUpdate(t *testing.T) {
 	assert.Equal(t, "htop", updates[0].Package)
 }
 
+func TestMacPorts_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewMacPorts()
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // port selfupdate succeeds
+		}
+		return nil, assert.AnError // port outdated fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
 func TestParsePortOutdated(t *testing.T) {
 	t.Parallel()
 	input := []byte("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n")

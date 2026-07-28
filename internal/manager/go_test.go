@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -241,6 +242,88 @@ func TestGo_Update_Batch(t *testing.T) {
 	require.NoError(t, err)
 	// "tool" has no "/" → skipped; no install calls
 	assert.Len(t, calls, 3) // GOBIN + GOPATH + version -m
+}
+
+func TestGo_Update_Batch_AllFail(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	binDir := filepath.Join(tmpDir, "bin")
+	//nolint:gosec
+	require.NoError(t, os.MkdirAll(binDir, 0755))
+	//nolint:gosec
+	require.NoError(t, os.WriteFile(filepath.Join(binDir, "tool1"), []byte("x"), 0755))
+	//nolint:gosec
+	require.NoError(t, os.WriteFile(filepath.Join(binDir, "tool2"), []byte("x"), 0755))
+
+	var installMu sync.Mutex
+	var installCalls int
+	mgr := NewGo()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[1] == "GOBIN" {
+			return []byte(""), nil
+		}
+		if len(args) >= 2 && args[1] == "GOPATH" {
+			return []byte(tmpDir), nil
+		}
+		if len(args) >= 2 && args[0] == "version" && args[1] == "-m" {
+			return []byte("tool1: go1.26\npath\tgithub.com/example/tool1\n"), nil
+		}
+		if len(args) >= 1 && args[0] == "install" {
+			installMu.Lock()
+			installCalls++
+			installMu.Unlock()
+			return nil, assert.AnError
+		}
+		return nil, nil
+	}
+
+	err := mgr.Update(context.Background(), "")
+	require.Error(t, err)
+	assert.Positive(t, installCalls)
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestGo_Update_Batch_PartialFail(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	binDir := filepath.Join(tmpDir, "bin")
+	//nolint:gosec
+	require.NoError(t, os.MkdirAll(binDir, 0755))
+	//nolint:gosec
+	require.NoError(t, os.WriteFile(filepath.Join(binDir, "tool1"), []byte("x"), 0755))
+	//nolint:gosec
+	require.NoError(t, os.WriteFile(filepath.Join(binDir, "tool2"), []byte("x"), 0755))
+
+	var partialMu sync.Mutex
+	var callCount int
+	mgr := NewGo()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[1] == "GOBIN" {
+			return []byte(""), nil
+		}
+		if len(args) >= 2 && args[1] == "GOPATH" {
+			return []byte(tmpDir), nil
+		}
+		if len(args) >= 2 && args[0] == "version" && args[1] == "-m" {
+			return []byte("tool1: go1.26\npath\tgithub.com/example/tool1\n"), nil
+		}
+		if len(args) >= 1 && args[0] == "install" {
+			partialMu.Lock()
+			callCount++
+			first := callCount == 1
+			partialMu.Unlock()
+			if first {
+				return nil, nil
+			}
+			return nil, assert.AnError
+		}
+		return nil, nil
+	}
+
+	err := mgr.Update(context.Background(), "")
+	require.Error(t, err)
+	assert.Equal(t, 2, callCount)
+	assert.ErrorIs(t, err, assert.AnError)
 }
 
 func TestGo_Search_Error(t *testing.T) {

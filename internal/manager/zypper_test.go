@@ -309,6 +309,23 @@ func TestZypper_CheckUpdate(t *testing.T) {
 	assert.Equal(t, "htop", updates[0].Package)
 }
 
+func TestZypper_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewZypper()
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // zypper refresh succeeds
+		}
+		return nil, assert.AnError // zypper list-updates fails
+	}
+
+	_, err := manager.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
 func TestParseZypperListUpdates(t *testing.T) {
 	t.Parallel()
 	input := []byte("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\nv | main | git | 2.43.0 | 2.43.2\n")
