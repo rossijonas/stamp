@@ -52,7 +52,7 @@ title: Stamp
       <span class="feature-icon">[&gt;]</span>
       <div>
         <h3>Multi-Manager Wrapper</h3>
-        <p>Install, search, and remove packages across <strong>12 supported package managers</strong> (DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, Paru, MacPorts, Pipx, Uv, and Go) through a single CLI. <a href="{{ '/history/feature-per-manager-matrix.html' | relative_url }}">See per-manager feature support →</a></p>
+        <p>Install, search, and remove packages across <strong>14 supported package managers</strong> (DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, Paru, MacPorts, Cargo, Npm, Pipx, Uv, and Go) through a single CLI. <a href="{{ '/history/feature-per-manager-matrix.html' | relative_url }}">See per-manager feature support →</a></p>
       </div>
     </div>
     <div class="feature-item">
@@ -88,6 +88,20 @@ title: Stamp
       <div>
         <h3>Unified Repository Management</h3>
         <p>Add, remove, and list third-party repositories &mdash; PPAs, taps, remotes &mdash; across all managers with the same interface.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[@]</span>
+      <div>
+        <h3>Familiar Features</h3>
+        <p>Homebrew casks, <code>stamp provides</code>, <code>stamp autoremove</code>, cache cleanup, version pinning &mdash; the native features you already know, unified. <a href="{{ '/usage/special-features.html' | relative_url }}">See the full list &rarr;</a></p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">[%]</span>
+      <div>
+        <h3>Speaks Your Language</h3>
+        <p>Every stamp command has aliases matching your package manager's native syntax &mdash; <code>stamp show</code> (APT/DNF), <code>stamp outdated</code> (Brew/npm), <code>stamp tap</code> (Brew). <a href="{{ '/usage/aliases.html' | relative_url }}">See the matrix &rarr;</a></p>
       </div>
     </div>
     <div class="feature-item">
@@ -139,7 +153,7 @@ title: Stamp
 
   <div class="usage-example">
     <h3>Keep everything fresh</h3>
-    <pre><span class="prompt">$</span> stamp update                   # update all managers
+    <pre><span class="prompt">$</span> stamp update                   # update all packages in all managers at once
 <span class="prompt">$</span> stamp self-update              # update stamp itself</pre>
   </div>
 
@@ -161,6 +175,8 @@ Package Managers:
   brew       ✓ Active   /home/user/.linuxbrew/bin/brew User-space manager
   macports   ✗ Not Found -                     Package manager for macOS
   go         ✓ Active   /usr/local/go/bin/go   Language toolchain — go install
+  npm        ✓ Active   /usr/bin/npm           Node.js package manager
+  cargo      ✗ Not Found -                     Rust package manager — cargo install
   pipx       ✗ Not Found -                     Python tool installer
   uv         ✗ Not Found -                     Python package manager
 

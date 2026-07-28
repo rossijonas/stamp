@@ -3,7 +3,7 @@
 
 ## What is Stamp?
 
-Stamp is a lightweight yet powerful CLI tool that wraps **many package managers into one**. It lets you install, track, and restore packages across DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, Paru, and MacPorts — plus `pipx`, `uv`, and `go` language-specific package managers — all through a single command.
+Stamp is a lightweight yet powerful CLI tool that wraps **many package managers into one**. It lets you install, track, and restore packages across DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, Paru, and MacPorts — plus `cargo`, `npm`, `pipx`, `uv`, and `go` language-specific package managers — all through a single command.
 
 ### How it works
 

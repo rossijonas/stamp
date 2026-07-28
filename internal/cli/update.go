@@ -191,10 +191,12 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 				pw, err := term.ReadPassword(int(os.Stdin.Fd()))
 				_, _ = fmt.Fprintln(errOut)
 				if err != nil {
-					return fmt.Errorf("failed to read sudo password: %w", err)
+					// Non-interactive environment — sudo -n will fail fast if password needed
+					_, _ = fmt.Fprintf(errOut, "  warning: cannot read password in non-interactive mode: %v\n", err)
+				} else {
+					manager.SetSudoPassword(pw)
+					defer manager.ClearSudoPassword()
 				}
-				manager.SetSudoPassword(pw)
-				defer manager.ClearSudoPassword()
 			}
 
 			// Check phase (skipped when -y)

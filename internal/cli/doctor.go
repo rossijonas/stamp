@@ -83,6 +83,8 @@ func buildManagersReport(adapters []manager.Adapter) []managerStatus {
 		{"brew", "User-space manager"},
 		{"macports", "Package manager for macOS"},
 		{"go", "Language toolchain — go install"},
+		{"npm", "Node.js package manager"},
+		{"cargo", "Rust package manager — cargo install"},
 		{"pipx", "Python tool installer"},
 		{"uv", "Python package manager"},
 	}

@@ -71,10 +71,18 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 		}
 
 		wg.Add(1)
-		go func(a manager.Adapter, names []string) {
+		go func(a manager.Adapter, names []string, pkgs []manifest.Package) {
 			defer wg.Done()
 			for _, pName := range names {
-				if err := a.Install(ctx, pName); err != nil {
+				// Check if this package is a brew cask
+				installCtx := ctx
+				for _, p := range pkgs {
+					if p.Name == pName && p.Manager == a.Name() && p.Cask {
+						installCtx = manager.WithCask(ctx)
+						break
+					}
+				}
+				if err := a.Install(installCtx, pName); err != nil {
 					errMu.Lock()
 					errors = append(errors, restoreError{Manager: a.Name(), Pkg: pName, Err: err})
 					errMu.Unlock()
@@ -82,7 +90,7 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 					_, _ = fmt.Fprintf(w, "  installed %s via %s\n", pName, a.Name())
 				}
 			}
-		}(adapter, pNames)
+		}(adapter, pNames, pkgs)
 	}
 
 	wg.Wait()

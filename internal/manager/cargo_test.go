@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestZypper_Operations(t *testing.T) {
+func TestCargo_Operations(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -22,8 +22,8 @@ func TestZypper_Operations(t *testing.T) {
 		{
 			name:        "list installed success",
 			operation:   "list",
-			mockOutput:  "S | Name | Summary | Type\n--+------+---------+--------\ni | htop | Interactive process viewer | package\ni | git  | git    | package\n",
-			expectedRes: []string{"htop", "git"},
+			mockOutput:  "bat v0.25.0:\n    bat\nripgrep v14.1.0:\n    rg\n",
+			expectedRes: []string{"bat", "ripgrep"},
 		},
 		{
 			name:        "list installed error",
@@ -32,58 +32,38 @@ func TestZypper_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
-			name:        "list installed no packages",
-			operation:   "list",
-			mockOutput:  "S | Name | Summary | Type\n--+------+---------+--------\n",
-			expectedRes: []string{},
-		},
-		{
 			name:      "install success",
 			operation: "install",
-			pkgName:   "htop",
+			pkgName:   "ripgrep",
 		},
 		{
 			name:        "install error",
 			operation:   "install",
-			pkgName:     "htop",
+			pkgName:     "ripgrep",
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
 		{
 			name:      "reinstall success",
 			operation: "reinstall",
-			pkgName:   "htop",
+			pkgName:   "ripgrep",
 		},
 		{
 			name:        "reinstall error",
 			operation:   "reinstall",
-			pkgName:     "htop",
+			pkgName:     "ripgrep",
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
 		{
 			name:      "remove success",
 			operation: "remove",
-			pkgName:   "htop",
+			pkgName:   "ripgrep",
 		},
 		{
 			name:        "remove error",
 			operation:   "remove",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "search success",
-			operation:   "search",
-			pkgName:     "htop",
-			mockOutput:  "S | Name | Summary | Type\n--+------+---------+--------\n  | htop | Interactive process viewer | package\n",
-			expectedRes: []string{"htop"},
-		},
-		{
-			name:        "search error",
-			operation:   "search",
-			pkgName:     "htop",
+			pkgName:     "ripgrep",
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
@@ -100,6 +80,19 @@ func TestZypper_Operations(t *testing.T) {
 			expectedErr: true,
 		},
 		{
+			name:       "search success",
+			operation:  "search",
+			pkgName:    "serde",
+			mockOutput: "serde = \"1.0.215\"\n",
+		},
+		{
+			name:        "search error",
+			operation:   "search",
+			pkgName:     "serde",
+			mockErr:     assert.AnError,
+			expectedErr: true,
+		},
+		{
 			name:        "search validation error",
 			operation:   "search",
 			pkgName:     "-invalid",
@@ -108,13 +101,13 @@ func TestZypper_Operations(t *testing.T) {
 		{
 			name:       "info success",
 			operation:  "info",
-			pkgName:    "htop",
-			mockOutput: "Name: htop\nVersion: 3.2.2\n",
+			pkgName:    "serde",
+			mockOutput: "serde — https://serde.rs\nA serialization framework\n",
 		},
 		{
 			name:        "info error",
 			operation:   "info",
-			pkgName:     "htop",
+			pkgName:     "serde",
 			mockErr:     assert.AnError,
 			expectedErr: true,
 		},
@@ -137,7 +130,7 @@ func TestZypper_Operations(t *testing.T) {
 		{
 			name:      "update single package",
 			operation: "update_single",
-			pkgName:   "htop",
+			pkgName:   "ripgrep",
 		},
 		{
 			name:        "doctor not supported",
@@ -164,10 +157,10 @@ func TestZypper_Operations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			manager := NewZypper()
+			manager := NewCargo()
 			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
 
-			assert.Equal(t, "zypper", manager.Name())
+			assert.Equal(t, "cargo", manager.Name())
 
 			var err error
 			ctx := context.Background()
@@ -208,7 +201,7 @@ func TestZypper_Operations(t *testing.T) {
 					require.Error(t, err)
 				} else {
 					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
+					assert.NotEmpty(t, res)
 				}
 			case "info":
 				res, err := manager.Info(ctx, tt.pkgName)
@@ -254,115 +247,74 @@ func TestZypper_Operations(t *testing.T) {
 	}
 }
 
-func TestZypperParseSearch(t *testing.T) {
+func TestCargo_ListInstalled_Empty(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name     string
-		input    string
-		expected []string
-	}{
-		{
-			name: "standard output with header",
-			input: "S | Name | Summary | Type\n--+------+---------+--------\n" +
-				"i | htop | Interactive process viewer | package\n" +
-				"  | git  | Git | package\n",
-			expected: []string{"htop", "git"},
-		},
-		{
-			name:     "no results",
-			input:    "S | Name | Summary | Type\n--+------+---------+--------\n",
-			expected: []string{},
-		},
-		{
-			name:     "empty input",
-			input:    "",
-			expected: []string{},
-		},
-	}
+	manager := NewCargo()
+	manager.exec = mockExecutorHelper("", nil)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			result := parseZypperSearch([]byte(tt.input))
-			assert.ElementsMatch(t, tt.expected, result)
-		})
-	}
+	pkgs, err := manager.ListInstalled(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, pkgs)
 }
 
-func TestZypper_CheckUpdateExecError(t *testing.T) {
+func TestCargo_Update_Single(t *testing.T) {
 	t.Parallel()
-	manager := NewZypper()
-	manager.exec = mockExecutorHelper("", assert.AnError)
+	manager := NewCargo()
+	manager.exec = mockExecutorHelper("", nil)
+
+	err := manager.Update(context.Background(), "ripgrep")
+	require.NoError(t, err)
+}
+
+func TestCargo_Search_Supported(t *testing.T) {
+	t.Parallel()
+	manager := NewCargo()
+	manager.exec = mockExecutorHelper("serde = \"1.0.215\"\n", nil)
+
+	results, err := manager.Search(context.Background(), "serde")
+	require.NoError(t, err)
+	assert.NotEmpty(t, results)
+}
+
+func TestCargo_Info_Supported(t *testing.T) {
+	t.Parallel()
+	manager := NewCargo()
+	expected := "serde — https://serde.rs\nA serialization framework\n"
+	manager.exec = mockExecutorHelper(expected, nil)
+
+	info, err := manager.Info(context.Background(), "serde")
+	require.NoError(t, err)
+	assert.Equal(t, expected, info)
+}
+
+func TestCargo_CheckUpdate_NotSupported(t *testing.T) {
+	t.Parallel()
+	manager := NewCargo()
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to refresh repositories")
+	assert.ErrorIs(t, err, ErrCheckUnsupported)
 }
 
-func TestZypper_CheckUpdate(t *testing.T) {
+func TestCargo_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
-	manager := NewZypper()
-	manager.exec = mockExecutorHelper("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\n", nil)
-
-	updates, err := manager.CheckUpdate(context.Background(), "")
-	require.NoError(t, err)
-	require.Len(t, updates, 1)
-	assert.Equal(t, "htop", updates[0].Package)
-}
-
-func TestZypper_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
-	t.Parallel()
-	call := 0
-	manager := NewZypper()
-	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		call++
-		if call == 1 {
-			return []byte(""), nil // zypper refresh succeeds
-		}
-		return nil, assert.AnError // zypper list-updates fails
-	}
-
-	_, err := manager.CheckUpdate(context.Background(), "")
+	mgr := NewCargo()
+	_, err := mgr.Provides(context.Background(), "htop")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to check updates")
+	assert.ErrorIs(t, err, ErrNotSupported)
 }
 
-func TestParseZypperListUpdates(t *testing.T) {
+func TestCargo_AutoRemoveNotSupported(t *testing.T) {
 	t.Parallel()
-	input := []byte("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\nv | main | git | 2.43.0 | 2.43.2\n")
-	updates := parseZypperListUpdates(input)
-	require.Len(t, updates, 2)
-	assert.Equal(t, "htop", updates[0].Package)
-	assert.Equal(t, "git", updates[1].Package)
-}
-
-func TestZypper_ProvidesError(t *testing.T) {
-	t.Parallel()
-	m := NewZypper()
-	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "htop")
+	mgr := NewCargo()
+	_, err := mgr.AutoRemove(context.Background(), false)
 	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
 }
 
-func TestZypper_AutoRemoveDryRun(t *testing.T) {
+func TestCargo_CleanNotSupported(t *testing.T) {
 	t.Parallel()
-	m := NewZypper()
-	pkgs, err := m.AutoRemove(context.Background(), true)
-	require.NoError(t, err)
-	assert.Nil(t, pkgs)
-}
-
-func TestZypper_Clean(t *testing.T) {
-	t.Parallel()
-	m := NewZypper()
-	m.exec = mockExecutorHelper("", nil)
-	_, err := m.Clean(context.Background(), false)
-	require.NoError(t, err)
-}
-
-func TestZypper_CleanDryRun(t *testing.T) {
-	t.Parallel()
-	m := NewZypper()
-	result, err := m.Clean(context.Background(), true)
-	require.NoError(t, err)
-	assert.Nil(t, result)
+	mgr := NewCargo()
+	_, err := mgr.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
 }

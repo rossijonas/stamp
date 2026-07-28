@@ -576,3 +576,27 @@ func TestGo_Name(t *testing.T) {
 	mgr := NewGo()
 	assert.Equal(t, "go", mgr.Name())
 }
+
+func TestGo_ProvidesNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewGo()
+	_, err := mgr.Provides(context.Background(), "htop")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestGo_AutoRemoveNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewGo()
+	_, err := mgr.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestGo_CleanNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewGo()
+	_, err := mgr.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

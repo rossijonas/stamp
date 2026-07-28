@@ -340,3 +340,36 @@ func TestParsePacmanQu(t *testing.T) {
 	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
 	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }
+
+func TestPacman_ProvidesError(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Provides(context.Background(), "/usr/bin/htop")
+	require.Error(t, err)
+}
+
+func TestPacman_AutoRemoveDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("", nil)
+	pkgs, err := m.AutoRemove(context.Background(), true)
+	require.NoError(t, err)
+	assert.Empty(t, pkgs)
+}
+
+func TestPacman_Clean(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.Clean(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestPacman_CleanDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	result, err := m.Clean(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}

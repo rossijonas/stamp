@@ -226,3 +226,27 @@ func TestUv_UnsupportedOperations(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, repos)
 }
+
+func TestUv_ProvidesNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	_, err := mgr.Provides(context.Background(), "htop")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestUv_AutoRemoveNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	_, err := mgr.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestUv_CleanNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	_, err := mgr.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

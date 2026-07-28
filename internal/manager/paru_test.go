@@ -299,3 +299,36 @@ func TestParu_Search_AURResults(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, results, "paru")
 }
+
+func TestParu_ProvidesError(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Provides(context.Background(), "/usr/bin/htop")
+	require.Error(t, err)
+}
+
+func TestParu_AutoRemoveDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	m.exec = mockExecutorHelper("", nil)
+	pkgs, err := m.AutoRemove(context.Background(), true)
+	require.NoError(t, err)
+	assert.Empty(t, pkgs)
+}
+
+func TestParu_Clean(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.Clean(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestParu_CleanDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	result, err := m.Clean(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}

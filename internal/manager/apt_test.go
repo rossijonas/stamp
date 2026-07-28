@@ -567,3 +567,43 @@ func TestParseAPTUpgradable(t *testing.T) {
 	assert.Equal(t, "git", updates[1].Package)
 	assert.NotEmpty(t, updates[1].AvailableVersion)
 }
+
+func TestAPT_ProvidesError(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Provides(context.Background(), "htop")
+	require.Error(t, err)
+}
+
+func TestAPT_AutoRemove(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt")
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestAPT_AutoRemoveDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt")
+	pkgs, err := m.AutoRemove(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, pkgs)
+}
+
+func TestAPT_Clean(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt")
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.Clean(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestAPT_CleanDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt")
+	result, err := m.Clean(context.Background(), true)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}

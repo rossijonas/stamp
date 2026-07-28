@@ -236,3 +236,25 @@ func parseFlatpakDryRun(output []byte) []UpdateInfo {
 	}
 	return result
 }
+
+// Provides returns an error since flatpak has no provides command.
+func (m *Flatpak) Provides(_ context.Context, _ string) ([]string, error) {
+	return nil, fmt.Errorf("%w: provides not supported for flatpak", ErrNotSupported)
+}
+
+// AutoRemove removes unused runtimes via flatpak uninstall --unused.
+func (m *Flatpak) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", "uninstall", "--unused", "-y")
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove unused flatpaks: %w", err)
+	}
+	return nil, nil
+}
+
+// Clean returns an error since flatpak has no cache clean command.
+func (m *Flatpak) Clean(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: clean not supported for flatpak", ErrNotSupported)
+}

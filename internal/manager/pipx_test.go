@@ -248,3 +248,27 @@ func TestPipx_UnsupportedOperations(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, repos)
 }
+
+func TestPipx_ProvidesNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	_, err := mgr.Provides(context.Background(), "htop")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestPipx_AutoRemoveNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	_, err := mgr.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestPipx_CleanNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	_, err := mgr.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

@@ -89,7 +89,7 @@ check "list --json valid" bash -c "stamp list --json | python3 -m json.tool > /d
 
 echo "=== Init ==="
 check "init runs" timeout $TIMEOUT stamp init
-check "init re-init shows warning" bash -c "stamp init 2>&1 | grep -q 'already initialized'"
+check "init re-init shows warning" bash -c "stamp init 2>&1 | grep -q 'backed up'"
 
 echo "=== Reconcile ==="
 check "reconcile --dry-run" timeout $TIMEOUT stamp reconcile --dry-run -m dnf

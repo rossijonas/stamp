@@ -19,6 +19,7 @@ type Package struct {
 	Manager  string `toml:"manager"`
 	Category string `toml:"category,omitempty"`
 	Notes    string `toml:"notes,omitempty"`
+	Cask     bool   `toml:"cask,omitempty"`
 }
 
 // Repository represents a tracked third-party repository or tap.

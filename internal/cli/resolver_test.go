@@ -30,6 +30,15 @@ func (t *testAdapter) Update(_ context.Context, _ string) error                 
 func (t *testAdapter) CheckUpdate(_ context.Context, _ string) ([]manager.UpdateInfo, error) {
 	return nil, nil
 }
+func (t *testAdapter) Provides(_ context.Context, _ string) ([]string, error) {
+	return nil, nil
+}
+func (t *testAdapter) AutoRemove(_ context.Context, _ bool) ([]string, error) {
+	return nil, nil
+}
+func (t *testAdapter) Clean(_ context.Context, _ bool) ([]string, error) {
+	return nil, nil
+}
 
 func TestResolver_Tier1ExplicitOverride(t *testing.T) {
 	t.Parallel()

@@ -158,6 +158,41 @@ func (m *Zypper) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
 }
 
+// Clean runs zypper clean to clear the package cache.
+func (m *Zypper) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd("zypper", "clean", "--non-interactive")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clean zypper cache: %w", err)
+	}
+	return nil, nil
+}
+
+// Provides runs zypper what-provides to find which package owns a file.
+func (m *Zypper) Provides(ctx context.Context, query string) ([]string, error) {
+	out, err := m.exec(ctx, "zypper", "what-provides", query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find provides for %s: %w", query, err)
+	}
+	return parseLines(out), nil
+}
+
+// AutoRemove removes unneeded dependencies via zypper rm -u.
+func (m *Zypper) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd("zypper", "rm", "-u", "--non-interactive")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to autoremove: %w", err)
+	}
+	return nil, nil
+}
+
 // CheckUpdate runs zypper list-updates to show available updates.
 func (m *Zypper) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	refreshArgs := sudoCmd("zypper", "refresh")

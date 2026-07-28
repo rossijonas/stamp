@@ -160,3 +160,18 @@ func (m *UvTool) RemoveRepo(_ context.Context, _ string) error {
 func (m *UvTool) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil
 }
+
+// Provides returns an error since uv has no provides command.
+func (m *UvTool) Provides(_ context.Context, _ string) ([]string, error) {
+	return nil, fmt.Errorf("%w: provides not supported for uv", ErrNotSupported)
+}
+
+// AutoRemove returns an error since uv has no autoremove command.
+func (m *UvTool) AutoRemove(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: autoremove not supported for uv", ErrNotSupported)
+}
+
+// Clean returns an error since uv has no cache clean command.
+func (m *UvTool) Clean(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: clean not supported for uv", ErrNotSupported)
+}

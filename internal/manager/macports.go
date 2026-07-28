@@ -183,6 +183,40 @@ func (m *MacPorts) RemoveRepo(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported for macports")
 }
 
+// Provides runs port provides <query> to find which package owns a file.
+func (m *MacPorts) Provides(ctx context.Context, query string) ([]string, error) {
+	out, err := m.exec(ctx, "port", "provides", query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find provides for %s: %w", query, err)
+	}
+	return parseLines(out), nil
+}
+
+// AutoRemove runs port reclaim to remove inactive ports.
+func (m *MacPorts) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	_, err := m.exec(WithStreamIO(ctx), "port", "reclaim", "--yes")
+	if err != nil {
+		return nil, fmt.Errorf("failed to reclaim ports: %w", err)
+	}
+	return nil, nil
+}
+
+// Clean runs port clean --all installed to clear build cache.
+func (m *MacPorts) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	args := sudoCmd("port", "clean", "--all", "installed")
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clean macports cache: %w", err)
+	}
+	return nil, nil
+}
+
 // ListRepos returns an empty list since macports has no concept of repositories.
 func (m *MacPorts) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return nil, nil

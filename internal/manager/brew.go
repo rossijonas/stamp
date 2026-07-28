@@ -6,7 +6,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 )
+
+type caskKey struct{}
+
+// WithCask returns a context that signals cask operations for brew.
+func WithCask(ctx context.Context) context.Context {
+	return context.WithValue(ctx, caskKey{}, true)
+}
+
+func isCask(ctx context.Context) bool {
+	v, _ := ctx.Value(caskKey{}).(bool)
+	return v
+}
 
 // Brew implements the Adapter interface for Homebrew.
 type Brew struct {
@@ -25,22 +39,57 @@ func (m *Brew) Name() string {
 	return "brew"
 }
 
-// ListInstalled returns a list of packages currently installed.
+// ListInstalled returns a list of packages currently installed (formulas + casks).
 func (m *Brew) ListInstalled(ctx context.Context) ([]string, error) {
-	// 'brew leaves --installed-on-request' returns packages the user explicitly installed.
 	out, err := m.exec(ctx, "brew", "leaves", "--installed-on-request")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
-	return parseLines(out), nil
+	formulas := parseLines(out)
+
+	// Also list installed casks and merge
+	caskOut, err := m.exec(ctx, "brew", "list", "--cask")
+	if err != nil {
+		// brew list --cask fails when no casks are installed — ignore
+		return formulas, nil
+	}
+	casks := parseLines(caskOut)
+	for _, c := range casks {
+		if !slices.Contains(formulas, c) {
+			formulas = append(formulas, c)
+		}
+	}
+	return formulas, nil
+}
+
+// IsCask returns true if the given package is a Homebrew cask.
+func (m *Brew) IsCask(ctx context.Context, pkg string) (bool, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return false, err
+	}
+	// brew info --cask succeeds only for casks
+	_, err := m.exec(ctx, "brew", "info", "--cask", pkg)
+	if err != nil {
+		if strings.Contains(err.Error(), "No available Cask") {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check cask status for %s: %w", pkg, err)
+	}
+	return true, nil
 }
 
 // Install executes the native installation command.
+// Adds --cask when the context is marked as cask (via WithCask).
 func (m *Brew) Install(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(WithStreamIO(ctx), "brew", "install", pkg)
+	args := []string{"install"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkg)
+	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
 	}
@@ -48,11 +97,17 @@ func (m *Brew) Install(ctx context.Context, pkg string) error {
 }
 
 // Reinstall executes the native reinstallation command.
+// Adds --cask when the context is marked as cask (via WithCask).
 func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(WithStreamIO(ctx), "brew", "reinstall", pkg)
+	args := []string{"reinstall"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkg)
+	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
 	}
@@ -60,11 +115,17 @@ func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
 }
 
 // Remove executes the native removal command.
+// Adds --cask when the context is marked as cask (via WithCask).
 func (m *Brew) Remove(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(WithStreamIO(ctx), "brew", "uninstall", pkg)
+	args := []string{"uninstall"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkg)
+	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", pkg, err)
 	}
@@ -143,13 +204,18 @@ func (m *Brew) Doctor(ctx context.Context) (string, error) {
 }
 
 // Update runs brew update then brew upgrade (two-phase).
-// If pkg is non-empty, upgrades only that package via brew upgrade <pkg>.
+// For batch, also runs brew upgrade --cask to update casks.
+// If pkg is non-empty, upgrades only that package.
 func (m *Brew) Update(ctx context.Context, pkg string) error {
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err
 		}
-		_, err := m.exec(WithStreamIO(ctx), "brew", "upgrade", pkg)
+		args := []string{"upgrade", pkg}
+		if isCask(ctx) {
+			args = []string{"upgrade", "--cask", pkg}
+		}
+		_, err := m.exec(WithStreamIO(ctx), "brew", args...)
 		if err != nil {
 			return fmt.Errorf("failed to upgrade %s: %w", pkg, err)
 		}
@@ -160,10 +226,11 @@ func (m *Brew) Update(ctx context.Context, pkg string) error {
 	if err != nil {
 		return fmt.Errorf("failed to update homebrew: %w", err)
 	}
-	_, err = m.exec(WithStreamIO(ctx), "brew", "upgrade")
-	if err != nil {
+	if _, err := m.exec(WithStreamIO(ctx), "brew", "upgrade"); err != nil {
 		return fmt.Errorf("failed to upgrade packages: %w", err)
 	}
+	// Cask upgrade is best-effort — may fail on systems with no casks installed
+	_, _ = m.exec(WithStreamIO(ctx), "brew", "upgrade", "--cask")
 	return nil
 }
 
@@ -213,4 +280,34 @@ func parseBrewOutdatedJSON(output []byte) ([]UpdateInfo, error) {
 		result = append(result, UpdateInfo{Package: f.Name, CurrentVersion: cur, AvailableVersion: f.CurrentVersion})
 	}
 	return result, nil
+}
+
+// Provides returns an error since brew has no provides command.
+func (m *Brew) Provides(_ context.Context, _ string) ([]string, error) {
+	return nil, fmt.Errorf("%w: provides not supported for brew", ErrNotSupported)
+}
+
+// AutoRemove removes orphaned formulae via brew autoremove.
+func (m *Brew) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if dryRun {
+		return nil, nil
+	}
+	_, err := m.exec(WithStreamIO(ctx), "brew", "autoremove")
+	if err != nil {
+		return nil, fmt.Errorf("failed to autoremove: %w", err)
+	}
+	return nil, nil
+}
+
+// Clean runs brew cleanup to remove old package versions.
+func (m *Brew) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	args := []string{"cleanup"}
+	if dryRun {
+		args = append(args, "--dry-run")
+	}
+	out, err := m.exec(ctx, "brew", args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clean brew cache: %w", err)
+	}
+	return parseLines(out), nil
 }

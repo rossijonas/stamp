@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Snap implements the Adapter interface for the snap package manager.
@@ -193,6 +194,86 @@ func parseSnapRefreshList(output []byte) []UpdateInfo {
 		result = append(result, UpdateInfo{Package: name})
 	}
 	return result
+}
+
+// Provides returns an error since snap has no provides command.
+func (m *Snap) Provides(_ context.Context, _ string) ([]string, error) {
+	return nil, fmt.Errorf("%w: provides not supported for snap", ErrNotSupported)
+}
+
+// AutoRemove returns an error since snap has no autoremove command.
+func (m *Snap) AutoRemove(_ context.Context, _ bool) ([]string, error) {
+	return nil, fmt.Errorf("%w: autoremove not supported for snap", ErrNotSupported)
+}
+
+// parseSnapRevisions extracts active (name→rev) mapping from snap list output.
+func parseSnapRevisions(output []byte) map[string]string {
+	result := make(map[string]string)
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 || bytes.HasPrefix(trimmed, []byte("Name")) {
+			continue
+		}
+		fields := bytes.Fields(trimmed)
+		if len(fields) < 3 {
+			continue
+		}
+		name := string(fields[0])
+		rev := string(fields[2])
+		result[name] = rev
+	}
+	return result
+}
+
+// Clean removes old snap revisions to free disk space.
+// Keeps active revisions; removes all inactive (old) revisions.
+func (m *Snap) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	activeOut, err := m.exec(ctx, "snap", "list")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list active snaps: %w", err)
+	}
+	activeRevs := parseSnapRevisions(activeOut)
+
+	allOut, err := m.exec(ctx, "snap", "list", "--all")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all snap revisions: %w", err)
+	}
+	allLines := parseLines(allOut)
+
+	var removed []string
+	for _, line := range allLines {
+		fields := strings.Fields(line)
+		if len(fields) < 3 || fields[0] == "Name" {
+			continue
+		}
+		name := fields[0]
+		rev := fields[2]
+		if activeRevs[name] == rev {
+			continue
+		}
+		removed = append(removed, fmt.Sprintf("%s rev %s", name, rev))
+	}
+
+	if dryRun {
+		return removed, nil
+	}
+
+	for _, line := range allLines {
+		fields := strings.Fields(line)
+		if len(fields) < 3 || fields[0] == "Name" {
+			continue
+		}
+		name := fields[0]
+		rev := fields[2]
+		if activeRevs[name] == rev {
+			continue
+		}
+		args := sudoCmd("snap", "remove", name, "--revision", rev)
+		if _, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...); err != nil {
+			return nil, fmt.Errorf("failed to remove snap %s revision %s: %w", name, rev, err)
+		}
+	}
+	return removed, nil
 }
 
 // Compile-time interface check.

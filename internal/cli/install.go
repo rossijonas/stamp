@@ -37,7 +37,22 @@ func newInstallCmd() *cobra.Command {
 				return fmt.Errorf("invalid package name: %w", err)
 			}
 
-			if err := adapter.Install(cmd.Context(), pkgName); err != nil {
+			// Detect cask for brew packages before install so --cask is passed
+			cask := false
+			if adapter.Name() == "brew" {
+				if brewAdapter, ok := adapter.(*manager.Brew); ok {
+					if isCask, err := brewAdapter.IsCask(cmd.Context(), pkgName); err == nil && isCask {
+						cask = true
+					}
+				}
+			}
+
+			installCtx := cmd.Context()
+			if cask {
+				installCtx = manager.WithCask(cmd.Context())
+			}
+
+			if err := adapter.Install(installCtx, pkgName); err != nil {
 				return fmt.Errorf("install failed: %w", err)
 			}
 
@@ -45,6 +60,7 @@ func newInstallCmd() *cobra.Command {
 				Name:    pkgName,
 				Manager: adapter.Name(),
 				Notes:   note,
+				Cask:    cask,
 			})
 
 			if err := app.saveManifest(); err != nil {
@@ -78,6 +94,7 @@ func newRemoveCmd() *cobra.Command {
 			pkgName := args[0]
 
 			var adapter manager.Adapter
+			var isCask bool
 
 			// Check manifest first: if package is tracked, use its recorded manager
 			if managerFlag == "" {
@@ -86,6 +103,7 @@ func newRemoveCmd() *cobra.Command {
 						for _, a := range app.adapters {
 							if a.Name() == p.Manager {
 								adapter = a
+								isCask = p.Cask
 								break
 							}
 						}
@@ -114,7 +132,12 @@ func newRemoveCmd() *cobra.Command {
 				}
 			}
 
-			if err := adapter.Remove(cmd.Context(), pkgName); err != nil {
+			removeCtx := cmd.Context()
+			if isCask && adapter.Name() == "brew" {
+				removeCtx = manager.WithCask(cmd.Context())
+			}
+
+			if err := adapter.Remove(removeCtx, pkgName); err != nil {
 				return fmt.Errorf("remove failed: %w", err)
 			}
 
