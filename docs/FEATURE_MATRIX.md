@@ -49,6 +49,9 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 | `stamp self-update` | `self-upgrade` | ✓ | ✓ | ✓ Atomic binary replacement + SHA-256 verification + post-update hooks | ✓ Complete |
 | `stamp auto-reconcile on\|off` | | ✓ | ✓ | ✓ systemd/launchd timer, --period flag | ✓ Complete |
+| `stamp autoremove` | | ✓ | ✓ | ✓ Iterates adapters, handles ErrNotSupported | ✓ Complete |
+| `stamp clean` | | ✓ | ✓ | ✓ Iterates adapters, handles ErrNotSupported | ✓ Complete |
+| `stamp provides <file>` | | ✓ | ✓ | ✓ Per-adapter Provides(), appends manager name | ✓ Complete |
 
 ## Repository Commands
 
@@ -100,6 +103,11 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp update` | `--serial` | `-s` | ✓ | ✓ | ✓ Complete |
 | `stamp auto-reconcile` | `--period <interval>` | `-p` | ✓ | ✓ | ✓ Complete |
 | `stamp list` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp autoremove` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp autoremove` | `--dry-run` | `-d` | ✓ | ✓ | ✓ Complete |
+| `stamp clean` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp clean` | `--dry-run` | `-d` | ✓ | ✓ | ✓ Complete |
+| `stamp provides` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 
 ## UNIX Compliance
 
@@ -162,3 +170,10 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | 6 | 29 | Flag and Compliance Updates | ✓ |
 | 6 | 30 | `stamp auto-reconcile` Command | ✓ |
 | 6 | 31 | Go toolchain adapter (go install) | ✓ |
+| 7 | 32 | npm toolchain adapter (#52) | ✓ |
+| 7 | 33 | Cargo toolchain adapter (#53) | ✓ |
+| 7 | 34 | cmd_test.go split (#105) | ✓ |
+| 7 | 35 | Homebrew cask support (#152) | ✓ |
+| 7 | 36 | Provides command (#154) | ✓ |
+| 7 | 37 | Autoremove command (#155) | ✓ |
+| 7 | 38 | Clean command (#158) | ✓ |
