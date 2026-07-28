@@ -17,3 +17,8 @@ Stamp doesn't replace your package managers — it unifies them into a single wo
 ### Vision
 
 Stamp is built for developers who want reproducible environments without the overhead of Nix or Ansible. Read the full [Vision](/VISION.html) to understand the project's goals.
+
+### See Also
+
+- [OS × Manager Compatibility Matrix](/history/os-manager-matrix.html) — which managers work on which OS
+- [Feature × Manager Support Matrix](/history/feature-per-manager-matrix.html) — which Stamp features work with each manager

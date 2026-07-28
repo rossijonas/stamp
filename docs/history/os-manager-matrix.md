@@ -39,3 +39,7 @@
 
 1. **Paru** replaces **Pacman** when both are detected on Arch Linux.  
    If Paru is not found, Stamp falls back to Pacman.
+
+### See Also
+
+- [Feature × Manager Support Matrix](feature-per-manager-matrix.html) — which Stamp features work with each manager

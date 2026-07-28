@@ -5,6 +5,8 @@
 
 This document tracks all SPEC.md commands, flags, and compliance items against their current implementation status. Updated after each feature delivery.
 
+See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) — which managers work on which OS — and [Feature × Manager Support Matrix](history/feature-per-manager-matrix.html) — which Stamp features work with each manager.
+
 ## Adapters
 
 | Adapter | Status | Commands | Notes |
