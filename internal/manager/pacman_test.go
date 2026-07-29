@@ -358,6 +358,36 @@ func TestPacman_AutoRemoveDryRun(t *testing.T) {
 	assert.Empty(t, pkgs)
 }
 
+func TestPacman_AutoRemove_WithOrphans(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewPacman()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			return []byte("libfoo\nlibbar\n"), nil // pacman -Qdtq lists orphans
+		case 2:
+			return []byte(""), nil // sudo pacman -Rs --noconfirm succeeds
+		default:
+			return nil, assert.AnError
+		}
+	}
+	pkgs, err := m.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"libfoo", "libbar"}, pkgs)
+	assert.Equal(t, 2, call)
+}
+
+func TestPacman_AutoRemove_ExecError(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list orphans")
+}
+
 func TestPacman_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()

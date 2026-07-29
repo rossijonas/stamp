@@ -344,6 +344,58 @@ func TestBrew_CleanError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestBrew_Doctor_Error(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.Doctor(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "brew doctor failed")
+}
+
+func TestBrew_IsCask_ExecError(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.IsCask(context.Background(), "firefox")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check cask status")
+}
+
+func TestBrew_AutoRemove_Error(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to autoremove")
+}
+
+func TestBrew_CheckUpdate_OutdatedFails_AfterRefresh(t *testing.T) {
+	t.Parallel()
+	call := 0
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil // brew update succeeds
+		}
+		return nil, assert.AnError // brew outdated --json fails
+	}
+	_, err := mgr.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestBrew_CheckUpdate_Pkg_NotFound(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper(`{"formulae":[]}`, nil)
+	updates, err := mgr.CheckUpdate(context.Background(), "nonexistent")
+	require.NoError(t, err)
+	assert.Empty(t, updates)
+}
+
 func TestBrew_CheckUpdateExecError(t *testing.T) {
 	t.Parallel()
 	manager := NewBrew()

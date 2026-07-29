@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -626,6 +627,54 @@ func TestDNF_ProvidesError(t *testing.T) {
 	m.exec = mockExecutorHelper("", assert.AnError)
 	_, err := m.Provides(context.Background(), "/usr/bin/htop")
 	require.Error(t, err)
+}
+
+func TestDNF_CheckUpdate_ExitCodeNot100(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		return nil, fmt.Errorf("exit status 1")
+	}
+	_, err := m.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestDNF_CheckUpdate_PkgScoped(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("htop.x86_64 3.2.1 updates\n", nil)
+	updates, err := m.CheckUpdate(context.Background(), "htop")
+	require.NoError(t, err)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "htop", updates[0].Package)
+}
+
+func TestDNF_Reinstall_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Reinstall(context.Background(), "htop")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to reinstall")
+}
+
+func TestDNF_Clean_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Clean(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to clean dnf cache")
+}
+
+func TestDNF_AutoRemove_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to autoremove")
 }
 
 func TestDNF_AutoRemove(t *testing.T) {

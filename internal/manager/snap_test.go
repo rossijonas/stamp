@@ -351,6 +351,15 @@ func TestSnap_Clean(t *testing.T) {
 	assert.Equal(t, 3, call)
 }
 
+func TestSnap_CheckUpdate_Error(t *testing.T) {
+	t.Parallel()
+	m := NewSnap()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.CheckUpdate(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
 func TestSnap_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	m := NewSnap()

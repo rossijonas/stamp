@@ -342,3 +342,21 @@ func TestCargo_ListHeld_NotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestCargo_Update_Batch_ListError(t *testing.T) {
+	t.Parallel()
+	mgr := NewCargo()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	err := mgr.Update(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list installed packages for update")
+}
+
+func TestCargo_Update_Single_Error(t *testing.T) {
+	t.Parallel()
+	mgr := NewCargo()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	err := mgr.Update(context.Background(), "ripgrep")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to update")
+}

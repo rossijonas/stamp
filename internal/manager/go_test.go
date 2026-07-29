@@ -624,3 +624,18 @@ func TestGo_ListHeld_NotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestGo_Remove_ExecError(t *testing.T) {
+	t.Parallel()
+	call := 0
+	mgr := NewGo()
+	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte("/home/user/go/bin/tool\n"), nil // go env GOPATH
+		}
+		return nil, assert.AnError // go version or removal fails
+	}
+	err := mgr.Remove(context.Background(), "github.com/example/tool")
+	require.Error(t, err)
+}

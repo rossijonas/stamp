@@ -274,3 +274,12 @@ func TestUv_ListHeld_NotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestUv_Info_Error(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.Info(context.Background(), "ruff")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get info")
+}
