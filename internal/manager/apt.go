@@ -285,3 +285,38 @@ func (m *APT) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	}
 	return nil, nil
 }
+
+// Hold pins a package via apt-mark hold.
+func (m *APT) Hold(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	args := sudoCmd("apt-mark", "hold", pkg)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to hold %s: %w", pkg, err)
+	}
+	return nil
+}
+
+// Unhold removes a version pin via apt-mark unhold.
+func (m *APT) Unhold(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	args := sudoCmd("apt-mark", "unhold", pkg)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to unhold %s: %w", pkg, err)
+	}
+	return nil
+}
+
+// ListHeld returns held packages via apt-mark showhold.
+func (m *APT) ListHeld(ctx context.Context) ([]string, error) {
+	out, err := m.exec(ctx, "apt-mark", "showhold")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list held packages: %w", err)
+	}
+	return parseLines(out), nil
+}

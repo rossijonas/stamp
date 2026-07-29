@@ -170,3 +170,18 @@ func (m *Npm) AutoRemove(_ context.Context, _ bool) ([]string, error) {
 func (m *Npm) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, fmt.Errorf("%w: clean not supported for npm", ErrNotSupported)
 }
+
+// Hold returns an error since npm has no hold command.
+func (m *Npm) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for npm", ErrNotSupported)
+}
+
+// Unhold returns an error since npm has no unhold command.
+func (m *Npm) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for npm", ErrNotSupported)
+}
+
+// ListHeld returns an error since npm has no hold command.
+func (m *Npm) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for npm", ErrNotSupported)
+}

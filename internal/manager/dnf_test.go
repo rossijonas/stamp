@@ -659,3 +659,72 @@ func TestDNF_CleanDryRun(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
+
+func TestDNF_Hold(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", nil)
+	err := m.Hold(context.Background(), "nginx")
+	require.NoError(t, err)
+}
+
+func TestDNF_Unhold(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", nil)
+	err := m.Unhold(context.Background(), "nginx")
+	require.NoError(t, err)
+}
+
+func TestDNF_ListHeld(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("nginx\nredis\n", nil)
+	pkgs, err := m.ListHeld(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
+}
+
+func TestDNF_ListHeld_Empty(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", nil)
+	pkgs, err := m.ListHeld(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, pkgs)
+}
+
+func TestDNF_Hold_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to hold")
+}
+
+func TestDNF_Hold_InvalidName(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	err := m.Hold(context.Background(), "-invalid")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+func TestDNF_Unhold_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unhold")
+}
+
+func TestDNF_ListHeld_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list held packages")
+}

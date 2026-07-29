@@ -600,3 +600,27 @@ func TestGo_CleanNotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestGo_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewGo()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestGo_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewGo()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestGo_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewGo()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

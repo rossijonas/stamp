@@ -545,6 +545,12 @@ a:hover { color: var(--accent-dim); }
 
 .docs-content p { margin-bottom: 1rem; color: var(--text-muted); }
 
+.docs-content a:not(.usage-link), .feature-item a:not(.usage-link), .usage a:not(.usage-link) {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 2px;
+}
+
 .docs-content ul, .docs-content ol {
   margin-bottom: 1rem;
   padding-left: 1.5rem;
@@ -556,10 +562,21 @@ a:hover { color: var(--accent-dim); }
 .docs-content code {
   font-family: var(--font-mono);
   font-size: 0.85em;
-  background: var(--code-bg);
+  background: var(--bg-hover);
   padding: 0.15em 0.4em;
   border-radius: 4px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-subtle);
+  color: var(--text);
+}
+
+.feature-item code, .usage code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg-hover);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border: 1px solid var(--accent-subtle);
+  color: var(--text);
 }
 
 .docs-content pre {

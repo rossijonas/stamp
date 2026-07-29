@@ -605,3 +605,27 @@ func TestBrew_Clean(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, result)
 }
+
+func TestBrew_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestBrew_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestBrew_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

@@ -366,3 +366,27 @@ func TestZypper_CleanDryRun(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
+
+func TestZypper_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewZypper()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestZypper_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewZypper()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestZypper_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewZypper()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

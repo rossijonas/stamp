@@ -276,5 +276,20 @@ func (m *Snap) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	return removed, nil
 }
 
+// Hold returns an error since snap has no hold command.
+func (m *Snap) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for snap", ErrNotSupported)
+}
+
+// Unhold returns an error since snap has no unhold command.
+func (m *Snap) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for snap", ErrNotSupported)
+}
+
+// ListHeld returns an error since snap has no hold command.
+func (m *Snap) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for snap", ErrNotSupported)
+}
+
 // Compile-time interface check.
 var _ Adapter = (*Snap)(nil)

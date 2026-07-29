@@ -145,6 +145,18 @@ type Adapter interface {
 	// If dryRun is true, returns what would be cleaned without deleting.
 	// Returns ErrNotSupported if the manager has no cache clean command.
 	Clean(ctx context.Context, dryRun bool) ([]string, error)
+
+	// Hold pins a package at its current version to prevent upgrades.
+	// Returns ErrNotSupported if the manager has no hold command.
+	Hold(ctx context.Context, pkg string) error
+
+	// Unhold removes a version pin, allowing the package to be upgraded.
+	// Returns ErrNotSupported if the manager has no unhold command.
+	Unhold(ctx context.Context, pkg string) error
+
+	// ListHeld returns the list of currently held/pinned packages.
+	// Returns ErrNotSupported if the manager has no hold command.
+	ListHeld(ctx context.Context) ([]string, error)
 }
 
 func init() {

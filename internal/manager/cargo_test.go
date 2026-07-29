@@ -318,3 +318,27 @@ func TestCargo_CleanNotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestCargo_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewCargo()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestCargo_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewCargo()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestCargo_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewCargo()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

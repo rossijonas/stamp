@@ -440,3 +440,27 @@ func TestFlatpak_CleanNotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestFlatpak_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestFlatpak_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestFlatpak_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

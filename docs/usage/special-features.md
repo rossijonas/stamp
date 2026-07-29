@@ -11,7 +11,7 @@ Cross-manager features that go beyond basic install, search, and remove.
 | **File Search (provides)** | Find which package owns a specific file or binary. | DNF, APT, Pacman, Paru, Zypper, MacPorts | `stamp provides <file>` | ✅ Complete |
 | **Orphan Cleanup (autoremove)** | Remove unused dependencies that were pulled in automatically. | Brew, DNF, APT, Pacman, Paru, Zypper, Flatpak, MacPorts | `stamp autoremove` | ✅ Complete |
 | **Cache Cleanup (clean)** | Clear locally cached package files to free disk space. | Brew, DNF, APT, Pacman, Paru, Zypper, Snap, MacPorts | `stamp clean` | ✅ Complete |
-| **Version Pinning (hold)** | Pin packages at specific versions to prevent accidental upgrades. | APT, DNF, Pacman, Paru | `stamp hold <pkg>` | 🚧 Planned |
+| **Version Pinning (hold)** | Pin packages at specific versions to prevent accidental upgrades. | APT, DNF, Pacman, Paru | `stamp hold <pkg>` | ✅ Complete |
 | **Group Install** | Install DNF package groups (e.g. "Development Tools"). | DNF | `stamp install --group` | 🚧 Planned |
 | **Flatpak Override** | Manage Flatpak sandbox permissions (filesystem, socket, device access). | Flatpak | `stamp override` | 🚧 Planned |
 | **Aliases** | Native command aliases for every supported package manager. | All | See [Aliases Matrix](aliases.html) | 🚧 Planned |

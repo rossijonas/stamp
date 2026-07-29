@@ -175,3 +175,18 @@ func (m *UvTool) AutoRemove(_ context.Context, _ bool) ([]string, error) {
 func (m *UvTool) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, fmt.Errorf("%w: clean not supported for uv", ErrNotSupported)
 }
+
+// Hold returns an error since uv has no hold command.
+func (m *UvTool) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for uv", ErrNotSupported)
+}
+
+// Unhold returns an error since uv has no unhold command.
+func (m *UvTool) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for uv", ErrNotSupported)
+}
+
+// ListHeld returns an error since uv has no hold command.
+func (m *UvTool) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for uv", ErrNotSupported)
+}

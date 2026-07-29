@@ -367,6 +367,30 @@ func TestSnap_AutoRemoveNotSupported(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
 
+func TestSnap_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewSnap()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestSnap_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewSnap()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestSnap_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewSnap()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
 func TestSnap_CleanDryRun(t *testing.T) {
 	t.Parallel()
 	call := 0

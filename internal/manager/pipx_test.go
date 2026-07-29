@@ -272,3 +272,27 @@ func TestPipx_CleanNotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestPipx_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestPipx_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestPipx_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

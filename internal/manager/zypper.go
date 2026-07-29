@@ -233,4 +233,19 @@ func parseZypperListUpdates(output []byte) []UpdateInfo {
 	return result
 }
 
+// Hold returns an error since zypper has no hold command.
+func (m *Zypper) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for zypper", ErrNotSupported)
+}
+
+// Unhold returns an error since zypper has no unhold command.
+func (m *Zypper) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for zypper", ErrNotSupported)
+}
+
+// ListHeld returns an error since zypper has no hold command.
+func (m *Zypper) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for zypper", ErrNotSupported)
+}
+
 var _ Adapter = (*Zypper)(nil)

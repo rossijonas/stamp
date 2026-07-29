@@ -266,4 +266,19 @@ func parsePortOutdated(output []byte) []UpdateInfo {
 	return result
 }
 
+// Hold returns an error since macports has no hold command.
+func (m *MacPorts) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for macports", ErrNotSupported)
+}
+
+// Unhold returns an error since macports has no unhold command.
+func (m *MacPorts) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for macports", ErrNotSupported)
+}
+
+// ListHeld returns an error since macports has no hold command.
+func (m *MacPorts) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for macports", ErrNotSupported)
+}
+
 var _ Adapter = (*MacPorts)(nil)

@@ -52,6 +52,9 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp autoremove` | | ✓ | ✓ | ✓ Iterates adapters, handles ErrNotSupported | ✓ Complete |
 | `stamp clean` | | ✓ | ✓ | ✓ Iterates adapters, handles ErrNotSupported | ✓ Complete |
 | `stamp provides <file>` | | ✓ | ✓ | ✓ Per-adapter Provides(), appends manager name | ✓ Complete |
+| `stamp hold <pkg>` | | ✓ | ✓ | ✓ Per-adapter Hold(), --manager required | ✓ Complete |
+| `stamp unhold <pkg>` | | ✓ | ✓ | ✓ Per-adapter Unhold(), --manager required | ✓ Complete |
+| `stamp held` | | ✓ | ✓ | ✓ Aggregates ListHeld across adapters | ✓ Complete |
 
 ## Repository Commands
 
@@ -108,6 +111,9 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp clean` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 | `stamp clean` | `--dry-run` | `-d` | ✓ | ✓ | ✓ Complete |
 | `stamp provides` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp hold` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp unhold` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp held` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 
 ## UNIX Compliance
 
@@ -177,3 +183,4 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | 7 | 36 | Provides command (#154) | ✓ |
 | 7 | 37 | Autoremove command (#155) | ✓ |
 | 7 | 38 | Clean command (#158) | ✓ |
+| 7 | 39 | Hold/unhold commands (#156) | ✓ |

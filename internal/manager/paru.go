@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Paru implements the Adapter interface for Arch Linux's Paru (AUR helper).
@@ -200,6 +201,121 @@ func (m *Paru) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error
 		return nil, fmt.Errorf("failed to check updates: %w", err)
 	}
 	return parsePacmanQu(out), nil
+}
+
+// Hold adds a package to IgnorePkg in pacman.conf (shared with pacman).
+func (m *Paru) Hold(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+
+	lines, err := pacmanConfRead(ctx, m.exec)
+	if err != nil {
+		return err
+	}
+	modified := false
+
+	inOptions := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[options]" {
+			inOptions = true
+			continue
+		}
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+			break
+		}
+		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
+			eqIdx := strings.Index(trimmed, "=")
+			if eqIdx < 0 {
+				continue
+			}
+			value := strings.TrimSpace(trimmed[eqIdx+1:])
+			pkgs := strings.Fields(value)
+			for _, p := range pkgs {
+				if p == pkg {
+					return nil
+				}
+			}
+			lines[i] = line + " " + pkg
+			modified = true
+			break
+		}
+	}
+
+	if !modified {
+		for i, line := range lines {
+			if strings.TrimSpace(line) == "[options]" {
+				lines = append(lines[:i+1], append([]string{"IgnorePkg = " + pkg}, lines[i+1:]...)...)
+				modified = true
+				break
+			}
+		}
+	}
+
+	if !modified {
+		return fmt.Errorf("could not find [options] section in pacman.conf")
+	}
+
+	return pacmanConfWrite(ctx, m.exec, lines)
+}
+
+// Unhold removes a package from IgnorePkg in pacman.conf.
+func (m *Paru) Unhold(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+
+	lines, err := pacmanConfRead(ctx, m.exec)
+	if err != nil {
+		return err
+	}
+	inOptions := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[options]" {
+			inOptions = true
+			continue
+		}
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+			break
+		}
+		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
+			eqIdx := strings.Index(trimmed, "=")
+			if eqIdx < 0 {
+				continue
+			}
+			before := strings.TrimSpace(trimmed[:eqIdx])
+			value := strings.TrimSpace(trimmed[eqIdx+1:])
+			pkgs := strings.Fields(value)
+			newPkgs := make([]string, 0, len(pkgs))
+			found := false
+			for _, p := range pkgs {
+				if p == pkg {
+					found = true
+				} else {
+					newPkgs = append(newPkgs, p)
+				}
+			}
+			if !found {
+				return fmt.Errorf("package %s is not held", pkg)
+			}
+			if len(newPkgs) == 0 {
+				lines[i] = before + " ="
+			} else {
+				lines[i] = before + " = " + strings.Join(newPkgs, " ")
+			}
+			return pacmanConfWrite(ctx, m.exec, lines)
+		}
+	}
+
+	return fmt.Errorf("package %s is not held", pkg)
+}
+
+// ListHeld returns the list of packages in IgnorePkg from pacman.conf.
+func (m *Paru) ListHeld(ctx context.Context) ([]string, error) {
+	return pacmanIgnorePkg(ctx, m.exec)
 }
 
 var _ Adapter = (*Paru)(nil)

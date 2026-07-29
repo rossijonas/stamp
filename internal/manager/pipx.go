@@ -192,3 +192,18 @@ func (m *Pipx) AutoRemove(_ context.Context, _ bool) ([]string, error) {
 func (m *Pipx) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, fmt.Errorf("%w: clean not supported for pipx", ErrNotSupported)
 }
+
+// Hold returns an error since pipx has no hold command.
+func (m *Pipx) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for pipx", ErrNotSupported)
+}
+
+// Unhold returns an error since pipx has no unhold command.
+func (m *Pipx) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for pipx", ErrNotSupported)
+}
+
+// ListHeld returns an error since pipx has no hold command.
+func (m *Pipx) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for pipx", ErrNotSupported)
+}
