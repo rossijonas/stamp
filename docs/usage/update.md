@@ -19,12 +19,14 @@ stamp check-update
 ```
 
 ```text
+▪ Refreshing package metadata...
+  refreshing apt...
+  refreshing brew...
 ▪ Checking for updates...
   apt: curl 7.88.1 → 7.88.3
   apt: git 2.43.0 → 2.43.2
   dnf: htop 3.2.1 → 3.2.2
   brew: lazygit 0.40.0 → 0.41.0
-  brew: ripgrep 13.0.0 → 14.1.0
   pipx: cannot preview updates
   uv: cannot preview updates
 ```
@@ -33,9 +35,12 @@ Both `outdated` and `check-update` are read-only — they run the check phase an
 
 ### Default Flow (Check + Confirm)
 
-By default, running `stamp update` performs a serialized check across all package managers first, aggregates the available updates, and prompts you before applying them:
+By default, running `stamp update` performs metadata refresh, then a serialized check across all package managers, aggregates the available updates, and prompts you before applying them:
 
 ```text
+▪ Refreshing package metadata...
+  refreshing apt...
+  refreshing brew...
 ▪ Checking for updates...
   apt: curl 7.88.1 → 7.88.3
   apt: git 2.43.0 → 2.43.2
@@ -68,11 +73,12 @@ Proceed with updates? [Y/n]: y
 
 Managers that do not support a native "list upgrades" command (like `go`, `pipx`, `uv`) will print a short notice and continue safely.
 
-To ensure accuracy, the check phase automatically refreshes package metadata
-for managers that don't do it themselves. This includes `brew update`, `apt update`,
-`zypper refresh`, `pacman -Sy`, and `port selfupdate` — all via `sudo -S` with the password cached at startup. A single sudo prompt at
-the start covers both the check refresh and the run phase. Managers like `dnf` refresh metadata as part of their check
-command and need no separate step.
+To ensure accuracy, the check phase runs an explicit metadata refresh step
+before querying for updates. Each adapter's `Refresh` method is called
+(e.g., `brew update`, `apt update`, `zypper refresh`, `pacman -Sy`)
+before the check loop. Managers like `dnf` and `flatpak` skip refresh
+since they use local metadata. A single sudo prompt at the start covers
+both the refresh and the run phase.
 
 ### Check Only (Dry-Run)
 
@@ -83,6 +89,9 @@ stamp update --check
 ```
 
 ```text
+▪ Refreshing package metadata...
+  refreshing apt...
+  refreshing brew...
 ▪ Checking for updates...
   apt: curl 7.88.1 → 7.88.3
   brew: lazygit 0.40.0 → 0.41.0

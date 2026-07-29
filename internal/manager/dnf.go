@@ -294,6 +294,11 @@ func (m *DNF) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error)
 	return parseDNFCheckUpdate(out), nil
 }
 
+// Refresh is a no-op for this manager.
+func (m *DNF) Refresh(_ context.Context) error {
+	return nil
+}
+
 func parseDNFCheckUpdate(output []byte) []UpdateInfo {
 	var result []UpdateInfo
 	for _, line := range bytes.Split(output, []byte("\n")) {

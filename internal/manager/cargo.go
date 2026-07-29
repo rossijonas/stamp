@@ -161,6 +161,11 @@ func (m *Cargo) CheckUpdate(_ context.Context, _ string) ([]UpdateInfo, error) {
 	return nil, fmt.Errorf("%w", ErrCheckUnsupported)
 }
 
+// Refresh is a no-op for this manager.
+func (m *Cargo) Refresh(_ context.Context) error {
+	return nil
+}
+
 // AddRepo returns an error since cargo has no concept of repositories.
 func (m *Cargo) AddRepo(_ context.Context, _, _ string) error {
 	return fmt.Errorf("not supported for cargo")

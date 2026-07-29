@@ -163,6 +163,11 @@ func (m *Pipx) CheckUpdate(_ context.Context, _ string) ([]UpdateInfo, error) {
 	return nil, fmt.Errorf("%w", ErrCheckUnsupported)
 }
 
+// Refresh is a no-op for pipx.
+func (m *Pipx) Refresh(_ context.Context) error {
+	return nil
+}
+
 // AddRepo returns an error since pipx has no concept of repositories.
 func (m *Pipx) AddRepo(_ context.Context, _, _ string) error {
 	return fmt.Errorf("not supported for pipx")

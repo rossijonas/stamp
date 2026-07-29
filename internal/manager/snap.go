@@ -179,6 +179,11 @@ func (m *Snap) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error
 	return parseSnapRefreshList(out), nil
 }
 
+// Refresh is a no-op for this manager.
+func (m *Snap) Refresh(_ context.Context) error {
+	return nil
+}
+
 func parseSnapRefreshList(output []byte) []UpdateInfo {
 	var result []UpdateInfo
 	for _, line := range bytes.Split(output, []byte("\n")) {

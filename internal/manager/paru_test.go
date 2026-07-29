@@ -254,7 +254,7 @@ func TestParu_CheckUpdateExecError(t *testing.T) {
 	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to sync databases")
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestParu_CheckUpdate(t *testing.T) {
@@ -270,18 +270,10 @@ func TestParu_CheckUpdate(t *testing.T) {
 	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
 }
 
-func TestParu_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
+func TestParu_CheckUpdate_Fails(t *testing.T) {
 	t.Parallel()
-	call := 0
 	manager := NewParu()
-	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		call++
-		if call == 1 {
-			return []byte(""), nil // paru -Sy succeeds
-		}
-		return nil, assert.AnError // paru -Qu fails
-	}
-
+	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")

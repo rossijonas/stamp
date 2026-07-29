@@ -146,6 +146,11 @@ func (m *UvTool) CheckUpdate(_ context.Context, _ string) ([]UpdateInfo, error) 
 	return nil, fmt.Errorf("%w", ErrCheckUnsupported)
 }
 
+// Refresh is a no-op for uv.
+func (m *UvTool) Refresh(_ context.Context) error {
+	return nil
+}
+
 // AddRepo returns an error since uv has no concept of repositories.
 func (m *UvTool) AddRepo(_ context.Context, _, _ string) error {
 	return fmt.Errorf("not supported for uv")

@@ -26,7 +26,7 @@ type checkResult struct {
 func needsSudo(adapters []manager.Adapter) bool {
 	for _, a := range adapters {
 		switch a.Name() {
-		case "dnf", "apt", "zypper", "pacman", "paru", "macports", "snap":
+		case "dnf", "apt", "zypper", "pacman", "paru", "macports", "snap", "npm":
 			return true
 		}
 	}
@@ -47,7 +47,19 @@ func runUpdate(ctx context.Context, w io.Writer, a manager.Adapter, pkg string, 
 	return true
 }
 
+// refreshMetadata calls Refresh on each adapter before checking for updates.
+func refreshMetadata(ctx context.Context, adapters []manager.Adapter, w io.Writer) {
+	for _, a := range adapters {
+		_, _ = fmt.Fprintf(w, "  refreshing %s...\n", a.Name())
+		if err := a.Refresh(ctx); err != nil {
+			_, _ = fmt.Fprintf(w, "  ⚠ %s: refresh failed: %v\n", a.Name(), err)
+		}
+	}
+}
+
 func runCheck(ctx context.Context, adapters []manager.Adapter, pkg string, w io.Writer) []checkResult {
+	_, _ = fmt.Fprintf(w, "▪ Refreshing package metadata...\n")
+	refreshMetadata(ctx, adapters, w)
 	_, _ = fmt.Fprintf(w, "▪ Checking for updates...\n")
 	var results []checkResult
 	for _, a := range adapters {

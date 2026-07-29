@@ -221,6 +221,11 @@ func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, er
 	return parseFlatpakDryRun(out), nil
 }
 
+// Refresh is a no-op for this manager.
+func (m *Flatpak) Refresh(_ context.Context) error {
+	return nil
+}
+
 func parseFlatpakDryRun(output []byte) []UpdateInfo {
 	var result []UpdateInfo
 	for _, line := range bytes.Split(output, []byte("\n")) {

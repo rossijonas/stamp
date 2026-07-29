@@ -48,6 +48,7 @@ func (t *testAdapter) Unhold(_ context.Context, _ string) error {
 func (t *testAdapter) ListHeld(_ context.Context) ([]string, error) {
 	return nil, nil
 }
+func (t *testAdapter) Refresh(_ context.Context) error { return nil }
 
 func TestResolver_Tier1ExplicitOverride(t *testing.T) {
 	t.Parallel()

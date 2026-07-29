@@ -28,6 +28,7 @@ type Mock struct {
 	DoctorErr        error
 	UpdateErr        error
 	CheckUpdateErr   error
+	RefreshErr       error
 	CheckUpdates     []UpdateInfo
 	ProvidesErr      error
 	ProvidesResult   []string
@@ -219,6 +220,14 @@ func (m *Mock) CheckUpdate(_ context.Context, pkg string) ([]UpdateInfo, error) 
 		return slices.Clone(m.CheckUpdates), nil
 	}
 	return nil, nil
+}
+
+// Refresh returns mock refresh error if set.
+func (m *Mock) Refresh(_ context.Context) error {
+	if m.RefreshErr != nil {
+		return m.RefreshErr
+	}
+	return nil
 }
 
 // Provides returns mock provides result or error.

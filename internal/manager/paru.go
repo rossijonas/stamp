@@ -178,14 +178,19 @@ func (m *Paru) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	return nil, nil
 }
 
+// Refresh syncs paru databases via paru -Sy.
+func (m *Paru) Refresh(ctx context.Context) error {
+	args := sudoCmd("paru", "-Sy")
+	_, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to sync databases: %w", err)
+	}
+	return nil
+}
+
 // CheckUpdate runs paru -Qu to list available updates.
 // paru -Qu exits 1 when no updates are available (success path).
 func (m *Paru) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
-	syncArgs := sudoCmd("paru", "-Sy")
-	_, err := m.exec(ctx, syncArgs[0], syncArgs[1:]...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sync databases: %w", err)
-	}
 	args := []string{"paru", "-Qu"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {

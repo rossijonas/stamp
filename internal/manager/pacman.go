@@ -202,14 +202,19 @@ func (m *Pacman) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	return nil, nil
 }
 
+// Refresh syncs pacman databases via pacman -Sy.
+func (m *Pacman) Refresh(ctx context.Context) error {
+	args := sudoCmd("pacman", "-Sy")
+	_, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to sync databases: %w", err)
+	}
+	return nil
+}
+
 // CheckUpdate runs pacman -Qu to list available updates.
 // pacman -Qu exits 1 when no updates are available (success path).
 func (m *Pacman) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
-	syncArgs := sudoCmd("pacman", "-Sy")
-	_, err := m.exec(ctx, syncArgs[0], syncArgs[1:]...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sync databases: %w", err)
-	}
 	args := []string{"pacman", "-Qu"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
