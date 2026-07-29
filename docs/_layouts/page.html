@@ -23,8 +23,14 @@ layout: default
     <a href="{{ '/usage/reconcile.html' | relative_url }}">Reconciling Changes</a>
     <a href="{{ '/usage/restore.html' | relative_url }}">Restoring Environment</a>
     <a href="{{ '/usage/update.html' | relative_url }}">Updating Packages</a>
+    <a href="{{ '/usage/search.html' | relative_url }}">Searching Packages</a>
+    <a href="{{ '/usage/info.html' | relative_url }}">Viewing Package Info</a>
+    <a href="{{ '/usage/clean.html' | relative_url }}">Cleaning Caches</a>
+    <a href="{{ '/usage/autoremove.html' | relative_url }}">Removing Orphans</a>
+    <a href="{{ '/usage/provides.html' | relative_url }}">Finding File Owners</a>
+    <a href="{{ '/usage/hold-unhold.html' | relative_url }}">Version Pinning</a>
+    <a href="{{ '/usage/doctor.html' | relative_url }}">System Diagnosis</a>
     <a href="{{ '/usage/self-update.html' | relative_url }}">Updating Stamp</a>
-
   </div>
   <button class="accordion-toggle" aria-expanded="false">CLI Reference</button>
   <div class="accordion-body">
@@ -35,18 +41,31 @@ layout: default
       <a href="{{ '/usage/stamp_auto-reconcile_on.html' | relative_url }}">on</a>
       <a href="{{ '/usage/stamp_auto-reconcile_off.html' | relative_url }}">off</a>
     </div>
+    <a href="{{ '/usage/stamp_autoremove.html' | relative_url }}">autoremove</a>
+    <a href="{{ '/usage/stamp_check-update.html' | relative_url }}">check-update</a>
+    <a href="{{ '/usage/stamp_clean.html' | relative_url }}">clean</a>
     <a href="{{ '/usage/stamp_completion.html' | relative_url }}">completion</a>
     <a href="{{ '/usage/stamp_doctor.html' | relative_url }}">doctor</a>
+    <a href="{{ '/usage/stamp_hello.html' | relative_url }}">hello</a>
+    <button class="sidebar-sub-toggle" aria-expanded="false">hold</button>
+    <div class="accordion-body">
+      <a href="{{ '/usage/stamp_held.html' | relative_url }}">held</a>
+      <a href="{{ '/usage/stamp_hold.html' | relative_url }}">hold</a>
+      <a href="{{ '/usage/stamp_unhold.html' | relative_url }}">unhold</a>
+    </div>
     <a href="{{ '/usage/stamp_info.html' | relative_url }}">info</a>
     <a href="{{ '/usage/stamp_init.html' | relative_url }}">init</a>
     <a href="{{ '/usage/stamp_install.html' | relative_url }}">install</a>
     <a href="{{ '/usage/stamp_list.html' | relative_url }}">list</a>
+    <a href="{{ '/usage/stamp_outdated.html' | relative_url }}">outdated</a>
+    <a href="{{ '/usage/stamp_override.html' | relative_url }}">override</a>
     <button class="sidebar-sub-toggle" aria-expanded="false">man</button>
     <div class="accordion-body">
       <a href="{{ '/usage/stamp_man.html' | relative_url }}">overview</a>
       <a href="{{ '/usage/stamp_man_install.html' | relative_url }}">install</a>
       <a href="{{ '/usage/stamp_man_check.html' | relative_url }}">check</a>
     </div>
+    <a href="{{ '/usage/stamp_provides.html' | relative_url }}">provides</a>
     <a href="{{ '/usage/stamp_reconcile.html' | relative_url }}">reconcile</a>
     <a href="{{ '/usage/stamp_reinstall.html' | relative_url }}">reinstall</a>
     <a href="{{ '/usage/stamp_remove.html' | relative_url }}">remove</a>
@@ -61,8 +80,13 @@ layout: default
     <a href="{{ '/usage/stamp_search.html' | relative_url }}">search</a>
     <a href="{{ '/usage/stamp_self-update.html' | relative_url }}">self-update</a>
     <a href="{{ '/usage/stamp_setup.html' | relative_url }}">setup</a>
+    <button class="sidebar-sub-toggle" aria-expanded="false">tap</button>
+    <div class="accordion-body">
+      <a href="{{ '/usage/stamp_tap.html' | relative_url }}">add</a>
+      <a href="{{ '/usage/stamp_taps.html' | relative_url }}">list</a>
+      <a href="{{ '/usage/stamp_untap.html' | relative_url }}">remove</a>
+    </div>
     <a href="{{ '/usage/stamp_update.html' | relative_url }}">update</a>
-
   </div>
   <button class="accordion-toggle" aria-expanded="false">Project & History</button>
   <div class="accordion-body">
