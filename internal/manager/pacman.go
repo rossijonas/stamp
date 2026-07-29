@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 )
 
 // Pacman implements the Adapter interface for Arch Linux's Pacman.
@@ -250,6 +252,177 @@ func parsePacmanQu(output []byte) []UpdateInfo {
 		result = append(result, UpdateInfo{Package: name, CurrentVersion: currentVer, AvailableVersion: avail})
 	}
 	return result
+}
+
+const pacmanConfPath = "/etc/pacman.conf"
+
+// pacmanConfRead reads /etc/pacman.conf via the executor and returns lines.
+func pacmanConfRead(ctx context.Context, exec Executor) ([]string, error) {
+	out, err := exec(ctx, "cat", pacmanConfPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read pacman.conf: %w", err)
+	}
+	return strings.Split(string(out), "\n"), nil
+}
+
+// pacmanConfWrite writes config lines to /etc/pacman.conf using temp file + sudo cp.
+func pacmanConfWrite(ctx context.Context, exec Executor, lines []string) error {
+	tmpPath := fmt.Sprintf("/tmp/stamp-pacman-conf.%d", time.Now().UnixNano())
+	if err := os.WriteFile(tmpPath, []byte(strings.Join(lines, "\n")), 0o600); err != nil {
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+	defer func() { _ = os.Remove(tmpPath) }()
+	args := sudoCmd("cp", tmpPath, pacmanConfPath)
+	_, err := exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to write pacman.conf: %w", err)
+	}
+	return nil
+}
+
+// pacmanIgnorePkg reads the IgnorePkg line from pacman.conf via an executor.
+func pacmanIgnorePkg(ctx context.Context, exec Executor) ([]string, error) {
+	lines, err := pacmanConfRead(ctx, exec)
+	if err != nil {
+		return nil, err
+	}
+	inOptions := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[options]" {
+			inOptions = true
+			continue
+		}
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+			inOptions = false
+			continue
+		}
+		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
+			eqIdx := strings.Index(trimmed, "=")
+			if eqIdx < 0 {
+				continue
+			}
+			value := strings.TrimSpace(trimmed[eqIdx+1:])
+			return strings.Fields(value), nil
+		}
+	}
+	return nil, nil
+}
+
+// Hold adds a package to IgnorePkg in pacman.conf to prevent upgrades.
+func (m *Pacman) Hold(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+
+	lines, err := pacmanConfRead(ctx, m.exec)
+	if err != nil {
+		return err
+	}
+	inOptions := false
+	modified := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[options]" {
+			inOptions = true
+			continue
+		}
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+			break
+		}
+		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
+			eqIdx := strings.Index(trimmed, "=")
+			if eqIdx < 0 {
+				continue
+			}
+			value := strings.TrimSpace(trimmed[eqIdx+1:])
+			pkgs := strings.Fields(value)
+			for _, p := range pkgs {
+				if p == pkg {
+					return nil // already held
+				}
+			}
+			lines[i] = line + " " + pkg
+			modified = true
+			break
+		}
+	}
+
+	if !modified {
+		for i, line := range lines {
+			if strings.TrimSpace(line) == "[options]" {
+				insert := "IgnorePkg = " + pkg
+				lines = append(lines[:i+1], append([]string{insert}, lines[i+1:]...)...)
+				modified = true
+				break
+			}
+		}
+	}
+
+	if !modified {
+		return fmt.Errorf("could not find [options] section in pacman.conf")
+	}
+
+	return pacmanConfWrite(ctx, m.exec, lines)
+}
+
+// Unhold removes a package from IgnorePkg in pacman.conf.
+func (m *Pacman) Unhold(ctx context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+
+	lines, err := pacmanConfRead(ctx, m.exec)
+	if err != nil {
+		return err
+	}
+	inOptions := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[options]" {
+			inOptions = true
+			continue
+		}
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+			break
+		}
+		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
+			eqIdx := strings.Index(trimmed, "=")
+			if eqIdx < 0 {
+				continue
+			}
+			before := strings.TrimSpace(trimmed[:eqIdx])
+			value := strings.TrimSpace(trimmed[eqIdx+1:])
+			pkgs := strings.Fields(value)
+			newPkgs := make([]string, 0, len(pkgs))
+			found := false
+			for _, p := range pkgs {
+				if p == pkg {
+					found = true
+				} else {
+					newPkgs = append(newPkgs, p)
+				}
+			}
+			if !found {
+				return fmt.Errorf("package %s is not held", pkg)
+			}
+			if len(newPkgs) == 0 {
+				lines[i] = before + " ="
+			} else {
+				lines[i] = before + " = " + strings.Join(newPkgs, " ")
+			}
+			return pacmanConfWrite(ctx, m.exec, lines)
+		}
+	}
+
+	return fmt.Errorf("package %s is not held", pkg)
+}
+
+// ListHeld returns the list of packages in IgnorePkg from pacman.conf.
+func (m *Pacman) ListHeld(ctx context.Context) ([]string, error) {
+	return pacmanIgnorePkg(ctx, m.exec)
 }
 
 var _ Adapter = (*Pacman)(nil)

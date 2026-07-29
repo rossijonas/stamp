@@ -35,6 +35,10 @@ type Mock struct {
 	AutoRemoveResult []string
 	CleanErr         error
 	CleanResult      []string
+	HoldErr          error
+	UnholdErr        error
+	ListHeldErr      error
+	HeldPkgs         []string
 }
 
 // Name returns the package manager identifier.
@@ -255,6 +259,48 @@ func (m *Mock) Clean(_ context.Context, _ bool) ([]string, error) {
 	}
 	if m.CleanResult != nil {
 		return slices.Clone(m.CleanResult), nil
+	}
+	return nil, nil
+}
+
+// Hold mocks pinning a package at its current version.
+func (m *Mock) Hold(_ context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	if m.HoldErr != nil {
+		return m.HoldErr
+	}
+	if !slices.Contains(m.HeldPkgs, pkg) {
+		m.HeldPkgs = append(m.HeldPkgs, pkg)
+	}
+	return nil
+}
+
+// Unhold mocks removing a version pin.
+func (m *Mock) Unhold(_ context.Context, pkg string) error {
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	if m.UnholdErr != nil {
+		return m.UnholdErr
+	}
+	for i, p := range m.HeldPkgs {
+		if p == pkg {
+			m.HeldPkgs = slices.Delete(m.HeldPkgs, i, i+1)
+			return nil
+		}
+	}
+	return nil
+}
+
+// ListHeld returns mock held packages or error.
+func (m *Mock) ListHeld(_ context.Context) ([]string, error) {
+	if m.ListHeldErr != nil {
+		return nil, m.ListHeldErr
+	}
+	if m.HeldPkgs != nil {
+		return slices.Clone(m.HeldPkgs), nil
 	}
 	return nil, nil
 }

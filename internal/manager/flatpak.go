@@ -258,3 +258,18 @@ func (m *Flatpak) AutoRemove(ctx context.Context, dryRun bool) ([]string, error)
 func (m *Flatpak) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, fmt.Errorf("%w: clean not supported for flatpak", ErrNotSupported)
 }
+
+// Hold returns an error since flatpak has no hold command.
+func (m *Flatpak) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for flatpak", ErrNotSupported)
+}
+
+// Unhold returns an error since flatpak has no unhold command.
+func (m *Flatpak) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for flatpak", ErrNotSupported)
+}
+
+// ListHeld returns an error since flatpak has no hold command.
+func (m *Flatpak) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for flatpak", ErrNotSupported)
+}

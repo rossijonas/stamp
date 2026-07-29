@@ -373,8 +373,32 @@ func TestMacPorts_ProvidesError(t *testing.T) {
 	t.Parallel()
 	m := NewMacPorts()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "htop")
+	_, err := m.Provides(context.Background(), "/usr/bin/htop")
 	require.Error(t, err)
+}
+
+func TestMacPorts_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestMacPorts_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestMacPorts_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
 }
 
 func TestMacPorts_AutoRemoveDryRun(t *testing.T) {

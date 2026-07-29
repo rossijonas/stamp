@@ -250,3 +250,27 @@ func TestUv_CleanNotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestUv_Hold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	err := mgr.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestUv_Unhold_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	err := mgr.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestUv_ListHeld_NotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewUv()
+	_, err := mgr.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}

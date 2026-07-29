@@ -190,3 +190,18 @@ func (m *Cargo) AutoRemove(_ context.Context, _ bool) ([]string, error) {
 func (m *Cargo) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, fmt.Errorf("%w: clean not supported for cargo", ErrNotSupported)
 }
+
+// Hold returns an error since cargo has no hold command.
+func (m *Cargo) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for cargo", ErrNotSupported)
+}
+
+// Unhold returns an error since cargo has no unhold command.
+func (m *Cargo) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for cargo", ErrNotSupported)
+}
+
+// ListHeld returns an error since cargo has no hold command.
+func (m *Cargo) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for cargo", ErrNotSupported)
+}

@@ -373,3 +373,170 @@ func TestPacman_CleanDryRun(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
+
+const testPacmanConf = `[options]
+Architecture = auto
+IgnorePkg = nginx redis
+SigLevel = Required DatabaseOptional
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+`
+
+func TestPacman_Hold_AddsToIgnorePkg(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewPacman()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			return []byte(testPacmanConf), nil // cat /etc/pacman.conf
+		case 2:
+			return []byte(""), nil // sudo cp
+		default:
+			return nil, assert.AnError
+		}
+	}
+	err := m.Hold(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.Equal(t, 2, call)
+}
+
+func TestPacman_Hold_AlreadyHeld(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper(testPacmanConf, nil)
+	err := m.Hold(context.Background(), "nginx")
+	require.NoError(t, err)
+}
+
+func TestPacman_Hold_AddsNewSection(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewPacman()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			return []byte("[options]\nArchitecture = auto\n"), nil
+		case 2:
+			return []byte(""), nil // sudo cp
+		default:
+			return nil, assert.AnError
+		}
+	}
+	err := m.Hold(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.Equal(t, 2, call)
+}
+
+func TestPacman_Unhold_RemovesFromIgnorePkg(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewPacman()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			return []byte(testPacmanConf), nil
+		case 2:
+			return []byte(""), nil
+		default:
+			return nil, assert.AnError
+		}
+	}
+	err := m.Unhold(context.Background(), "nginx")
+	require.NoError(t, err)
+	assert.Equal(t, 2, call)
+}
+
+func TestPacman_Unhold_NotHeld(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper(testPacmanConf, nil)
+	err := m.Unhold(context.Background(), "htop")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is not held")
+}
+
+func TestPacman_ListHeld(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper(testPacmanConf, nil)
+	pkgs, err := m.ListHeld(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
+}
+
+func TestPacman_ListHeld_Empty(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("[options]\nArchitecture = auto\n", nil)
+	pkgs, err := m.ListHeld(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, pkgs)
+}
+
+func TestPacman_Hold_InvalidName(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	err := m.Hold(context.Background(), "-invalid")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+func TestPacman_Unhold_InvalidName(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	err := m.Unhold(context.Background(), "-invalid")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+func TestPacman_Hold_ReadError(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read pacman.conf")
+}
+
+func TestPacman_Unhold_ReadError(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read pacman.conf")
+}
+
+func TestPacman_ListHeld_ReadError(t *testing.T) {
+	t.Parallel()
+	m := NewPacman()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.ListHeld(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read pacman.conf")
+}
+
+func TestPacman_Hold_WriteError(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewPacman()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			return []byte("[options]\nArchitecture = auto\n"), nil
+		case 2:
+			return nil, assert.AnError // sudo cp fails
+		default:
+			return nil, assert.AnError
+		}
+	}
+	err := m.Hold(context.Background(), "htop")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to write pacman.conf")
+}

@@ -39,6 +39,15 @@ func (t *testAdapter) AutoRemove(_ context.Context, _ bool) ([]string, error) {
 func (t *testAdapter) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, nil
 }
+func (t *testAdapter) Hold(_ context.Context, _ string) error {
+	return nil
+}
+func (t *testAdapter) Unhold(_ context.Context, _ string) error {
+	return nil
+}
+func (t *testAdapter) ListHeld(_ context.Context) ([]string, error) {
+	return nil, nil
+}
 
 func TestResolver_Tier1ExplicitOverride(t *testing.T) {
 	t.Parallel()

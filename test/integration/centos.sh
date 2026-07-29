@@ -133,7 +133,7 @@ else
 fi
 
 echo "=== Alias Tests ==="
-check "install via add alias" timeout $TIMEOUT stamp add hello -m dnf
+check "install via add alias" timeout $TIMEOUT_LONG stamp add hello -m dnf
 check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m dnf
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m dnf
 

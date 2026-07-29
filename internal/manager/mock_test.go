@@ -401,3 +401,90 @@ func TestMockReinstall_InvalidName(t *testing.T) {
 	err := mock.Reinstall(context.Background(), "-invalid")
 	require.Error(t, err)
 }
+
+func TestMock_Hold_Success(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "apt"}
+	err := mock.Hold(context.Background(), "nginx")
+	require.NoError(t, err)
+	assert.Contains(t, mock.HeldPkgs, "nginx")
+}
+
+func TestMock_Hold_AlreadyHeld(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "apt",
+		HeldPkgs:    []string{"nginx"},
+	}
+	err := mock.Hold(context.Background(), "nginx")
+	require.NoError(t, err)
+	assert.Len(t, mock.HeldPkgs, 1)
+}
+
+func TestMock_Hold_Error(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "apt",
+		HoldErr:     assert.AnError,
+	}
+	err := mock.Hold(context.Background(), "nginx")
+	require.Error(t, err)
+}
+
+func TestMock_Unhold_Success(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "apt",
+		HeldPkgs:    []string{"nginx", "redis"},
+	}
+	err := mock.Unhold(context.Background(), "nginx")
+	require.NoError(t, err)
+	assert.NotContains(t, mock.HeldPkgs, "nginx")
+	assert.Contains(t, mock.HeldPkgs, "redis")
+}
+
+func TestMock_Unhold_NotHeld(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "apt"}
+	err := mock.Unhold(context.Background(), "nginx")
+	require.NoError(t, err) // not an error — nothing to remove
+}
+
+func TestMock_Unhold_Error(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "apt",
+		UnholdErr:   assert.AnError,
+	}
+	err := mock.Unhold(context.Background(), "nginx")
+	require.Error(t, err)
+}
+
+func TestMock_ListHeld_WithResults(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "apt",
+		HeldPkgs:    []string{"nginx", "redis"},
+	}
+	pkgs, err := mock.ListHeld(context.Background())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
+}
+
+func TestMock_ListHeld_Empty(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "apt"}
+	pkgs, err := mock.ListHeld(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, pkgs)
+}
+
+func TestMock_ListHeld_Error(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "apt",
+		ListHeldErr: assert.AnError,
+	}
+	_, err := mock.ListHeld(context.Background())
+	require.Error(t, err)
+}

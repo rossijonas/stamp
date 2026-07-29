@@ -234,6 +234,21 @@ func (m *Brew) Update(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// Hold returns an error since brew has no hold command.
+func (m *Brew) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported for brew", ErrNotSupported)
+}
+
+// Unhold returns an error since brew has no unhold command.
+func (m *Brew) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported for brew", ErrNotSupported)
+}
+
+// ListHeld returns an error since brew has no hold command.
+func (m *Brew) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: hold not supported for brew", ErrNotSupported)
+}
+
 type brewOutdatedJSON struct {
 	Formulae []brewFormula `json:"formulae"`
 }

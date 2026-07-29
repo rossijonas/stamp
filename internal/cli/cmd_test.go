@@ -68,6 +68,15 @@ func (m *mockAdapter) AutoRemove(_ context.Context, _ bool) ([]string, error) {
 func (m *mockAdapter) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, fmt.Errorf("not supported")
 }
+func (m *mockAdapter) Hold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: hold not supported", manager.ErrNotSupported)
+}
+func (m *mockAdapter) Unhold(_ context.Context, _ string) error {
+	return fmt.Errorf("%w: unhold not supported", manager.ErrNotSupported)
+}
+func (m *mockAdapter) ListHeld(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("%w: list held not supported", manager.ErrNotSupported)
+}
 
 // execCmd builds a root with injected mock adapters and isolated temp paths, executes, returns output.
 func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Buffer, error) {
