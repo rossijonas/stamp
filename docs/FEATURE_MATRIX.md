@@ -123,6 +123,10 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp override` | `--reset` | | ✓ | ✓ | ✓ Complete |
 | `stamp override` | `--show` | | ✓ | ✓ | ✓ Complete |
 | `stamp override` | `--system` | | ✓ | ✓ | ✓ Complete |
+| `stamp install` | `--group` | `-g` | ✓ | ✓ | ✓ Complete |
+| `stamp remove` | `--group` | `-g` | ✓ | ✓ | ✓ Complete |
+| `stamp search` | `--group` | `-g` | ✓ | ✓ | ✓ Complete |
+| `stamp info` | `--group` | `-g` | ✓ | ✓ | ✓ Complete |
 
 ## UNIX Compliance
 
@@ -194,3 +198,4 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | 7 | 38 | Clean command (#158) | ✓ |
 | 7 | 39 | Hold/unhold commands (#156) | ✓ |
 | 7 | 40 | Flatpak override command (#157) | ✓ |
+| 7 | 41 | DNF group install (#159) | ✓ |

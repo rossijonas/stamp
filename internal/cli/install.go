@@ -13,6 +13,7 @@ import (
 func newInstallCmd() *cobra.Command {
 	var managerFlag string
 	var note string
+	var groupInstall bool
 
 	cmd := &cobra.Command{
 		Use:     "install <package>",
@@ -47,9 +48,16 @@ func newInstallCmd() *cobra.Command {
 				}
 			}
 
+			if groupInstall && adapter.Name() != "dnf" && adapter.Name() != "yum" {
+				return fmt.Errorf("--group is only supported for dnf")
+			}
+
 			installCtx := cmd.Context()
 			if cask {
 				installCtx = manager.WithCask(cmd.Context())
+			}
+			if groupInstall {
+				installCtx = manager.WithGroup(installCtx)
 			}
 
 			if err := adapter.Install(installCtx, pkgName); err != nil {
@@ -61,6 +69,7 @@ func newInstallCmd() *cobra.Command {
 				Manager: adapter.Name(),
 				Notes:   note,
 				Cask:    cask,
+				Group:   groupInstall,
 			})
 
 			if err := app.saveManifest(); err != nil {
@@ -74,11 +83,13 @@ func newInstallCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use")
 	cmd.Flags().StringVarP(&note, "note", "n", "", "annotation for this package")
+	cmd.Flags().BoolVarP(&groupInstall, "group", "g", false, "install a DNF package group")
 	return cmd
 }
 
 func newRemoveCmd() *cobra.Command {
 	var managerFlag string
+	var groupRemove bool
 
 	cmd := &cobra.Command{
 		Use:     "remove <package>",
@@ -136,6 +147,12 @@ func newRemoveCmd() *cobra.Command {
 			if isCask && adapter.Name() == "brew" {
 				removeCtx = manager.WithCask(cmd.Context())
 			}
+			if groupRemove {
+				if adapter.Name() != "dnf" && adapter.Name() != "yum" {
+					return fmt.Errorf("--group is only supported for dnf")
+				}
+				removeCtx = manager.WithGroup(removeCtx)
+			}
 
 			if err := adapter.Remove(removeCtx, pkgName); err != nil {
 				return fmt.Errorf("remove failed: %w", err)
@@ -152,11 +169,13 @@ func newRemoveCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use")
+	cmd.Flags().BoolVarP(&groupRemove, "group", "g", false, "remove a DNF package group")
 	return cmd
 }
 
 func newSearchCmd() *cobra.Command {
 	var managerFlag string
+	var groupSearch bool
 
 	cmd := &cobra.Command{
 		Use:     "search <query>",
@@ -182,9 +201,24 @@ func newSearchCmd() *cobra.Command {
 				}
 			}
 
+			if groupSearch && managerFlag == "" {
+				return fmt.Errorf("--group requires --manager <name>")
+			}
+			if groupSearch {
+				for _, a := range targets {
+					if a.Name() != "dnf" && a.Name() != "yum" {
+						return fmt.Errorf("--group is only supported for dnf")
+					}
+				}
+			}
+
 			var results []string
 			for _, a := range targets {
-				pkgs, err := a.Search(cmd.Context(), query)
+				searchCtx := cmd.Context()
+				if groupSearch {
+					searchCtx = manager.WithGroup(searchCtx)
+				}
+				pkgs, err := a.Search(searchCtx, query)
 				if err != nil {
 					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s search: %v\n", a.Name(), err)
 					continue
@@ -205,5 +239,6 @@ func newSearchCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to search")
+	cmd.Flags().BoolVarP(&groupSearch, "group", "g", false, "search DNF package groups")
 	return cmd
 }

@@ -22,6 +22,7 @@ stamp remove <package> [flags]
 ### Options
 
 ```
+  -g, --group            remove a DNF package group
   -h, --help             help for remove
   -m, --manager string   package manager to use
 ```

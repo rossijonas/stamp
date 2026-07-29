@@ -20,6 +20,7 @@ stamp install <package> [flags]
 ### Options
 
 ```
+  -g, --group            install a DNF package group
   -h, --help             help for install
   -m, --manager string   package manager to use
   -n, --note string      annotation for this package

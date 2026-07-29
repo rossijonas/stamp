@@ -26,6 +26,7 @@ stamp info <package> [flags]
 ### Options
 
 ```
+  -g, --group            query a DNF package group
   -h, --help             help for info
   -m, --manager string   package manager to query
 ```

@@ -20,6 +20,7 @@ stamp search <query> [flags]
 ### Options
 
 ```
+  -g, --group            search DNF package groups
   -h, --help             help for search
   -m, --manager string   package manager to search
 ```
