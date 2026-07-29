@@ -19,8 +19,14 @@ stamp hold <package> [flags]
 ### Examples
 
 ```
+  # hold with apt (via apt-mark)
   stamp hold nginx -m apt
+
+  # hold with dnf (via dnf versionlock)
   stamp hold nginx -m dnf
+
+  # hold on arch with pacman (adds to IgnorePkg in pacman.conf)
+  stamp hold nginx -m pacman
 ```
 
 ### Options

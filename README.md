@@ -36,7 +36,7 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 ### Features
 
-**`[>]` Multi-Manager Wrapper** — Install, search, and remove packages across **14 supported package managers** (DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, Paru, MacPorts, Cargo, Npm, Pipx, Uv, and Go) through a single CLI. [See per-manager feature support →](docs/history/feature-per-manager-matrix.md)
+**`[>]` Multi-Manager Wrapper** — Install, search, and remove packages across **14 supported package managers** (DNF, APT, Brew, Flatpak, Snap, Zypper, Pacman, Paru, MacPorts, Cargo, Npm, Pipx, Uv, and Go) through a single CLI. [See per-manager feature support →](docs/project/features.md)
 
 **`[+]` Cross-Platform** — Works on **Linux** &amp; **macOS** today. **Windows** support is planned.
 
@@ -48,7 +48,7 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 **`[#]` Unified Repository Management** — Add, remove, and list third-party repositories &mdash; PPAs, taps, remotes &mdash; across all managers with the same interface.
 
-**`[@]` Familiar Features** — Homebrew casks, file-to-package resolution, orphan cleanup, cache management, version pinning &mdash; stamp brings your native package manager's best features into one CLI. [See the full list &rarr;](docs/usage/special-features.md)
+**`[@]` Familiar Features** — Homebrew casks, file-to-package resolution, orphan cleanup, cache management, version pinning &mdash; stamp brings your native package manager's best features into one CLI. [See the full list &rarr;](docs/project/features.md)
 
 **`[%]` Speaks Your Language** — `stamp show` like `apt show`, `stamp outdated` like `brew outdated`, `stamp tap` like `brew tap` &mdash; every command has aliases matching your favorite tool's syntax. [See the aliases matrix &rarr;](docs/usage/aliases.md)
 
@@ -66,7 +66,7 @@ See the full [OS × Manager compatibility matrix](docs/history/os-manager-matrix
 
 ## ▪ Architecture & Vision
 
-Read the [Project Vision](docs/VISION.md) to understand the "why" behind the project, or check out the [Technical Specs](docs/SPEC.md) and [Architecture Decisions](docs/decisions/).
+Read the [Project Vision](docs/project/about.md) to understand the "why" behind the project, or check out the [Technical Specs](docs/project/spec.md) and [Architecture Decisions](docs/decisions/).
 
 ## ▪ License
 

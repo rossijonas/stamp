@@ -478,13 +478,72 @@ func TestMock_ListHeld_Empty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
-
 func TestMock_ListHeld_Error(t *testing.T) {
 	t.Parallel()
 	mock := &Mock{
 		ManagerName: "apt",
 		ListHeldErr: assert.AnError,
 	}
+
 	_, err := mock.ListHeld(context.Background())
 	require.Error(t, err)
+}
+
+func TestMock_Update_Error(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName: "brew",
+		UpdateErr:   assert.AnError,
+	}
+	err := mock.Update(context.Background(), "")
+	require.Error(t, err)
+}
+
+func TestMock_Doctor_Result(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:  "brew",
+		DoctorResult: "mock doctor: healthy",
+	}
+	res, err := mock.Doctor(context.Background())
+	require.NoError(t, err)
+	assert.Contains(t, res, "healthy")
+}
+
+func TestMock_Provides_AvailablePkgs(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:   "brew",
+		AvailablePkgs: []string{"htop", "htop-debug", "jq"},
+	}
+	results, err := mock.Provides(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop", "htop-debug"}, results)
+}
+
+func TestMock_AutoRemove_WithResult(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{
+		ManagerName:      "brew",
+		AutoRemoveResult: []string{"libfoo"},
+	}
+	results, err := mock.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"libfoo"}, results)
+}
+
+func TestMock_EmptyResults(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew"}
+	results, err := mock.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+	assert.Nil(t, results)
+
+	clean, err := mock.Clean(context.Background(), false)
+	require.NoError(t, err)
+	assert.Nil(t, clean)
+
+	held, err := mock.ListHeld(context.Background())
+	require.NoError(t, err)
+	assert.Nil(t, held)
 }

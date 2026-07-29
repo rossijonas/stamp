@@ -60,7 +60,18 @@ func newRepoAddCmd() *cobra.Command {
 		Use:     "add <name> [url]",
 		Aliases: []string{"install"},
 		Short:   "Add a third-party repository",
-		Args:    cobra.MinimumNArgs(1),
+		Example: `  # add a PPA on Debian/Ubuntu systems
+  stamp repo add ppa:git-core/ppa -m apt
+
+  # add a COPR repository on Fedora/RHEL
+  stamp repo add petersen/cava -m dnf
+
+  # add a flatpak remote by URL
+  stamp repo add flathub https://dl.flathub.org/repo/flathub.flatpakrepo -m flatpak
+
+  # add a homebrew tap
+  stamp repo add homebrew/cask -m brew`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			if app.manifestErr != nil {
@@ -120,7 +131,12 @@ func newRepoRemoveCmd() *cobra.Command {
 		Use:     "remove <name>",
 		Aliases: []string{"uninstall", "rm", "delete", "del"},
 		Short:   "Remove a third-party repository",
-		Args:    cobra.ExactArgs(1),
+		Example: `  # remove a PPA or repository
+  stamp repo remove ppa:git-core/ppa -m apt
+
+  # aliases behave the same way
+  stamp repo rm ppa:git-core/ppa -m apt`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			if app.manifestErr != nil {
@@ -168,7 +184,15 @@ func newRepoListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List all tracked repositories",
-		Args:    cobra.NoArgs,
+		Example: `  # list all tracked repositories
+  stamp repo list
+
+  # filter by package manager
+  stamp repo list -m flatpak
+
+  # machine-readable JSON output
+  stamp repo list --json`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 

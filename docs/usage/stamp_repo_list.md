@@ -9,6 +9,19 @@ List all tracked repositories
 stamp repo list [flags]
 ```
 
+### Examples
+
+```
+  # list all tracked repositories
+  stamp repo list
+
+  # filter by package manager
+  stamp repo list -m flatpak
+
+  # machine-readable JSON output
+  stamp repo list --json
+```
+
 ### Options
 
 ```

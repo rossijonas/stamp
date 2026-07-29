@@ -117,9 +117,25 @@ func newUpdateCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "update",
-		Aliases: []string{"upgrade"},
+		Aliases: []string{"upgrade", "refresh"},
 		Short:   "Run system upgrades across all package managers",
-		Example: "  stamp update\n  stamp update --check\n  stamp update -m apt\n  stamp update -p htop -m brew\n  stamp update --serial\n  stamp upgrade",
+		Example: `  # default two-phase flow (check + confirm, then update)
+  stamp update
+
+  # dry-run: check for updates without applying them
+  stamp update --check
+
+  # skip check phase, auto-confirm (useful in scripts)
+  stamp update -y
+
+  # update a specific package (requires --manager)
+  stamp update -p htop -m brew
+
+  # run updates one manager at a time instead of parallel
+  stamp update --serial
+
+  # alias
+  stamp upgrade`,
 		Long: `Run system upgrade commands for each available package manager using a safe two-phase (check + confirm) flow.
 
 By default, checks for available updates, displays them, and prompts for confirmation before upgrading.
@@ -251,4 +267,44 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 	cmd.Flags().BoolVarP(&serial, "serial", "s", false, "run updates one at a time (sequential)")
 	cmd.Flags().BoolVarP(&checkOnly, "check", "c", false, "check for available updates without applying them")
 	return cmd
+}
+
+func newOutdatedCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "outdated",
+		Short: "Check for available updates (alias for stamp update --check)",
+		Long: `Check across all package managers for outdated packages.
+Alias for "stamp update --check".`,
+		Example: `  # check for outdated packages (alias form)
+  stamp outdated
+
+  # equivalent canonical command
+  stamp update --check`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			app := appFromCtx(cmd)
+			runCheck(cmd.Context(), app.adapters, "", cmd.ErrOrStderr())
+			return nil
+		},
+	}
+}
+
+func newCheckUpdateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check-update",
+		Short: "Check for available updates (alias for stamp update --check)",
+		Long: `Check across all package managers for available updates.
+Alias for "stamp update --check".`,
+		Example: `  # check for available updates (alias form)
+  stamp check-update
+
+  # equivalent canonical command
+  stamp update --check`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			app := appFromCtx(cmd)
+			runCheck(cmd.Context(), app.adapters, "", cmd.ErrOrStderr())
+			return nil
+		},
+	}
 }

@@ -9,6 +9,22 @@ Add a third-party repository
 stamp repo add <name> [url] [flags]
 ```
 
+### Examples
+
+```
+  # add a PPA on Debian/Ubuntu systems
+  stamp repo add ppa:git-core/ppa -m apt
+
+  # add a COPR repository on Fedora/RHEL
+  stamp repo add petersen/cava -m dnf
+
+  # add a flatpak remote by URL
+  stamp repo add flathub https://dl.flathub.org/repo/flathub.flatpakrepo -m flatpak
+
+  # add a homebrew tap
+  stamp repo add homebrew/cask -m brew
+```
+
 ### Options
 
 ```

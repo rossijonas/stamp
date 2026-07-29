@@ -73,5 +73,97 @@ func generate(root *cobra.Command, header *doc.GenManHeader) error {
 		return fmt.Errorf("failed to generate man pages: %w", err)
 	}
 
+	if err := reformatManExamples(); err != nil {
+		return fmt.Errorf("failed to reformat man examples: %w", err)
+	}
+
+	return nil
+}
+
+// reformatManExamples post-processes cobra-generated man pages to clean up
+// the .SH EXAMPLE section: strips "  # " comment prefixes and wraps command
+// lines in .EX/.EE for proper troff formatting.
+func reformatManExamples() error {
+	entries, err := os.ReadDir("docs/man")
+	if err != nil {
+		return fmt.Errorf("failed to read docs/man: %w", err)
+	}
+
+	exampleSection := []byte(".SH EXAMPLE")
+	seeAlso := []byte(".SH SEE ALSO")
+
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".1") {
+			continue
+		}
+		manPath := filepath.Join("docs/man", entry.Name())
+		//nolint:gosec // manPath is scoped to docs/man/ directory, entry name from ReadDir
+		data, err := os.ReadFile(manPath)
+		if err != nil {
+			return fmt.Errorf("failed to read %s: %w", manPath, err)
+		}
+
+		// Find the .SH EXAMPLE section
+		startIdx := bytes.Index(data, exampleSection)
+		if startIdx < 0 {
+			continue
+		}
+
+		// Find the end of the EXAMPLE section (next .SH or EOF)
+		endIdx := bytes.Index(data[startIdx+1:], seeAlso)
+		var sectionEnd int
+		if endIdx >= 0 {
+			sectionEnd = startIdx + 1 + endIdx
+		} else {
+			sectionEnd = len(data)
+		}
+
+		// Parse the example section content (skip the .SH EXAMPLE header line)
+		sectionContent := data[startIdx:sectionEnd]
+		lines := bytes.Split(sectionContent, []byte("\n"))
+
+		// Rebuild the section with formatted examples
+		var newSection bytes.Buffer
+		newSection.WriteString(".SH EXAMPLES\n")
+		for i := 0; i < len(lines); i++ {
+			line := string(lines[i])
+			// Skip the original .SH EXAMPLE header itself
+			if strings.HasPrefix(line, ".SH ") {
+				continue
+			}
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				newSection.WriteString("\n")
+				continue
+			}
+			// Lines starting with "  # " are descriptions — strip the prefix
+			if strings.HasPrefix(line, "  # ") {
+				desc := strings.TrimPrefix(line, "  # ")
+				newSection.WriteString(desc + "\n")
+				continue
+			}
+			// Lines starting with "  stamp" are commands — wrap in .EX/.EE
+			if strings.HasPrefix(trimmed, "stamp") {
+				newSection.WriteString(".EX\n")
+				newSection.WriteString(trimmed + "\n")
+				newSection.WriteString(".EE\n")
+				continue
+			}
+		}
+
+		// Replace the old EXAMPLE section with the new one
+		before := data[:startIdx]
+		after := data[sectionEnd:]
+		var newData []byte
+		newData = append(newData, before...)
+		newData = append(newData, newSection.Bytes()...)
+		newData = append(newData, after...)
+
+		//nolint:gosec // generated man pages must be world-readable
+		if err := os.WriteFile(manPath, newData, 0o644); err != nil {
+			return fmt.Errorf("failed to write %s: %w", manPath, err)
+		}
+	}
+
 	return nil
 }

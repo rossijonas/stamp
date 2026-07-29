@@ -42,4 +42,4 @@
 
 ### See Also
 
-- [Feature × Manager Support Matrix](feature-per-manager-matrix.html) — which Stamp features work with each manager
+- [Feature Reference](../project/features.html) — feature implementation status and per-manager support

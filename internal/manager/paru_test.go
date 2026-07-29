@@ -317,6 +317,35 @@ func TestParu_AutoRemoveDryRun(t *testing.T) {
 	assert.Empty(t, pkgs)
 }
 
+func TestParu_AutoRemove_WithOrphans(t *testing.T) {
+	t.Parallel()
+	call := 0
+	m := NewParu()
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		switch call {
+		case 1:
+			return []byte("libfoo\n"), nil
+		case 2:
+			return []byte(""), nil
+		default:
+			return nil, assert.AnError
+		}
+	}
+	pkgs, err := m.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"libfoo"}, pkgs)
+}
+
+func TestParu_AutoRemove_ExecError(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list orphans")
+}
+
 func TestParu_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewParu()

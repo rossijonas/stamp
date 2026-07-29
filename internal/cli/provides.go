@@ -13,9 +13,16 @@ func newProvidesCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:     "provides <file>",
-		Short:   "Find which package provides a given file",
-		Example: "  stamp provides /usr/bin/htop\n  stamp provides libssl.so -m dnf",
+		Use:   "provides <file>",
+		Short: "Find which package provides a given file",
+		Example: `  # find which package owns a binary across all managers
+  stamp provides /usr/bin/htop
+
+  # scope to a single manager for faster results
+  stamp provides libssl.so -m dnf
+
+  # no results returns a clear message
+  stamp provides /usr/bin/nonexistent`,
 		Long: `Search across all system package managers to find which package
 owns the specified file. Supports both absolute and relative paths.
 

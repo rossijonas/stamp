@@ -13,9 +13,16 @@ func newHoldCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:     "hold <package>",
-		Short:   "Pin a package at its current version to prevent upgrades",
-		Example: "  stamp hold nginx -m apt\n  stamp hold nginx -m dnf",
+		Use:   "hold <package>",
+		Short: "Pin a package at its current version to prevent upgrades",
+		Example: `  # hold with apt (via apt-mark)
+  stamp hold nginx -m apt
+
+  # hold with dnf (via dnf versionlock)
+  stamp hold nginx -m dnf
+
+  # hold on arch with pacman (adds to IgnorePkg in pacman.conf)
+  stamp hold nginx -m pacman`,
 		Long: `Pin a package at its current version to prevent accidental upgrades.
 
 Scoped to a single manager with the --manager flag.
@@ -65,9 +72,13 @@ func newUnholdCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:     "unhold <package>",
-		Short:   "Remove a version pin, allowing upgrades",
-		Example: "  stamp unhold nginx -m apt\n  stamp unhold nginx -m dnf",
+		Use:   "unhold <package>",
+		Short: "Remove a version pin, allowing upgrades",
+		Example: `  # unhold with apt (via apt-mark)
+  stamp unhold nginx -m apt
+
+  # unhold on arch with pacman (removes from IgnorePkg)
+  stamp unhold nginx -m pacman`,
 		Long: `Remove a version pin from a package, allowing it to be upgraded again.
 
 Scoped to a single manager with the --manager flag.

@@ -9,6 +9,28 @@ The `update` (alias `upgrade`) command runs system upgrades across all available
 stamp update
 ```
 
+### Checking for outdated packages
+
+Use the `outdated` or `check-update` commands to see available updates without applying them:
+
+```bash
+stamp outdated
+stamp check-update
+```
+
+```text
+▪ Checking for updates...
+  apt: curl 7.88.1 → 7.88.3
+  apt: git 2.43.0 → 2.43.2
+  dnf: htop 3.2.1 → 3.2.2
+  brew: lazygit 0.40.0 → 0.41.0
+  brew: ripgrep 13.0.0 → 14.1.0
+  pipx: cannot preview updates
+  uv: cannot preview updates
+```
+
+Both `outdated` and `check-update` are read-only — they run the check phase and exit without applying anything. Equivalent to `stamp update --check`.
+
 ### Default Flow (Check + Confirm)
 
 By default, running `stamp update` performs a serialized check across all package managers first, aggregates the available updates, and prompts you before applying them:

@@ -351,6 +351,23 @@ func TestZypper_AutoRemoveDryRun(t *testing.T) {
 	assert.Nil(t, pkgs)
 }
 
+func TestZypper_AutoRemove(t *testing.T) {
+	t.Parallel()
+	m := NewZypper()
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.NoError(t, err)
+}
+
+func TestZypper_AutoRemove_Error(t *testing.T) {
+	t.Parallel()
+	m := NewZypper()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.AutoRemove(context.Background(), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to autoremove")
+}
+
 func TestZypper_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewZypper()

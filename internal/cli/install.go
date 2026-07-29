@@ -19,8 +19,18 @@ func newInstallCmd() *cobra.Command {
 		Use:     "install <package>",
 		Aliases: []string{"add"},
 		Short:   "Install a package and record intent",
-		Example: "  stamp install htop\n  stamp install spotify --manager flatpak\n  stamp add lazygit -m brew --note \"better git TUI\"",
-		Args:    cobra.ExactArgs(1),
+		Example: `  # install htop using the default system manager
+  stamp install htop
+
+  # install from a specific manager
+  stamp install spotify -m flatpak
+
+  # install a DNF package group (name may contain spaces)
+  stamp install "Development Tools" -m dnf --group
+
+  # add a note so you remember why later
+  stamp add lazygit -m brew --note "better git TUI"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			if app.manifestErr != nil {
@@ -95,8 +105,21 @@ func newRemoveCmd() *cobra.Command {
 		Use:     "remove <package>",
 		Aliases: []string{"uninstall", "rm", "delete", "del"},
 		Short:   "Remove a package and untrack it",
-		Example: "  stamp remove htop\n  stamp remove -m brew lazygit\n  stamp uninstall htop\n  stamp rm htop\n  stamp delete htop",
-		Args:    cobra.ExactArgs(1),
+		Example: `  # remove using the manager recorded in the manifest
+  stamp remove htop
+
+  # specify a manager explicitly
+  stamp remove lazygit -m brew
+
+  # remove a DNF package group
+  stamp remove "Development Tools" -m dnf --group
+
+  # all these aliases behave the same way
+  stamp uninstall htop
+  stamp rm htop
+  stamp delete htop
+  stamp del htop`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			if app.manifestErr != nil {
@@ -178,10 +201,17 @@ func newSearchCmd() *cobra.Command {
 	var groupSearch bool
 
 	cmd := &cobra.Command{
-		Use:     "search <query>",
-		Short:   "Search for packages across managers",
-		Example: "  stamp search htop\n  stamp search lazygit -m brew\n  stamp search ripgrep",
-		Args:    cobra.ExactArgs(1),
+		Use:   "search <query>",
+		Short: "Search for packages across managers",
+		Example: `  # search across all available managers
+  stamp search htop
+
+  # limit search to a specific manager
+  stamp search lazygit -m brew
+
+  # search DNF package groups instead of individual packages
+  stamp search Development -m dnf --group`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			query := args[0]

@@ -296,3 +296,12 @@ func TestPipx_ListHeld_NotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestPipx_Info_Error(t *testing.T) {
+	t.Parallel()
+	mgr := NewPipx()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.Info(context.Background(), "black")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get info")
+}
