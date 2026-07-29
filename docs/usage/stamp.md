@@ -32,6 +32,7 @@ stamp [flags]
 * [stamp install](stamp_install.html)	 - Install a package and record intent
 * [stamp list](stamp_list.html)	 - List all intentionally installed packages
 * [stamp man](stamp_man.html)	 - Manage stamp troff man pages
+* [stamp override](stamp_override.html)	 - Manage Flatpak sandbox permissions
 * [stamp provides](stamp_provides.html)	 - Find which package provides a given file
 * [stamp reconcile](stamp_reconcile.html)	 - Detect packages installed outside stamp and add them to the manifest
 * [stamp reinstall](stamp_reinstall.html)	 - Reinstall a package and record it in the manifest

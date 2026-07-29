@@ -258,6 +258,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newHoldCmd())
 	root.AddCommand(newUnholdCmd())
 	root.AddCommand(newHeldCmd())
+	root.AddCommand(newOverrideCmd())
 	root.AddCommand(newManCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newSelfUpdateCmd())

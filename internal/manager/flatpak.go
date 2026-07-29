@@ -259,6 +259,71 @@ func (m *Flatpak) Clean(_ context.Context, _ bool) ([]string, error) {
 	return nil, fmt.Errorf("%w: clean not supported for flatpak", ErrNotSupported)
 }
 
+// OverrideFlags holds flag values for flatpak override permission management.
+type OverrideFlags struct {
+	Filesystem []string
+	Socket     []string
+	Device     []string
+	Env        []string
+	Reset      bool
+	Show       bool
+	System     bool
+}
+
+// Override manages flatpak sandbox permissions for the given application.
+// This method is NOT part of the Adapter interface — it's flatpak-specific.
+func (m *Flatpak) Override(ctx context.Context, appID string, flags OverrideFlags) error {
+	if err := ValidatePackageName(appID); err != nil {
+		return err
+	}
+
+	args := []string{"override"}
+	if flags.System {
+		args = append(args, "--system")
+	} else {
+		args = append(args, "--user")
+	}
+
+	if flags.Reset {
+		args = append(args, "--reset", appID)
+		_, err := m.exec(WithStreamIO(ctx), "flatpak", args...)
+		if err != nil {
+			return fmt.Errorf("failed to reset overrides for %s: %w", appID, err)
+		}
+		return nil
+	}
+
+	if flags.Show {
+		args = append(args, "--show", appID)
+		out, err := m.exec(WithStreamIO(ctx), "flatpak", args...)
+		if err != nil {
+			return fmt.Errorf("failed to show overrides for %s: %w", appID, err)
+		}
+		fmt.Print(string(out))
+		return nil
+	}
+
+	for _, fs := range flags.Filesystem {
+		args = append(args, "--filesystem="+fs)
+	}
+	for _, s := range flags.Socket {
+		args = append(args, "--socket="+s)
+	}
+	for _, d := range flags.Device {
+		args = append(args, "--device="+d)
+	}
+	for _, e := range flags.Env {
+		args = append(args, "--env="+e)
+	}
+	args = append(args, appID)
+
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", args...)
+	if err != nil {
+		return fmt.Errorf("failed to set overrides for %s: %w", appID, err)
+	}
+	return nil
+}
+
 // Hold returns an error since flatpak has no hold command.
 func (m *Flatpak) Hold(_ context.Context, _ string) error {
 	return fmt.Errorf("%w: hold not supported for flatpak", ErrNotSupported)

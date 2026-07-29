@@ -464,3 +464,151 @@ func TestFlatpak_ListHeld_NotSupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
+
+func TestFlatpak_Override_Filesystem(t *testing.T) {
+	t.Parallel()
+	var args []string
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Filesystem: []string{"host", "home"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, args, "--user")
+	assert.Contains(t, args, "--filesystem=host")
+	assert.Contains(t, args, "--filesystem=home")
+	assert.Contains(t, args, "firefox")
+}
+
+func TestFlatpak_Override_Socket(t *testing.T) {
+	t.Parallel()
+	var args []string
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Socket: []string{"wayland", "pulseaudio"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, args, "--socket=wayland")
+	assert.Contains(t, args, "--socket=pulseaudio")
+}
+
+func TestFlatpak_Override_Device(t *testing.T) {
+	t.Parallel()
+	var args []string
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Device: []string{"dri", "all"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, args, "--device=dri")
+	assert.Contains(t, args, "--device=all")
+}
+
+func TestFlatpak_Override_Env(t *testing.T) {
+	t.Parallel()
+	var args []string
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Env: []string{"MY_VAR=value", "OTHER=val"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, args, "--env=MY_VAR=value")
+	assert.Contains(t, args, "--env=OTHER=val")
+}
+
+func TestFlatpak_Override_Reset(t *testing.T) {
+	t.Parallel()
+	var args []string
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Reset: true,
+	})
+	require.NoError(t, err)
+	assert.Contains(t, args, "--reset")
+	assert.Contains(t, args, "firefox")
+}
+
+func TestFlatpak_Override_Show(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	mgr.exec = mockExecutorHelper("filesystem=host\nsocket=wayland\n", nil)
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Show: true,
+	})
+	require.NoError(t, err)
+}
+
+func TestFlatpak_Override_System(t *testing.T) {
+	t.Parallel()
+	var args []string
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		System: true,
+	})
+	require.NoError(t, err)
+	assert.Contains(t, args, "--system")
+}
+
+func TestFlatpak_Override_Error(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Filesystem: []string{"host"},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to set overrides")
+}
+
+func TestFlatpak_Override_InvalidName(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	err := mgr.Override(context.Background(), "-invalid", OverrideFlags{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+func TestFlatpak_Override_AllFlags(t *testing.T) {
+	t.Parallel()
+	var args []string
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+		Filesystem: []string{"host"},
+		Socket:     []string{"wayland"},
+		Device:     []string{"dri"},
+		Env:        []string{"VAR=val"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, args, "--filesystem=host")
+	assert.Contains(t, args, "--socket=wayland")
+	assert.Contains(t, args, "--device=dri")
+	assert.Contains(t, args, "--env=VAR=val")
+	assert.Contains(t, args, "firefox")
+}

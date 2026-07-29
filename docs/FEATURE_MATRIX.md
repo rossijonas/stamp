@@ -55,6 +55,7 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp hold <pkg>` | | ✓ | ✓ | ✓ Per-adapter Hold(), --manager required | ✓ Complete |
 | `stamp unhold <pkg>` | | ✓ | ✓ | ✓ Per-adapter Unhold(), --manager required | ✓ Complete |
 | `stamp held` | | ✓ | ✓ | ✓ Aggregates ListHeld across adapters | ✓ Complete |
+| `stamp override <app-id>` | | ✓ | ✓ | ✓ Flatpak-only, CLI command via type assertion | ✓ Complete |
 
 ## Repository Commands
 
@@ -114,6 +115,14 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp hold` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 | `stamp unhold` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 | `stamp held` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--filesystem <value>` | | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--socket <value>` | | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--device <value>` | | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--env <key=value>` | | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--reset` | | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--show` | | ✓ | ✓ | ✓ Complete |
+| `stamp override` | `--system` | | ✓ | ✓ | ✓ Complete |
 
 ## UNIX Compliance
 
@@ -184,3 +193,4 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | 7 | 37 | Autoremove command (#155) | ✓ |
 | 7 | 38 | Clean command (#158) | ✓ |
 | 7 | 39 | Hold/unhold commands (#156) | ✓ |
+| 7 | 40 | Flatpak override command (#157) | ✓ |

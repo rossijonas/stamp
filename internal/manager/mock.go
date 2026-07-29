@@ -35,6 +35,7 @@ type Mock struct {
 	AutoRemoveResult []string
 	CleanErr         error
 	CleanResult      []string
+	OverrideFunc     func(ctx context.Context, appID string, flags OverrideFlags) error
 	HoldErr          error
 	UnholdErr        error
 	ListHeldErr      error
@@ -250,6 +251,14 @@ func (m *Mock) AutoRemove(_ context.Context, _ bool) ([]string, error) {
 		return slices.Clone(m.AutoRemoveResult), nil
 	}
 	return nil, nil
+}
+
+// Override delegates to OverrideFunc if set, otherwise returns ErrNotSupported.
+func (m *Mock) Override(ctx context.Context, appID string, flags OverrideFlags) error {
+	if m.OverrideFunc != nil {
+		return m.OverrideFunc(ctx, appID, flags)
+	}
+	return fmt.Errorf("%w: override not supported", ErrNotSupported)
 }
 
 // Clean returns mock clean result or error.
