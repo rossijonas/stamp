@@ -19,8 +19,11 @@ stamp unhold <package> [flags]
 ### Examples
 
 ```
+  # unhold with apt (via apt-mark)
   stamp unhold nginx -m apt
-  stamp unhold nginx -m dnf
+
+  # unhold on arch with pacman (removes from IgnorePkg)
+  stamp unhold nginx -m pacman
 ```
 
 ### Options

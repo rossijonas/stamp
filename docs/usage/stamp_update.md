@@ -23,11 +23,22 @@ stamp update [flags]
 ### Examples
 
 ```
+  # default two-phase flow (check + confirm, then update)
   stamp update
+
+  # dry-run: check for updates without applying them
   stamp update --check
-  stamp update -m apt
+
+  # skip check phase, auto-confirm (useful in scripts)
+  stamp update -y
+
+  # update a specific package (requires --manager)
   stamp update -p htop -m brew
+
+  # run updates one manager at a time instead of parallel
   stamp update --serial
+
+  # alias
   stamp upgrade
 ```
 

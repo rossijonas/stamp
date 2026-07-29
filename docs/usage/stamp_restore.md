@@ -18,9 +18,17 @@ stamp restore [flags]
 ### Examples
 
 ```
+  # restore all repositories and packages from the manifest
   stamp restore
+
+  # skip confirmation and proceed immediately
   stamp restore -y
+
+  # preview what would be restored without making changes
   stamp restore --dry-run
+
+  # restore only packages from a specific manager
+  stamp restore -m brew
 ```
 
 ### Options

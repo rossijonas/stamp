@@ -9,6 +9,16 @@ Remove a third-party repository
 stamp repo remove <name> [flags]
 ```
 
+### Examples
+
+```
+  # remove a PPA or repository
+  stamp repo remove ppa:git-core/ppa -m apt
+
+  # aliases behave the same way
+  stamp repo rm ppa:git-core/ppa -m apt
+```
+
 ### Options
 
 ```

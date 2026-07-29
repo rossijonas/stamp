@@ -12,11 +12,20 @@ stamp remove <package> [flags]
 ### Examples
 
 ```
+  # remove using the manager recorded in the manifest
   stamp remove htop
-  stamp remove -m brew lazygit
+
+  # specify a manager explicitly
+  stamp remove lazygit -m brew
+
+  # remove a DNF package group
+  stamp remove "Development Tools" -m dnf --group
+
+  # all these aliases behave the same way
   stamp uninstall htop
   stamp rm htop
   stamp delete htop
+  stamp del htop
 ```
 
 ### Options

@@ -19,8 +19,14 @@ stamp provides <file> [flags]
 ### Examples
 
 ```
+  # find which package owns a binary across all managers
   stamp provides /usr/bin/htop
+
+  # scope to a single manager for faster results
   stamp provides libssl.so -m dnf
+
+  # no results returns a clear message
+  stamp provides /usr/bin/nonexistent
 ```
 
 ### Options

@@ -12,8 +12,16 @@ stamp install <package> [flags]
 ### Examples
 
 ```
+  # install htop using the default system manager
   stamp install htop
-  stamp install spotify --manager flatpak
+
+  # install from a specific manager
+  stamp install spotify -m flatpak
+
+  # install a DNF package group (name may contain spaces)
+  stamp install "Development Tools" -m dnf --group
+
+  # add a note so you remember why later
   stamp add lazygit -m brew --note "better git TUI"
 ```
 

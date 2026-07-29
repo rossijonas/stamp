@@ -19,12 +19,20 @@ stamp override <app-id> [flags]
 ### Examples
 
 ```
+  # grant filesystem access (repeatable)
   stamp override firefox -m flatpak --filesystem=host
+
+  # grant socket access (repeatable)
   stamp override firefox -m flatpak --socket=wayland
-  stamp override firefox -m flatpak --device=dri
-  stamp override firefox -m flatpak --env=MY_VAR=value
+
+  # reset all overrides to defaults
   stamp override firefox -m flatpak --reset
+
+  # show current overrides
   stamp override firefox -m flatpak --show
+
+  # apply system-wide (requires sudo)
+  stamp override firefox -m flatpak --system --filesystem=host
 ```
 
 ### Options

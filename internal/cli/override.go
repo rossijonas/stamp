@@ -28,12 +28,20 @@ func newOverrideCmd() *cobra.Command {
 
 Requires --manager flatpak. Use repeatable flags for filesystem, socket,
 device, and environment variables. At least one action flag is required.`,
-		Example: `  stamp override firefox -m flatpak --filesystem=host
+		Example: `  # grant filesystem access (repeatable)
+  stamp override firefox -m flatpak --filesystem=host
+
+  # grant socket access (repeatable)
   stamp override firefox -m flatpak --socket=wayland
-  stamp override firefox -m flatpak --device=dri
-  stamp override firefox -m flatpak --env=MY_VAR=value
+
+  # reset all overrides to defaults
   stamp override firefox -m flatpak --reset
-  stamp override firefox -m flatpak --show`,
+
+  # show current overrides
+  stamp override firefox -m flatpak --show
+
+  # apply system-wide (requires sudo)
+  stamp override firefox -m flatpak --system --filesystem=host`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)

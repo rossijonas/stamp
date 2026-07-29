@@ -14,6 +14,13 @@ Equivalent to "stamp update --check".
 stamp outdated [flags]
 ```
 
+### Examples
+
+```
+  # check which packages have newer versions available (read-only)
+  stamp outdated
+```
+
 ### Options
 
 ```

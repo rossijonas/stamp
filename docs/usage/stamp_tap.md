@@ -14,6 +14,13 @@ Equivalent to "stamp repo add <name> -m brew".
 stamp tap <name> [flags]
 ```
 
+### Examples
+
+```
+  # add a homebrew tap (equivalent to repo add <name> -m brew)
+  stamp tap homebrew/cask
+```
+
 ### Options
 
 ```

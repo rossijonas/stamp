@@ -32,7 +32,17 @@ func newInfoCmd() *cobra.Command {
 		Use:     "info <package>",
 		Aliases: []string{"show", "view"},
 		Short:   "Show package information across managers",
-		Example: "  stamp info htop\n  stamp info -m brew lazygit\n  stamp info htop --json",
+		Example: `  # show package info across all managers (summary table)
+  stamp info htop
+
+  # show full raw output from a specific manager
+  stamp info htop -m dnf
+
+  # machine-readable JSON output
+  stamp info htop --json
+
+  # query info about a DNF package group
+  stamp info "Development Tools" -m dnf --group`,
 		Long: `Query detailed information about a package.
 By default, queries all available managers and outputs a summary table.
 If -m, --manager is specified, displays the native manager's full raw info block.`,

@@ -18,9 +18,17 @@ stamp info <package> [flags]
 ### Examples
 
 ```
+  # show package info across all managers (summary table)
   stamp info htop
-  stamp info -m brew lazygit
+
+  # show full raw output from a specific manager
+  stamp info htop -m dnf
+
+  # machine-readable JSON output
   stamp info htop --json
+
+  # query info about a DNF package group
+  stamp info "Development Tools" -m dnf --group
 ```
 
 ### Options

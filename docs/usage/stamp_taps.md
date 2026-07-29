@@ -14,6 +14,13 @@ Equivalent to "stamp repo list -m brew".
 stamp taps [flags]
 ```
 
+### Examples
+
+```
+  # list all homebrew taps (equivalent to repo list -m brew)
+  stamp taps
+```
+
 ### Options
 
 ```

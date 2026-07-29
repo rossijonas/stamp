@@ -12,9 +12,14 @@ stamp search <query> [flags]
 ### Examples
 
 ```
+  # search across all available managers
   stamp search htop
+
+  # limit search to a specific manager
   stamp search lazygit -m brew
-  stamp search ripgrep
+
+  # search DNF package groups instead of individual packages
+  stamp search Development -m dnf --group
 ```
 
 ### Options
