@@ -56,6 +56,11 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp unhold <pkg>` | | ✓ | ✓ | ✓ Per-adapter Unhold(), --manager required | ✓ Complete |
 | `stamp held` | | ✓ | ✓ | ✓ Aggregates ListHeld across adapters | ✓ Complete |
 | `stamp override <app-id>` | | ✓ | ✓ | ✓ Flatpak-only, CLI command via type assertion | ✓ Complete |
+| `stamp outdated` | | ✓ | ✓ | ✓ Delegates to runCheck (same as update --check) | ✓ Complete |
+| `stamp check-update` | | ✓ | ✓ | ✓ Delegates to runCheck (same as update --check) | ✓ Complete |
+| `stamp tap <name>` | | ✓ | ✓ | ✓ Delegates to brew AddRepo | ✓ Complete |
+| `stamp untap <name>` | | ✓ | ✓ | ✓ Delegates to brew RemoveRepo | ✓ Complete |
+| `stamp taps` | | ✓ | ✓ | ✓ Delegates to brew ListRepos | ✓ Complete |
 
 ## Repository Commands
 
@@ -199,3 +204,4 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | 7 | 39 | Hold/unhold commands (#156) | ✓ |
 | 7 | 40 | Flatpak override command (#157) | ✓ |
 | 7 | 41 | DNF group install (#159) | ✓ |
+| 7 | 42 | CLI aliases (#160) | ✓ |

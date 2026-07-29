@@ -30,6 +30,7 @@ func newInfoCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "info <package>",
+		Aliases: []string{"show", "view"},
 		Short:   "Show package information across managers",
 		Example: "  stamp info htop\n  stamp info -m brew lazygit\n  stamp info htop --json",
 		Long: `Query detailed information about a package.

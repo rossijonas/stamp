@@ -117,7 +117,7 @@ func newUpdateCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "update",
-		Aliases: []string{"upgrade"},
+		Aliases: []string{"upgrade", "refresh"},
 		Short:   "Run system upgrades across all package managers",
 		Example: "  stamp update\n  stamp update --check\n  stamp update -m apt\n  stamp update -p htop -m brew\n  stamp update --serial\n  stamp upgrade",
 		Long: `Run system upgrade commands for each available package manager using a safe two-phase (check + confirm) flow.
@@ -251,4 +251,34 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 	cmd.Flags().BoolVarP(&serial, "serial", "s", false, "run updates one at a time (sequential)")
 	cmd.Flags().BoolVarP(&checkOnly, "check", "c", false, "check for available updates without applying them")
 	return cmd
+}
+
+func newOutdatedCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "outdated",
+		Short: "Check for available updates without applying them",
+		Long: `Check across all package managers for outdated packages.
+Equivalent to "stamp update --check".`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			app := appFromCtx(cmd)
+			runCheck(cmd.Context(), app.adapters, "", cmd.ErrOrStderr())
+			return nil
+		},
+	}
+}
+
+func newCheckUpdateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check-update",
+		Short: "Check for available updates without applying them",
+		Long: `Check across all package managers for available updates.
+Equivalent to "stamp update --check".`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			app := appFromCtx(cmd)
+			runCheck(cmd.Context(), app.adapters, "", cmd.ErrOrStderr())
+			return nil
+		},
+	}
 }
