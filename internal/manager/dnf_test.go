@@ -728,3 +728,105 @@ func TestDNF_ListHeld_Error(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list held packages")
 }
+
+func TestDNF_GroupInstall(t *testing.T) {
+	t.Parallel()
+	var args []string
+	m := NewDNF("dnf")
+	m.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := m.Install(WithGroup(context.Background()), "Development Tools")
+	require.NoError(t, err)
+	assert.Contains(t, args, "group")
+	assert.Contains(t, args, "install")
+	assert.Contains(t, args, "Development Tools")
+}
+
+func TestDNF_GroupInstall_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Install(WithGroup(context.Background()), "Development Tools")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to install group")
+}
+
+func TestDNF_GroupRemove(t *testing.T) {
+	t.Parallel()
+	var args []string
+	m := NewDNF("dnf")
+	m.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte(""), nil
+	}
+	err := m.Remove(WithGroup(context.Background()), "Development Tools")
+	require.NoError(t, err)
+	assert.Contains(t, args, "group")
+	assert.Contains(t, args, "remove")
+	assert.Contains(t, args, "Development Tools")
+}
+
+func TestDNF_GroupRemove_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Remove(WithGroup(context.Background()), "Development Tools")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to remove group")
+}
+
+func TestDNF_GroupSearch(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("   Development Tools\n   C Development Tools\n   Backup Client\n", nil)
+	pkgs, err := m.Search(WithGroup(context.Background()), "Development")
+	require.NoError(t, err)
+	assert.Contains(t, pkgs, "Development Tools")
+	assert.Contains(t, pkgs, "C Development Tools")
+	assert.NotContains(t, pkgs, "Backup Client")
+}
+
+func TestDNF_GroupSearch_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Search(WithGroup(context.Background()), "Development")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list groups")
+}
+
+func TestDNF_GroupInfo(t *testing.T) {
+	t.Parallel()
+	var args []string
+	m := NewDNF("dnf")
+	m.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte("Group: Development Tools\n"), nil
+	}
+	info, err := m.Info(WithGroup(context.Background()), "Development Tools")
+	require.NoError(t, err)
+	assert.Contains(t, args, "group")
+	assert.Contains(t, args, "info")
+	assert.Contains(t, info, "Development Tools")
+}
+
+func TestDNF_GroupInfo_Error(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Info(WithGroup(context.Background()), "Development Tools")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get group info")
+}
+
+func TestParseDNFGroupList(t *testing.T) {
+	t.Parallel()
+	input := []byte("Installed Environment Groups:\n   Development Tools\nInstalled Groups:\n   C Development Tools\nAvailable Groups:\n   Backup Client\n   LibreOffice\n")
+	groups := parseDNFGroupList(input)
+	assert.Contains(t, groups, "Development Tools")
+	assert.Contains(t, groups, "C Development Tools")
+	assert.Contains(t, groups, "Backup Client")
+	assert.Contains(t, groups, "LibreOffice")
+}

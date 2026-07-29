@@ -8,6 +8,18 @@ import (
 	"strings"
 )
 
+type groupKey struct{}
+
+// WithGroup returns a context that signals group operations for dnf.
+func WithGroup(ctx context.Context) context.Context {
+	return context.WithValue(ctx, groupKey{}, true)
+}
+
+func isGroup(ctx context.Context) bool {
+	v, _ := ctx.Value(groupKey{}).(bool)
+	return v
+}
+
 // DNF implements the Adapter interface for Fedora's DNF (or RHEL 7's yum).
 type DNF struct {
 	exec Executor
@@ -111,6 +123,14 @@ func parseDNFHistoryUserInstalled(output []byte) []string {
 
 // Install executes the native installation command.
 func (m *DNF) Install(ctx context.Context, pkg string) error {
+	if isGroup(ctx) {
+		args := sudoCmd(m.cmd, "group", "install", "-y", pkg)
+		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+		if err != nil {
+			return fmt.Errorf("failed to install group %s: %w", pkg, err)
+		}
+		return nil
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -124,6 +144,10 @@ func (m *DNF) Install(ctx context.Context, pkg string) error {
 
 // Reinstall executes the native reinstallation command.
 func (m *DNF) Reinstall(ctx context.Context, pkg string) error {
+	if isGroup(ctx) {
+		// Reinstall is same as install for groups
+		return m.Install(ctx, pkg)
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -137,6 +161,14 @@ func (m *DNF) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove executes the native removal command.
 func (m *DNF) Remove(ctx context.Context, pkg string) error {
+	if isGroup(ctx) {
+		args := sudoCmd(m.cmd, "group", "remove", "-y", pkg)
+		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+		if err != nil {
+			return fmt.Errorf("failed to remove group %s: %w", pkg, err)
+		}
+		return nil
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -148,8 +180,51 @@ func (m *DNF) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// parseDNFGroupList parses the output of 'dnf group list' and returns group names.
+// Format:
+//
+//	Installed Environment Groups:
+//	   Development Tools
+//	Installed Groups:
+//	   C Development Tools
+//	Available Groups:
+//	   Backup Client
+func parseDNFGroupList(output []byte) []string {
+	var result []string
+	// Group names are indented with 3+ spaces in 'dnf group list' output.
+	// Headers (e.g. "Installed Groups:") have no leading whitespace.
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 {
+			continue
+		}
+		// Group names are indented with leading whitespace; headers are not.
+		// Heuristic: if the line has leading spaces and the trimmed content
+		// doesn't contain a colon, it's a group name.
+		if bytes.HasPrefix([]byte(line), []byte("   ")) && !bytes.Contains(trimmed, []byte(":")) {
+			result = append(result, string(trimmed))
+		}
+	}
+	return result
+}
+
 // Search queries the native package manager for the given package name.
 func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
+	if isGroup(ctx) {
+		out, err := m.exec(ctx, m.cmd, "group", "list")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list groups: %w", err)
+		}
+		groups := parseDNFGroupList(out)
+		var result []string
+		lowerQuery := strings.ToLower(query)
+		for _, g := range groups {
+			if strings.Contains(strings.ToLower(g), lowerQuery) {
+				result = append(result, g)
+			}
+		}
+		return result, nil
+	}
 	if err := ValidatePackageName(query); err != nil {
 		return nil, err
 	}
@@ -162,6 +237,13 @@ func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info queries dnf info metadata.
 func (m *DNF) Info(ctx context.Context, pkg string) (string, error) {
+	if isGroup(ctx) {
+		out, err := m.exec(ctx, m.cmd, "group", "info", pkg)
+		if err != nil {
+			return "", fmt.Errorf("failed to get group info for %s: %w", pkg, err)
+		}
+		return string(out), nil
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return "", err
 	}

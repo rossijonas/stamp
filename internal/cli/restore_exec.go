@@ -74,11 +74,15 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 		go func(a manager.Adapter, names []string, pkgs []manifest.Package) {
 			defer wg.Done()
 			for _, pName := range names {
-				// Check if this package is a brew cask
 				installCtx := ctx
 				for _, p := range pkgs {
-					if p.Name == pName && p.Manager == a.Name() && p.Cask {
-						installCtx = manager.WithCask(ctx)
+					if p.Name == pName && p.Manager == a.Name() {
+						if p.Cask {
+							installCtx = manager.WithCask(ctx)
+						}
+						if p.Group {
+							installCtx = manager.WithGroup(ctx)
+						}
 						break
 					}
 				}

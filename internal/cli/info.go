@@ -26,6 +26,7 @@ type infoReport struct {
 
 func newInfoCmd() *cobra.Command {
 	var managerFlag string
+	var groupInfo bool
 
 	cmd := &cobra.Command{
 		Use:     "info <package>",
@@ -42,8 +43,10 @@ If -m, --manager is specified, displays the native manager's full raw info block
 			}
 
 			pkgName := args[0]
-			if err := manager.ValidatePackageName(pkgName); err != nil {
-				return fmt.Errorf("invalid package name: %w", err)
+			if !groupInfo {
+				if err := manager.ValidatePackageName(pkgName); err != nil {
+					return fmt.Errorf("invalid package name: %w", err)
+				}
 			}
 
 			targets := app.adapters
@@ -61,6 +64,17 @@ If -m, --manager is specified, displays the native manager's full raw info block
 				targets = []manager.Adapter{found}
 			}
 
+			if groupInfo {
+				if managerFlag == "" {
+					return fmt.Errorf("--group requires --manager <name>")
+				}
+				for _, a := range targets {
+					if a.Name() != "dnf" && a.Name() != "yum" {
+						return fmt.Errorf("--group is only supported for dnf")
+					}
+				}
+			}
+
 			if len(targets) == 0 {
 				return fmt.Errorf("no package managers available")
 			}
@@ -73,7 +87,11 @@ If -m, --manager is specified, displays the native manager's full raw info block
 			var results []rawResult
 
 			for _, a := range targets {
-				info, err := a.Info(cmd.Context(), pkgName)
+				infoCtx := cmd.Context()
+				if groupInfo {
+					infoCtx = manager.WithGroup(infoCtx)
+				}
+				info, err := a.Info(infoCtx, pkgName)
 				if err != nil {
 					results = append(results, rawResult{manager: a.Name(), found: false})
 				} else {
@@ -161,5 +179,6 @@ If -m, --manager is specified, displays the native manager's full raw info block
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to query")
+	cmd.Flags().BoolVarP(&groupInfo, "group", "g", false, "query a DNF package group")
 	return cmd
 }
