@@ -130,6 +130,11 @@ type Adapter interface {
 	// Returns ErrCheckUnsupported if the manager has no native check command.
 	CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error)
 
+	// Refresh syncs the package manager's metadata (e.g., apt update, pacman -Sy).
+	// Called once before CheckUpdate to ensure fresh results.
+	// Returns nil for managers that do not require explicit refresh.
+	Refresh(ctx context.Context) error
+
 	// Provides searches for which package provides the given file.
 	// Returns the raw output lines from the native command.
 	// Returns ErrNotSupported if the manager has no provides command.

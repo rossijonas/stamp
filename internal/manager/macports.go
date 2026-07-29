@@ -243,6 +243,11 @@ func (m *MacPorts) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, e
 	return parsePortOutdated(out), nil
 }
 
+// Refresh is a no-op for this manager.
+func (m *MacPorts) Refresh(_ context.Context) error {
+	return nil
+}
+
 func parsePortOutdated(output []byte) []UpdateInfo {
 	var result []UpdateInfo
 	for _, line := range bytes.Split(output, []byte("\n")) {

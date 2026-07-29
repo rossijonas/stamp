@@ -46,13 +46,11 @@ func parseNpmLs(output []byte) []string {
 		if len(trimmed) == 0 || trimmed[0] == '/' || trimmed[0] == '(' {
 			continue
 		}
-		// Strip tree prefix characters: ├── └── │
 		stripped := bytes.TrimLeft(trimmed, " ├─│└")
 		stripped = bytes.TrimSpace(stripped)
 		if len(stripped) == 0 {
 			continue
 		}
-		// Extract name before @ symbol
 		atIdx := bytes.LastIndexByte(stripped, '@')
 		name := ""
 		if atIdx > 0 {
@@ -72,7 +70,8 @@ func (m *Npm) Install(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(WithStreamIO(ctx), "npm", "install", "-g", pkg)
+	cmdArgs := sudoCmd("npm", "install", "-g", pkg)
+	_, err := m.exec(WithStreamIO(ctx), cmdArgs[0], cmdArgs[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
 	}
@@ -89,7 +88,8 @@ func (m *Npm) Remove(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(WithStreamIO(ctx), "npm", "uninstall", "-g", pkg)
+	cmdArgs := sudoCmd("npm", "uninstall", "-g", pkg)
+	_, err := m.exec(WithStreamIO(ctx), cmdArgs[0], cmdArgs[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", pkg, err)
 	}
@@ -129,7 +129,8 @@ func (m *Npm) Update(ctx context.Context, pkg string) error {
 	} else {
 		args = []string{"update", "-g"}
 	}
-	_, err := m.exec(WithStreamIO(ctx), "npm", args...)
+	cmdArgs := sudoCmd(append([]string{"npm"}, args...)...)
+	_, err := m.exec(WithStreamIO(ctx), cmdArgs[0], cmdArgs[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to update: %w", err)
 	}
@@ -139,6 +140,11 @@ func (m *Npm) Update(ctx context.Context, pkg string) error {
 // CheckUpdate returns an error since npm has no check-update command.
 func (m *Npm) CheckUpdate(_ context.Context, _ string) ([]UpdateInfo, error) {
 	return nil, fmt.Errorf("%w", ErrCheckUnsupported)
+}
+
+// Refresh is a no-op for npm.
+func (m *Npm) Refresh(_ context.Context) error {
+	return nil
 }
 
 // AddRepo returns an error since npm has no concept of repositories.

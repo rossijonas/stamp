@@ -380,7 +380,7 @@ func TestAPT_CheckUpdateExecError(t *testing.T) {
 	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to update package lists")
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestAPT_CheckUpdate(t *testing.T) {
@@ -398,16 +398,8 @@ func TestAPT_CheckUpdate(t *testing.T) {
 
 func TestAPT_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
 	t.Parallel()
-	call := 0
 	manager := NewAPT("apt")
-	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		call++
-		if call == 1 {
-			return []byte(""), nil // apt update succeeds
-		}
-		return nil, assert.AnError // apt list --upgradable fails
-	}
-
+	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")

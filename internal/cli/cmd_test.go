@@ -77,6 +77,7 @@ func (m *mockAdapter) Unhold(_ context.Context, _ string) error {
 func (m *mockAdapter) ListHeld(_ context.Context) ([]string, error) {
 	return nil, fmt.Errorf("%w: list held not supported", manager.ErrNotSupported)
 }
+func (m *mockAdapter) Refresh(_ context.Context) error { return nil }
 
 // execCmd builds a root with injected mock adapters and isolated temp paths, executes, returns output.
 func execCmd(t *testing.T, args []string, adapters []manager.Adapter) (*bytes.Buffer, error) {

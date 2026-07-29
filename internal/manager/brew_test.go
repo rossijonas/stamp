@@ -373,15 +373,8 @@ func TestBrew_AutoRemove_Error(t *testing.T) {
 
 func TestBrew_CheckUpdate_OutdatedFails_AfterRefresh(t *testing.T) {
 	t.Parallel()
-	call := 0
 	mgr := NewBrew()
-	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		call++
-		if call == 1 {
-			return []byte(""), nil // brew update succeeds
-		}
-		return nil, assert.AnError // brew outdated --json fails
-	}
+	mgr.exec = mockExecutorHelper("", assert.AnError)
 	_, err := mgr.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
@@ -402,7 +395,7 @@ func TestBrew_CheckUpdateExecError(t *testing.T) {
 	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to update homebrew")
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestBrew_CheckUpdate(t *testing.T) {
@@ -421,15 +414,7 @@ func TestBrew_CheckUpdate(t *testing.T) {
 func TestBrew_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
 	t.Parallel()
 	manager := NewBrew()
-	call := 0
-	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		call++
-		if call == 1 {
-			return []byte(""), nil // brew update succeeds
-		}
-		return nil, assert.AnError // brew outdated --json fails
-	}
-
+	manager.exec = mockExecutorHelper("", assert.AnError)
 	_, err := manager.CheckUpdate(context.Background(), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")

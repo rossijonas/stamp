@@ -214,6 +214,11 @@ func (m *Zypper) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, err
 	return parseZypperListUpdates(out), nil
 }
 
+// Refresh is a no-op for this manager.
+func (m *Zypper) Refresh(_ context.Context) error {
+	return nil
+}
+
 func parseZypperListUpdates(output []byte) []UpdateInfo {
 	var result []UpdateInfo
 	for _, line := range bytes.Split(output, []byte("\n")) {

@@ -259,14 +259,17 @@ type brewFormula struct {
 	CurrentVersion    string   `json:"current_version"`
 }
 
+// Refresh updates homebrew's package metadata.
+func (m *Brew) Refresh(ctx context.Context) error {
+	_, err := m.exec(ctx, "brew", "update")
+	if err != nil {
+		return fmt.Errorf("failed to update homebrew: %w", err)
+	}
+	return nil
+}
+
 // CheckUpdate runs brew outdated --json to list available updates.
 func (m *Brew) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
-	if pkg == "" {
-		_, err := m.exec(ctx, "brew", "update")
-		if err != nil {
-			return nil, fmt.Errorf("failed to update homebrew: %w", err)
-		}
-	}
 	args := []string{"brew", "outdated", "--json"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
