@@ -33,6 +33,21 @@ stamp del htop
 
 All aliases behave identically.
 
+### DNF package groups
+
+Remove a DNF package group with `--group` / `-g`:
+
+```bash
+stamp remove "Development Tools" -m dnf --group
+```
+
+```text
+▪ removing group Development Tools via dnf...
+✓ removed Development Tools via dnf
+```
+
+Group removal runs `dnf group remove -y <name>` — it removes the group meta-package but not the individual packages that were installed as part of the group.
+
 ### What happens
 
 1. Stamp finds the package in the manifest (or uses `-m` override)

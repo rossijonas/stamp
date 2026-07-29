@@ -1,11 +1,13 @@
 ---
 ---
 
-# Feature Matrix: Stamp CLI
+# Feature Reference
 
-This document tracks all SPEC.md commands, flags, and compliance items against their current implementation status. Updated after each feature delivery.
+This document tracks all features, commands, and manager support across Stamp.
 
-See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) — which managers work on which OS — and [Feature × Manager Support Matrix](history/feature-per-manager-matrix.html) — which Stamp features work with each manager.
+See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../history/os-manager-matrix.html).
+
+---
 
 ## Adapters
 
@@ -24,6 +26,8 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | Go | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | go install with module path validation, no search/doctor/repo support, ListInstalled recovers module paths via binary metadata, batch update reinstalls recoverable paths, binary-name fallback for unrecoverable |
 | Npm | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | Node.js package manager for globally installed CLI tools, no search/doctor/repo support, user-space |
 | Cargo | ✓ Complete | Install, Remove, Search, Info, ListInstalled, Update (single + batch) | Rust crate installer via cargo install, native search/info via crates.io, --force for reinstall, no doctor/repo support, user-space |
+
+---
 
 ## CLI Commands
 
@@ -62,7 +66,7 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp untap <name>` | | ✓ | ✓ | ✓ Delegates to brew RemoveRepo | ✓ Complete |
 | `stamp taps` | | ✓ | ✓ | ✓ Delegates to brew ListRepos | ✓ Complete |
 
-## Repository Commands
+### Repository Commands
 
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -70,7 +74,7 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 
-## Man Command (Subcommands)
+### Man Command (Subcommands)
 
 | Command | Flags | SPEC.md | Implemented | Status |
 | :--- | :--- | :---: | :---: | :---: |
@@ -78,7 +82,7 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp man install` | `--prefix` | ✓ | ✓ Installs stamp.1 to system path | ✓ Complete |
 | `stamp man check` | | ✓ | ✓ Verifies installed version matches binary | ✓ Complete |
 
-## Global Flags
+### Global Flags
 
 | Flag | Short | SPEC.md | Implemented | Status |
 | :--- | :--- | :---: | :---: | :---: |
@@ -86,7 +90,7 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `--json` | `-j` | ✓ | ✓ Registered in root PersistentFlags | ✓ Complete |
 | `--yes` | `-y` | ✓ | ✓ Registered in root PersistentFlags | ✓ Complete |
 
-## Per-Command Flags
+### Per-Command Flags
 
 | Command | Flag | Short | SPEC.md | Implemented | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -133,18 +137,52 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | `stamp search` | `--group` | `-g` | ✓ | ✓ | ✓ Complete |
 | `stamp info` | `--group` | `-g` | ✓ | ✓ | ✓ Complete |
 
-## UNIX Compliance
+---
 
-| Requirement | SPEC.md | Implemented | Details | Status |
-| :--- | :---: | :---: | :--- | :---: |
-| POSIX Syntax | ✓ | ✓ | Built-in via spf13/cobra | ✓ Complete |
-| XDG Base Directory | ✓ | ✓ | `xdgConfigDir()` in root.go | ✓ Complete |
-| Exit Codes (sysexits) | ✓ | ⚠ Partial | Constants defined (`ExitUsage`, `ExitDataErr`, etc.) but `Execute()` always uses `os.Exit(1)` | ⚠ Partial |
-| I/O Separation | ✓ | ✓ | Confirmations → `stderr`, search results/listings → `stdout` | ✓ Complete |
-| NO_COLOR support | ✓ | ✓ | Checks `NO_COLOR` env var, reports in `stamp doctor` | ✓ Complete |
-| Auto-Generated Docs | ✓ | ✓ | `task docs` generates markdown + man pages | ✓ Complete |
-| UNIX Man Pages | ✓ | ✓ | `stamp man` generates and installs system man page | ✓ Complete |
-| Project Landing Page | ✓ | ✗ | Not created (Task 10) | ✗ Missing |
+## Per-Manager Feature Support
+
+| Feature | DNF | APT | Pacman | Paru | Zypper | Snap | Flatpak | Brew | MacPorts | Go | Pipx | Uv | Npm | Cargo |
+|---------|:---:|:---:|:------:|:----:|:------:|:----:|:-------:|:----:|:--------:|:--:|:----:|:--:|:---:|:-----:|
+| **Install** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Reinstall** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Remove** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Search** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| **Info** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Update** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **CheckUpdate** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Doctor** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Cask** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Hold** | ✗ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Add Repo** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Remove Repo** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **List Repos** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+
+### Notes
+
+- **Search:** Cargo is the only toolchain adapter with native search support (`cargo search`). Other toolchains (Go, Npm, Pipx, Uv) do not support search.
+- **Update:** All managers support both batch (`stamp update`) and single-package (`stamp update -p <pkg> -m <mgr>`) updates.
+- **Doctor:** Only Brew has a native `doctor` command. Other managers print an informational message and continue.
+- **Cask:** Brew-specific feature for macOS GUI applications (`brew install --cask`). Flatpak and Snap support GUI apps natively on Linux through their standard install flow — no separate flag needed.
+- **Hold:** APT (apt-mark), DNF (dnf versionlock), Pacman/Paru (IgnorePkg in pacman.conf). Other managers do not support version pinning.
+- **Repo management:** DNF supports COPR repos, APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
+- **CheckUpdate:** Toolchain managers (Go, Pipx, Uv) cannot preview updates. They print an informational notice during `stamp update --check` and continue.
+
+---
+
+## Cross-Manager Special Features
+
+| Feature | Description | Supported Managers | Stamp Command | Status |
+|---------|-------------|-------------------|---------------|--------|
+| **Cask (GUI Apps)** | macOS GUI application management via `brew install --cask`. Auto-detected on install, stored in manifest. | Brew | `stamp install <pkg> -m brew` | ✓ Complete |
+| **File Search (provides)** | Find which package owns a specific file or binary. | DNF, APT, Pacman, Paru, Zypper, MacPorts | `stamp provides <file>` | ✓ Complete |
+| **Orphan Cleanup (autoremove)** | Remove unused dependencies that were pulled in automatically. | Brew, DNF, APT, Pacman, Paru, Zypper, Flatpak, MacPorts | `stamp autoremove` | ✓ Complete |
+| **Cache Cleanup (clean)** | Clear locally cached package files to free disk space. | Brew, DNF, APT, Pacman, Paru, Zypper, Snap, MacPorts | `stamp clean` | ✓ Complete |
+| **Version Pinning (hold)** | Pin packages at specific versions to prevent accidental upgrades. | APT, DNF, Pacman, Paru | `stamp hold <pkg>` | ✓ Complete |
+| **Group Install** | Install DNF package groups (e.g. "Development Tools"). | DNF | `stamp install --group` | ✓ Complete |
+| **Flatpak Override** | Manage Flatpak sandbox permissions (filesystem, socket, device access). | Flatpak | `stamp override` | ✓ Complete |
+| **Aliases** | Native command aliases for every supported package manager. | All | See [Aliases Matrix](../usage/aliases.html) | ✓ Complete |
+
+---
 
 ## Phase & Task Progress
 
@@ -173,27 +211,27 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | 4 | 13 | `stamp info` package info command | ✓ |
 | 4 | 14 | `stamp man check` version verification | ✓ |
 | 4 | 15 | Per-manager flags for reconcile/restore/doctor/list | ⚠ Partial |
-| 4 | 16 | Multi-platform integration testing (7 platforms: Ubuntu, Debian, Fedora, CentOS, Rocky, Arch, openSUSE) | ✓ Complete |
-| 4 | 17 | Package manager feature audit (Homebrew cask, brew services, dnf groupinstall) | * |
+| 4 | 16 | Multi-platform integration testing | ✓ Complete |
+| 4 | 17 | Package manager feature audit | * |
 | 4 | 18 | `stamp reinstall` command | ✓ |
 | 4 | 19 | Generate missing usage & man pages | ✓ |
-| 4 | 20 | Create GitHub Pages landing page (`docs/index.html`) | ~ |
+| 4 | 20 | Create GitHub Pages landing page | ~ |
 | 4 | 21 | `stamp init` command | ✓ |
-| 4 | 22 | `stamp list` command (alias `ls`) | ✓ |
-| 4 | 23 | `stamp update` command (alias `upgrade`) | ✓ |
-| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard (#59) | ✓ |
-| 4 | 25 | Add shell completion check to `stamp doctor` (#60) | ✓ |
-| 4 | 25b | Re-init guard for `stamp init` with mandatory backup | ✓ |
-| 4 | 26 | Add `yum` as alias to `dnf` manager (#61) | ✓ |
-| 4 | 32 | APT package manager adapter (#46) | ✓ |
+| 4 | 22 | `stamp list` command | ✓ |
+| 4 | 23 | `stamp update` command | ✓ |
+| 4 | 24 | Migrate `stamp hello` to `stamp setup` wizard | ✓ |
+| 4 | 25 | Add shell completion check to `stamp doctor` | ✓ |
+| 4 | 25b | Re-init guard for `stamp init` | ✓ |
+| 4 | 26 | Add `yum` as alias to `dnf` manager | ✓ |
+| 4 | 32 | APT package manager adapter | ✓ |
 | 4 | 33 | Docker-based integration testing | ✓ |
-| 4 | 34 | Post-release integration CI pipelines (ubuntu/debian/fedora) | ✓ |
+| 4 | 34 | Post-release integration CI pipelines | ✓ |
 | 5 | — | Relicense to Apache-2.0 | ✓ |
 | 6 | 27 | Reconcile — Auto-Track and `--dry-run` | ✓ |
 | 6 | 28 | Reinstall — Support Pre-Existing Packages | ✓ |
 | 6 | 29 | Flag and Compliance Updates | ✓ |
 | 6 | 30 | `stamp auto-reconcile` Command | ✓ |
-| 6 | 31 | Go toolchain adapter (go install) | ✓ |
+| 6 | 31 | Go toolchain adapter | ✓ |
 | 7 | 32 | npm toolchain adapter (#52) | ✓ |
 | 7 | 33 | Cargo toolchain adapter (#53) | ✓ |
 | 7 | 34 | cmd_test.go split (#105) | ✓ |
@@ -205,3 +243,16 @@ See also: [OS × Manager Compatibility Matrix](history/os-manager-matrix.html) �
 | 7 | 40 | Flatpak override command (#157) | ✓ |
 | 7 | 41 | DNF group install (#159) | ✓ |
 | 7 | 42 | CLI aliases (#160) | ✓ |
+
+## UNIX Compliance
+
+| Requirement | SPEC.md | Implemented | Details | Status |
+| :--- | :---: | :---: | :--- | :---: |
+| POSIX Syntax | ✓ | ✓ | Built-in via spf13/cobra | ✓ Complete |
+| XDG Base Directory | ✓ | ✓ | `xdgConfigDir()` in root.go | ✓ Complete |
+| Exit Codes (sysexits) | ✓ | ⚠ Partial | Constants defined (`ExitUsage`, `ExitDataErr`, etc.) but `Execute()` always uses `os.Exit(1)` | ⚠ Partial |
+| I/O Separation | ✓ | ✓ | Confirmations → `stderr`, search results/listings → `stdout` | ✓ Complete |
+| NO_COLOR support | ✓ | ✓ | Checks `NO_COLOR` env var, reports in `stamp doctor` | ✓ Complete |
+| Auto-Generated Docs | ✓ | ✓ | `task docs` generates markdown + man pages | ✓ Complete |
+| UNIX Man Pages | ✓ | ✓ | `stamp man` generates and installs system man page | ✓ Complete |
+| Project Landing Page | ✓ | ✗ | Not created (Task 10) | ✗ Missing |

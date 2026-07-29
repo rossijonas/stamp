@@ -44,6 +44,43 @@ stamp reinstall htop           # reinstall and re-track
 stamp reinstall -m brew htop   # reinstall with specific manager
 ```
 
+### DNF package groups
+
+Install a DNF package group with the `--group` / `-g` flag:
+
+```bash
+stamp install "Development Tools" -m dnf --group
+```
+
+```text
+▪ installing group Development Tools via dnf...
+✓ installed Development Tools via dnf
+```
+
+Group names like "Development Tools" may contain spaces — use quotes.
+
+### Homebrew casks
+
+Stamp auto-detects Homebrew casks (GUI applications) and passes `--cask` automatically:
+
+```bash
+stamp install firefox -m brew
+```
+
+```text
+▪ installing firefox via brew...
+✓ installed firefox via brew (cask: true)
+```
+
+Casks are recorded in the manifest and restored correctly with `stamp restore`.
+
+### Using show/view aliases
+
+```bash
+stamp show htop      # alias for stamp info htop
+stamp view htop      # alias for stamp info htop
+```
+
 ### Reinstall
 
 The `reinstall` command works for both manifest-tracked and pre-existing packages:

@@ -19,6 +19,9 @@ stamp restore -y
   ✓ installed lazygit via brew
   ✓ installed spotify via flatpak
 ✓ Restore complete — 3 packages installed
+
+Restore respects package metadata: Homebrew casks are installed with `--cask`
+and DNF groups are installed with `--group` automatically.
 ```
 
 ### Dry run

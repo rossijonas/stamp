@@ -42,6 +42,23 @@ The `--manager` / `-m` flag is **required** for all repo operations.
 
 ```bash
 stamp repo install ppa:git-core/ppa -m apt
+stamp repo uninstall ppa:git-core/ppa -m apt
+stamp repo ls
+```
+
+### Homebrew tap aliases
+
+```bash
+stamp tap homebrew/cask        # equivalent to: stamp repo add homebrew/cask -m brew
+stamp untap homebrew/cask      # equivalent to: stamp repo remove homebrew/cask -m brew
+stamp taps                     # equivalent to: stamp repo list -m brew
+```
+
+```text
+added tap homebrew/cask via brew
+removed tap homebrew/cask via brew
+homebrew/cask
+homebrew/core
 ```
 
 ### List repositories
