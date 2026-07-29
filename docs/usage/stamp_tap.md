@@ -17,8 +17,11 @@ stamp tap <name> [flags]
 ### Examples
 
 ```
-  # add a homebrew tap (equivalent to repo add <name> -m brew)
+  # add a homebrew tap (alias form)
   stamp tap homebrew/cask
+
+  # equivalent canonical command
+  stamp repo add homebrew/cask -m brew
 ```
 
 ### Options

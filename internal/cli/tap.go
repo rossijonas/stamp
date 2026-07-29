@@ -10,8 +10,11 @@ func newTapCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tap <name>",
 		Short: "Add a Homebrew tap (alias for repo add -m brew)",
-		Example: `  # add a homebrew tap (equivalent to repo add <name> -m brew)
-  stamp tap homebrew/cask`,
+		Example: `  # add a homebrew tap (alias form)
+  stamp tap homebrew/cask
+
+  # equivalent canonical command
+  stamp repo add homebrew/cask -m brew`,
 		Long: `Add a third-party Homebrew tap repository.
 Equivalent to "stamp repo add <name> -m brew".`,
 		Args: cobra.ExactArgs(1),
@@ -36,8 +39,11 @@ func newUntapCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "untap <name>",
 		Short: "Remove a Homebrew tap (alias for repo remove -m brew)",
-		Example: `  # remove a homebrew tap (equivalent to repo remove <name> -m brew)
-  stamp untap homebrew/cask`,
+		Example: `  # remove a homebrew tap (alias form)
+  stamp untap homebrew/cask
+
+  # equivalent canonical command
+  stamp repo remove homebrew/cask -m brew`,
 		Long: `Remove a third-party Homebrew tap repository.
 Equivalent to "stamp repo remove <name> -m brew".`,
 		Args: cobra.ExactArgs(1),
@@ -62,8 +68,11 @@ func newTapsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "taps",
 		Short: "List Homebrew taps (alias for repo list -m brew)",
-		Example: `  # list all homebrew taps (equivalent to repo list -m brew)
-  stamp taps`,
+		Example: `  # list homebrew taps (alias form)
+  stamp taps
+
+  # equivalent canonical command
+  stamp repo list -m brew`,
 		Long: `List all installed Homebrew tap repositories.
 Equivalent to "stamp repo list -m brew".`,
 		Args: cobra.NoArgs,

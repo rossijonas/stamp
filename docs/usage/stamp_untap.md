@@ -17,8 +17,11 @@ stamp untap <name> [flags]
 ### Examples
 
 ```
-  # remove a homebrew tap (equivalent to repo remove <name> -m brew)
+  # remove a homebrew tap (alias form)
   stamp untap homebrew/cask
+
+  # equivalent canonical command
+  stamp repo remove homebrew/cask -m brew
 ```
 
 ### Options

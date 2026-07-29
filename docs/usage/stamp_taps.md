@@ -17,8 +17,11 @@ stamp taps [flags]
 ### Examples
 
 ```
-  # list all homebrew taps (equivalent to repo list -m brew)
+  # list homebrew taps (alias form)
   stamp taps
+
+  # equivalent canonical command
+  stamp repo list -m brew
 ```
 
 ### Options

@@ -3,12 +3,12 @@
 
 ## stamp outdated
 
-Check for available updates without applying them
+Check for available updates (alias for stamp update --check)
 
 ### Synopsis
 
 Check across all package managers for outdated packages.
-Equivalent to "stamp update --check".
+Alias for "stamp update --check".
 
 ```
 stamp outdated [flags]
@@ -17,8 +17,11 @@ stamp outdated [flags]
 ### Examples
 
 ```
-  # check which packages have newer versions available (read-only)
+  # check for outdated packages (alias form)
   stamp outdated
+
+  # equivalent canonical command
+  stamp update --check
 ```
 
 ### Options

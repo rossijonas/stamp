@@ -272,11 +272,14 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 func newOutdatedCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "outdated",
-		Short: "Check for available updates without applying them",
+		Short: "Check for available updates (alias for stamp update --check)",
 		Long: `Check across all package managers for outdated packages.
-Equivalent to "stamp update --check".`,
-		Example: `  # check which packages have newer versions available (read-only)
-  stamp outdated`,
+Alias for "stamp update --check".`,
+		Example: `  # check for outdated packages (alias form)
+  stamp outdated
+
+  # equivalent canonical command
+  stamp update --check`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
@@ -289,11 +292,14 @@ Equivalent to "stamp update --check".`,
 func newCheckUpdateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check-update",
-		Short: "Check for available updates without applying them",
+		Short: "Check for available updates (alias for stamp update --check)",
 		Long: `Check across all package managers for available updates.
-Equivalent to "stamp update --check".`,
-		Example: `  # check for available updates (read-only, same as stamp outdated)
-  stamp check-update`,
+Alias for "stamp update --check".`,
+		Example: `  # check for available updates (alias form)
+  stamp check-update
+
+  # equivalent canonical command
+  stamp update --check`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)

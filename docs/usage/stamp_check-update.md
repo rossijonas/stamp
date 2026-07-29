@@ -3,12 +3,12 @@
 
 ## stamp check-update
 
-Check for available updates without applying them
+Check for available updates (alias for stamp update --check)
 
 ### Synopsis
 
 Check across all package managers for available updates.
-Equivalent to "stamp update --check".
+Alias for "stamp update --check".
 
 ```
 stamp check-update [flags]
@@ -17,8 +17,11 @@ stamp check-update [flags]
 ### Examples
 
 ```
-  # check for available updates (read-only, same as stamp outdated)
+  # check for available updates (alias form)
   stamp check-update
+
+  # equivalent canonical command
+  stamp update --check
 ```
 
 ### Options
