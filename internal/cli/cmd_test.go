@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -864,4 +865,72 @@ func TestListCmd_CorruptedManifest(t *testing.T) {
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse manifest")
+}
+
+// ctxBlockingAdapter blocks on context cancellation during Install so the
+// middleware's SIGINT handling can be observed deterministically.
+type ctxBlockingAdapter struct {
+	mockAdapter
+	started chan struct{}
+}
+
+func (m *ctxBlockingAdapter) Install(ctx context.Context, _ string) error {
+	close(m.started)
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func TestMiddleware_CancelsCommandOnSigint(t *testing.T) {
+	sigCh := make(chan os.Signal, 1)
+	old := notifySigint
+	notifySigint = func() chan os.Signal { return sigCh }
+	t.Cleanup(func() { notifySigint = old })
+
+	started := make(chan struct{})
+	adapter := &ctxBlockingAdapter{mockAdapter: mockAdapter{name: "dnf"}, started: started}
+	tmpDir := t.TempDir()
+	root := NewRootCmd(
+		WithAdapters([]manager.Adapter{adapter}),
+		WithConfigPath(filepath.Join(tmpDir, "config.toml")),
+		WithManifestPath(filepath.Join(tmpDir, "manifest.toml")),
+	)
+	buf := new(bytes.Buffer)
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	root.SetIn(r)
+	_ = w.Close()
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"install", "htop"})
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- root.Execute() }()
+
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("adapter never started")
+	}
+
+	sigCh <- os.Interrupt
+
+	select {
+	case err := <-errCh:
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "context canceled")
+	case <-time.After(5 * time.Second):
+		t.Fatal("command did not abort on SIGINT")
+	}
+}
+
+func TestMiddleware_GroupCommandNoHandler(t *testing.T) {
+	tmpDir := t.TempDir()
+	root := NewRootCmd(
+		WithAdapters([]manager.Adapter{&mockAdapter{name: "dnf"}}),
+		WithConfigPath(filepath.Join(tmpDir, "config.toml")),
+		WithManifestPath(filepath.Join(tmpDir, "manifest.toml")),
+	)
+	root.SetArgs([]string{"repo"})
+	err := root.Execute()
+	require.NoError(t, err)
 }

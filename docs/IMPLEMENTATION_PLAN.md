@@ -300,6 +300,17 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 *   **Depends on:** Task 27
 *   **Status:** ~ Pending
 
+### Phase 7: Signal Handling & Clean Abort
+
+Deliver reliable Ctrl+C behavior for all commands that spawn privileged children.
+
+**Task 43: Clean SIGINT Abort for All Commands (#170)**
+*   **Description:** Install a shared two-phase SIGINT handler (`cancelOnInterrupt`) once in the root command's `PersistentPreRunE`, covering every runnable command. First SIGINT: newline + `stty echo` restore + cancel the command context so `exec.CommandContext` kills the running child. Second SIGINT: SIGKILL the entire job process group and exit 130, guaranteeing no orphaned privileged processes survive. Remove the now-redundant inline handler from `update.go`. Documented in ADR-014.
+*   **Acceptance:** Ctrl+C at the sudo password prompt aborts cleanly for `reinstall`, `install`, `remove`, `hold`, `unhold`, `clean`, `autoremove`, `update`, `restore`, and `repo add/remove`; no orphaned `sudo`/`dnf`/`apt` processes remain; terminal echo restored; second Ctrl+C force-exits with 130.
+*   **Verify:** `task check` passes; manual smoke: `stamp reinstall -m dnf htop`, Ctrl+C at prompt, then `pgrep -a dnf` empty.
+*   **Files:** `internal/cli/signal.go` (new), `internal/cli/signal_test.go` (new), `internal/cli/root.go`, `internal/cli/update.go`, `internal/cli/cmd_test.go`, `docs/decisions/ADR-014-signal-handling-and-clean-abort.md`, `docs/usage/installing-packages.md`
+*   **Status:** ✓ Completed
+
 ### Phase & Task Progress Summary
 
 | Phase | Task | Description | Status |
@@ -373,3 +384,4 @@ Deliver the final design for `stamp reconcile` and `stamp reinstall` based on re
 | 6 | 42c | CLI update.go rework with --check and prompt | ~ |
 | 6 | 42d | ADR-011: update check + confirm | ✓ |
 | 6 | 42e | Docs: SPEC, FEATURE_MATRIX, usage/update.md | ✓ |
+| 7 | 43 | Clean SIGINT abort for all commands (#170) | ✓ |
