@@ -6,10 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -160,24 +157,7 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 			errOut := cmd.ErrOrStderr()
-
-			ctx, cancel := context.WithCancel(cmd.Context())
-			defer cancel()
-
-			// SIGINT handler: restore terminal state and cancel context
-			sigCh := make(chan os.Signal, 1)
-			signal.Notify(sigCh, syscall.SIGINT)
-			go func() {
-				<-sigCh
-				signal.Stop(sigCh)
-				_, _ = fmt.Fprintln(errOut)
-				if stty, err := exec.LookPath("stty"); err == nil {
-					//nolint:gosec // stty path comes from LookPath, not user input
-					_ = exec.Command(stty, "echo").Run()
-				}
-				cancel()
-			}()
-			defer signal.Stop(sigCh)
+			ctx := cmd.Context()
 
 			if checkOnly && app.yes {
 				return fmt.Errorf("--check and --yes are mutually exclusive")

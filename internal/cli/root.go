@@ -218,6 +218,20 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 				return fmt.Errorf("initialization failed: %w", err)
 			}
 			cmd.SetContext(context.WithValue(cmd.Context(), ctxKey{}, app))
+
+			// Install the shared SIGINT handler so every runnable command aborts
+			// cleanly (see cancelOnInterrupt). Group/help-only commands have no
+			// RunE and spawn no children, so they are skipped.
+			if cmd.RunE != nil {
+				ctx, cleanup := cancelOnInterrupt(cmd.Context(), cmd.ErrOrStderr())
+				cmd.SetContext(ctx)
+				runE := cmd.RunE
+				cmd.RunE = func(c *cobra.Command, args []string) error {
+					err := runE(c, args)
+					cleanup()
+					return err
+				}
+			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
