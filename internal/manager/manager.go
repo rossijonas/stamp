@@ -73,6 +73,12 @@ var ErrCheckUnsupported = errors.New("check not supported")
 // by a particular package manager (e.g. provides, autoremove).
 var ErrNotSupported = errors.New("not supported")
 
+// ErrConfirmationRequired is returned by destructive adapter methods when the
+// context carries no explicit operator consent (see WithYes). The CLI is the
+// only layer that sets consent, so any direct adapter invocation without it
+// fails closed instead of mutating the system.
+var ErrConfirmationRequired = errors.New("confirmation required")
+
 // exitCodeFromError attempts to extract a process exit code from an error.
 // Returns -1 if the error is not an *exec.ExitError or has no process state.
 func exitCodeFromError(err error) int {
@@ -162,6 +168,57 @@ type Adapter interface {
 	// ListHeld returns the list of currently held/pinned packages.
 	// Returns ErrNotSupported if the manager has no hold command.
 	ListHeld(ctx context.Context) ([]string, error)
+}
+
+// Preview describes what a destructive operation would do, rendered by the
+// adapter from its native dry-run. Interpretation is fully adapter-owned — the
+// CLI renders Output verbatim and never parses vendor output.
+type Preview struct {
+	// Output is the verbatim combined stdout+stderr of the native dry-run,
+	// including the transaction display a manager like dnf prints before an
+	// assume-no abort.
+	Output string
+	// Noop reports that no transaction would occur (e.g. the package is
+	// already installed and up to date). The CLI fails fast without prompting.
+	Noop bool
+}
+
+// Previewer is an optional capability interface implemented by adapters that
+// can render a native transaction preview (dry-run) before a destructive
+// operation. Preview methods MUST NOT modify system state — they only display
+// what a real operation would do.
+type Previewer interface {
+	// PreviewInstall previews installing pkg.
+	PreviewInstall(ctx context.Context, pkg string) (Preview, error)
+	// PreviewRemove previews removing pkg.
+	PreviewRemove(ctx context.Context, pkg string) (Preview, error)
+	// PreviewReinstall previews reinstalling pkg.
+	PreviewReinstall(ctx context.Context, pkg string) (Preview, error)
+}
+
+// yesKey is the context key for operator consent (see WithYes).
+type yesKey struct{}
+
+// WithYes returns a context that marks explicit operator consent for a
+// destructive operation. Only the CLI confirmation gate sets this, and only
+// after the user confirmed or passed -y/--yes.
+func WithYes(ctx context.Context) context.Context {
+	return context.WithValue(ctx, yesKey{}, true)
+}
+
+// isYes reports whether the context carries explicit operator consent.
+func isYes(ctx context.Context) bool {
+	v, _ := ctx.Value(yesKey{}).(bool)
+	return v
+}
+
+// requireConsent returns ErrConfirmationRequired when the context carries no
+// explicit operator consent. Destructive adapter methods call it first.
+func requireConsent(ctx context.Context) error {
+	if !isYes(ctx) {
+		return ErrConfirmationRequired
+	}
+	return nil
 }
 
 func init() {

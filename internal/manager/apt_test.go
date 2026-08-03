@@ -118,7 +118,7 @@ func TestAPT_Operations(t *testing.T) {
 			assert.Equal(t, "apt", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -199,7 +199,7 @@ func TestAPT_ListInstalled_Fallback(t *testing.T) {
 		return []byte("installed htop\ninstalled jq\nnot-installed curl\n"), nil
 	}
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"htop", "jq"}, pkgs)
 	assert.Equal(t, 2, calls)
@@ -214,7 +214,7 @@ func TestAPT_ListInstalled_BothFail(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	_, err := manager.ListInstalled(context.Background())
+	_, err := manager.ListInstalled(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
 }
@@ -224,7 +224,7 @@ func TestAPT_Info_Fallback(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("Package: htop\nVersion: 3.2.1\n", nil)
 
-	res, err := manager.Info(context.Background(), "htop")
+	res, err := manager.Info(WithYes(context.Background()), "htop")
 	require.NoError(t, err)
 	assert.Equal(t, "Package: htop\nVersion: 3.2.1\n", res)
 }
@@ -234,7 +234,7 @@ func TestAPT_Info_AptGet(t *testing.T) {
 	manager := NewAPT("apt-get")
 	manager.exec = mockExecutorHelper("Package: htop\nVersion: 3.2.1\n", nil)
 
-	res, err := manager.Info(context.Background(), "htop")
+	res, err := manager.Info(WithYes(context.Background()), "htop")
 	require.NoError(t, err)
 	assert.Equal(t, "Package: htop\nVersion: 3.2.1\n", res)
 }
@@ -242,7 +242,7 @@ func TestAPT_Info_AptGet(t *testing.T) {
 func TestAPT_Doctor_NotSupported(t *testing.T) {
 	t.Parallel()
 	manager := NewAPT("apt")
-	_, err := manager.Doctor(context.Background())
+	_, err := manager.Doctor(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "doctor not supported")
 }
@@ -338,7 +338,7 @@ func TestAPT_AddRepo_CustomURL(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	err := manager.AddRepo(context.Background(), "myrepo", "https://example.com/apt")
+	err := manager.AddRepo(WithYes(context.Background()), "myrepo", "https://example.com/apt")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to add repository")
 }
@@ -355,7 +355,7 @@ func TestAPT_Update_Phase2Fails(t *testing.T) {
 		return nil, assert.AnError // upgrade fails
 	}
 
-	err := manager.Update(context.Background(), "")
+	err := manager.Update(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
 }
@@ -369,7 +369,7 @@ func TestAPT_Update_Phase1Fails(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	err := manager.Update(context.Background(), "")
+	err := manager.Update(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Equal(t, 1, calls) // update should fail before upgrade is called
 }
@@ -378,7 +378,7 @@ func TestAPT_CheckUpdateExecError(t *testing.T) {
 	t.Parallel()
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -388,7 +388,7 @@ func TestAPT_CheckUpdate(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("htop/stable 3.2.2 amd64 [upgradable from: 3.2.1]\ngit/stable 2.43.2 amd64 [upgradable from: 2.43.0]\n", nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -400,7 +400,7 @@ func TestAPT_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
 	t.Parallel()
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -414,7 +414,7 @@ func TestAPT_RemoveRepo_NoFile(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", nil)
 
-	err := manager.RemoveRepo(context.Background(), "nonexistent-repo")
+	err := manager.RemoveRepo(WithYes(context.Background()), "nonexistent-repo")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "add-apt-repository not found")
 }
@@ -433,7 +433,7 @@ func TestAPT_RemoveRepo_WithFile(t *testing.T) {
 	manager.exec = mockExecutorHelper("", nil)
 
 	// Now the file exists in our overridden aptSourcesDir, and sudo rm is mocked
-	err := manager.RemoveRepo(context.Background(), "myrepo")
+	err := manager.RemoveRepo(WithYes(context.Background()), "myrepo")
 	require.NoError(t, err)
 }
 
@@ -452,7 +452,7 @@ func TestAPT_ListRepos_ThroughAdapter(t *testing.T) {
 		[]byte("deb https://myrepo.example.com/apt ./\n"), 0644))
 
 	manager := NewAPT("apt")
-	repos, err := manager.ListRepos(context.Background())
+	repos, err := manager.ListRepos(WithYes(context.Background()))
 	require.NoError(t, err)
 	require.Len(t, repos, 1)
 	assert.Equal(t, "myrepo.example.com/apt", repos[0].Name)
@@ -463,7 +463,7 @@ func TestAPT_Reinstall_Error(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	err := manager.Reinstall(context.Background(), "htop")
+	err := manager.Reinstall(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to reinstall")
 }
@@ -473,7 +473,7 @@ func TestAPT_Remove_Error(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	err := manager.Remove(context.Background(), "htop")
+	err := manager.Remove(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to remove")
 }
@@ -487,7 +487,7 @@ func TestAPT_AddRepo_PPA(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", nil)
 
-	err := manager.AddRepo(context.Background(), "ppa:git-core/ppa", "")
+	err := manager.AddRepo(WithYes(context.Background()), "ppa:git-core/ppa", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "add-apt-repository not found")
 }
@@ -501,7 +501,7 @@ func TestAPT_AddRepo_PPA_Success(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", nil)
 
-	err := manager.AddRepo(context.Background(), "ppa:git-core/ppa", "")
+	err := manager.AddRepo(WithYes(context.Background()), "ppa:git-core/ppa", "")
 	require.NoError(t, err)
 }
 
@@ -510,7 +510,7 @@ func TestAPT_AddRepo_CustomURL_ExecError(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	err := manager.AddRepo(context.Background(), "failrepo", "https://example.com/apt")
+	err := manager.AddRepo(WithYes(context.Background()), "failrepo", "https://example.com/apt")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to add repository")
 }
@@ -527,7 +527,7 @@ func TestAPT_RemoveRepo_FileExecError(t *testing.T) {
 	manager := NewAPT("apt")
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	err := manager.RemoveRepo(context.Background(), "failrepo")
+	err := manager.RemoveRepo(WithYes(context.Background()), "failrepo")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to remove repository")
 }
@@ -564,7 +564,7 @@ func TestAPT_ProvidesError(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "htop")
+	_, err := m.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 }
 
@@ -572,14 +572,14 @@ func TestAPT_AutoRemove(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestAPT_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
-	pkgs, err := m.AutoRemove(context.Background(), true)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, pkgs)
 }
@@ -588,14 +588,14 @@ func TestAPT_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestAPT_CleanDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
-	result, err := m.Clean(context.Background(), true)
+	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
@@ -604,7 +604,7 @@ func TestAPT_Hold(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", nil)
-	err := m.Hold(context.Background(), "nginx")
+	err := m.Hold(WithYes(context.Background()), "nginx")
 	require.NoError(t, err)
 }
 
@@ -612,7 +612,7 @@ func TestAPT_Unhold(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", nil)
-	err := m.Unhold(context.Background(), "nginx")
+	err := m.Unhold(WithYes(context.Background()), "nginx")
 	require.NoError(t, err)
 }
 
@@ -620,7 +620,7 @@ func TestAPT_ListHeld(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("nginx\nredis\n", nil)
-	pkgs, err := m.ListHeld(context.Background())
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
 }
@@ -629,7 +629,7 @@ func TestAPT_ListHeld_Empty(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", nil)
-	pkgs, err := m.ListHeld(context.Background())
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -638,7 +638,7 @@ func TestAPT_Hold_Error(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Hold(context.Background(), "nginx")
+	err := m.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to hold")
 }
@@ -646,7 +646,7 @@ func TestAPT_Hold_Error(t *testing.T) {
 func TestAPT_Hold_InvalidName(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
-	err := m.Hold(context.Background(), "-invalid")
+	err := m.Hold(WithYes(context.Background()), "-invalid")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid package name")
 }
@@ -655,7 +655,7 @@ func TestAPT_Unhold_Error(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Unhold(context.Background(), "nginx")
+	err := m.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unhold")
 }
@@ -664,7 +664,7 @@ func TestAPT_ListHeld_Error(t *testing.T) {
 	t.Parallel()
 	m := NewAPT("apt")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.ListHeld(context.Background())
+	_, err := m.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list held packages")
 }

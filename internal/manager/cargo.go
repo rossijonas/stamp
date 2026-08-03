@@ -67,6 +67,9 @@ func parseCargoList(output []byte) []string {
 
 // Install runs cargo install <pkg>.
 func (m *Cargo) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -79,6 +82,9 @@ func (m *Cargo) Install(ctx context.Context, pkg string) error {
 
 // Reinstall runs cargo install <pkg> --force to upgrade to the latest version.
 func (m *Cargo) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -91,6 +97,9 @@ func (m *Cargo) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove runs cargo uninstall <pkg>.
 func (m *Cargo) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -132,6 +141,9 @@ func (m *Cargo) Doctor(_ context.Context) (string, error) {
 
 // Update runs cargo install --force for batch or a single package.
 func (m *Cargo) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err

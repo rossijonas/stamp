@@ -65,8 +65,15 @@ tracked in the manifest, resolve the manager and track it.`,
 				adapter = resolved
 			}
 
+			// Confirmation gate: prompts unless -y is passed. Non-interactive
+			// runs without -y abort (fail closed).
+			if !confirmDestructive(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+				adapter, previewReinstall, "Reinstall", pkgName) {
+				return nil
+			}
+
 			// Execute native reinstall
-			if err := adapter.Reinstall(cmd.Context(), pkgName); err != nil {
+			if err := adapter.Reinstall(manager.WithYes(cmd.Context()), pkgName); err != nil {
 				return fmt.Errorf("reinstall failed: %w", err)
 			}
 

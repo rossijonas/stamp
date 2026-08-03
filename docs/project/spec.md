@@ -31,6 +31,21 @@ The complete surface area of the CLI, including aliases and flags.
 2. Actions MUST be subcommands, not flags. (e.g. `stamp man install`, not `stamp man --install`).
 3. Boolean flags for enabling/disabling behavior are acceptable (e.g. `--dry-run`, `--json`).
 
+### Confirmation & Consent Model
+
+Destructive commands (`install`, `remove`, `reinstall`, `restore`, `update`, `autoremove`, `clean`, `hold`, `unhold`, `repo add/remove`) share one fail-closed gate:
+
+1. `-y/--yes` skips refresh, preview, and prompt entirely.
+2. Otherwise the command renders the adapter-owned transaction preview (`manager.Previewer` returns a typed `Preview{Output, Noop}`; combined stdout+stderr, never parsed by the CLI — see [ADR-016](../decisions/ADR-016-unified-preview-contract.md)), then prompts with a default of **no** (`[y/N]`).
+3. A `Noop` preview (e.g. package already up to date, or remove of an absent package) fails fast with `nothing to do` — no prompt.
+4. A preview that cannot be rendered warns (`⚠ could not render preview`) and still prompts; managers without a `Previewer` do the same.
+5. **Non-interactive input without `-y` aborts** — pipelines and CI never silently mutate the system.
+6. After confirmation, the CLI marks the context with `manager.WithYes`; destructive adapter methods refuse to run without that marker (`ErrConfirmationRequired`). This is defense-in-depth at the privileged boundary.
+
+`autoremove`/`clean --dry-run` are read-only and never require consent.
+
+See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../decisions/ADR-016-unified-preview-contract.md) for the full design.
+
 **Core Commands:**
 
 | Command | Aliases | Flags | Description |
@@ -213,13 +228,13 @@ Detailed specifications, execution behaviors, and business rules for every subco
 
 - **Usage:** Installs a package natively and records it in the manifest.
 - **Flags:** `--manager`, `-m`, `--note`, `-n`
-- **Behavior:** Validates name, resolves manager, runs native install, appends package to manifest, saves manifest. For managers requiring root (e.g., DNF), write operations automatically wrap with `sudo` — TTY-aware, prompts for password when needed. On systems where `dnf` is unavailable, the adapter falls back to `yum` automatically.
+- **Behavior:** Validates name, resolves manager, refreshes metadata and shows a native dry-run preview, prompts for confirmation (`Install <pkg> via <mgr>? [y/N]`, default No, `-y` to skip), then runs native install, appends package to manifest, saves manifest. For managers requiring root (e.g., DNF), write operations automatically wrap with `sudo` — TTY-aware, prompts for password when needed. On systems where `dnf` is unavailable, the adapter falls back to `yum` automatically.
 
 ### `stamp remove <pkg>` (aliases `uninstall`, `rm`, `delete`, `del`)
 
 - **Usage:** Removes a package natively and untracks it.
 - **Flags:** `--manager`, `-m`
-- **Behavior:** Looks up recorded manager from manifest if not overridden by `-m`. Runs native remove, deletes package from manifest, saves manifest.
+- **Behavior:** Looks up recorded manager from manifest if not overridden by `-m`. Prompts for confirmation (`Remove <pkg> via <mgr>? [y/N]`, `-y` to skip). Runs native remove, deletes package from manifest, saves manifest.
 
 ### `stamp reinstall <pkg>` (C4)
 
@@ -229,7 +244,8 @@ Detailed specifications, execution behaviors, and business rules for every subco
   1. Looks up `<pkg>` in the manifest.toml.
   2. **If found:** Resolves its recorded manager (e.g. `brew`). Calls `adapter.Install()` on the active manager.
   3. **If NOT found (pre-existing package):** Resolves manager via the 3-tier resolution engine. Runs native reinstall command (e.g. `dnf reinstall htop`). Falls back to native install if reinstall not supported. Appends package to manifest.
-  4. Saves new system snapshots and saves manifest (updates `updated_at`).
+  4. Before executing, prompts for confirmation (`Reinstall <pkg> via <mgr>? [y/N]`, default No, `-y` to skip).
+  5. Saves new system snapshots and saves manifest (updates `updated_at`).
 - **Output:** `reinstalled htop via brew` to stderr.
 
 ### `stamp search <query>`
@@ -282,7 +298,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
 
 - **Usage:** Restores environment on a new machine from the manifest.
 - **Flags:** `--dry-run`, `-d`, `--manager`, `-m` (Proposed)
-- **Behavior:** Adds repositories sequentially in Phase 1, then installs packages concurrently in Phase 2.
+- **Behavior:** Adds repositories sequentially in Phase 1, then installs packages concurrently in Phase 2. Prompts for confirmation before running (`Restore tracked repositories and packages? [y/N]`, default No, `-y` to skip); `--dry-run` previews without prompting.
 
 ### `stamp doctor`
 
@@ -316,7 +332,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
      e. If `--check` / `-c` is set: the command displays the check results/notices and exits 0 immediately without performing any upgrades.
   2. **Confirm Phase:**
      a. If `-y` is set: the confirmation prompt is skipped.
-     b. Otherwise: the CLI displays the aggregated list of available updates/warnings and prompts the user to confirm. If rejected, exits 0.
+     b. Otherwise: the CLI displays the aggregated list of available updates/warnings and prompts the user to confirm. The prompt defaults to **no** (`[y/N]`); non-interactive input without `-y` aborts (fail closed). If rejected, exits 0.
   3. **Run Phase:**
      a. If `-m` is set: runs that single manager's native upgrade command.
      b. If `-p <pkg>` is set (requires `-m`): updates only the specified package instead of all packages.
@@ -496,6 +512,7 @@ The Uv adapter supports `uv tool install` for CLI tools from the Python ecosyste
 - **Never:** Mutate the actual system state (run native installs) during a `reconcile` or `list` command.
 - **Never:** Use flags to represent actions (e.g. `--install`). Use subcommands instead.
 - **Never:** Present interactive prompts during `stamp reconcile`. The command is fully deterministic.
+- **Never:** Execute destructive adapter operations without explicit consent (`manager.WithYes`). The CLI gate is the only source of consent.
 
 ## Edge Cases
 

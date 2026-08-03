@@ -58,6 +58,8 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 **`[$]` UNIX Compliant** — XDG Base Directory, NO_COLOR support, strict stdout/stderr separation, and TTY-aware sudo.
 
+**`[x]` Safety-First Confirmation** — Destructive commands (`install`, `remove`, `reinstall`, `restore`, `update`, `autoremove`, `clean`, `hold`, `unhold`, `repo add/remove`) show a native transaction preview and prompt before making changes. Pass `-y`/`--yes` to skip confirmation in scripts; non-interactive runs without `-y` abort instead of proceeding silently.
+
 See **[Installation](https://gostamp.dev/getting-started/installation.html)**, **[Usage](https://gostamp.dev/usage/)**, **[CLI Reference](https://gostamp.dev/usage/stamp.html)**, and more at  **[https://gostamp.dev](https://gostamp.dev)**.
 
 ## ▪ Compatibility

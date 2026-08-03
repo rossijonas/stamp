@@ -123,7 +123,7 @@ func TestSaveManifestError(t *testing.T) {
 	root := NewRootCmd(WithAdapters([]manager.Adapter{&mockAdapter{name: "dnf"}}), WithConfigPath(cPath), WithManifestPath(mPath))
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"install", "htop"})
+	root.SetArgs([]string{"install", "htop", "-y"})
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to save manifest")
@@ -297,21 +297,21 @@ func TestGlobalFlags(t *testing.T) {
 
 func TestInstallCmd_ExecutesInstall(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	buf, err := execCmd(t, []string{"install", "htop", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "installed htop via dnf")
 }
 
 func TestRemoveCmd_ExecutesRemove(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	buf, err := execCmd(t, []string{"remove", "htop", "-y"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "removed htop via brew")
 }
 
 func TestRemoveCmd_WithManagerFlag(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"remove", "htop", "-m", "dnf"}, []manager.Adapter{
+	buf, err := execCmd(t, []string{"remove", "htop", "-m", "dnf", "-y"}, []manager.Adapter{
 		&mockAdapter{name: "dnf"}, &mockAdapter{name: "brew"},
 	})
 	require.NoError(t, err)
@@ -351,7 +351,7 @@ func TestSearchCmd_UnknownManager(t *testing.T) {
 
 func TestRemoveCmd_NoAdapters(t *testing.T) {
 	t.Parallel()
-	_, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{})
+	_, err := execCmd(t, []string{"remove", "htop", "-y"}, []manager.Adapter{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no package managers available")
 }
@@ -372,21 +372,21 @@ func TestSearchCmd_NoResultsWithEmpty(t *testing.T) {
 
 func TestRepoAddCmd_Executes(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	buf, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew", "-y"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "added repo mytap via brew")
 }
 
 func TestRepoRemoveCmd_Executes(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak"}, []manager.Adapter{&mockAdapter{name: "flatpak"}})
+	buf, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak", "-y"}, []manager.Adapter{&mockAdapter{name: "flatpak"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "removed repo mytap via flatpak")
 }
 
 func TestInstallCmd_Error(t *testing.T) {
 	t.Parallel()
-	_, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&mockAdapter{name: "dnf", err: errors.New("install failed")}})
+	_, err := execCmd(t, []string{"install", "htop", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf", err: errors.New("install failed")}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "install failed")
 }
@@ -398,7 +398,7 @@ func TestInstallCmd_CorruptedManifest(t *testing.T) {
 	mPath := filepath.Join(tmpDir, "manifest.toml")
 	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
 	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	root.SetArgs([]string{"install", "htop"})
+	root.SetArgs([]string{"install", "htop", "-y"})
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse manifest")
@@ -406,7 +406,7 @@ func TestInstallCmd_CorruptedManifest(t *testing.T) {
 
 func TestRemoveCmd_Error(t *testing.T) {
 	t.Parallel()
-	_, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{&mockAdapter{name: "brew", err: errors.New("remove failed")}})
+	_, err := execCmd(t, []string{"remove", "htop", "-y"}, []manager.Adapter{&mockAdapter{name: "brew", err: errors.New("remove failed")}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "remove failed")
 }
@@ -418,7 +418,7 @@ func TestRemoveCmd_CorruptedManifest(t *testing.T) {
 	mPath := filepath.Join(tmpDir, "manifest.toml")
 	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
 	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	root.SetArgs([]string{"remove", "htop"})
+	root.SetArgs([]string{"remove", "htop", "-y"})
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse manifest")
@@ -426,7 +426,7 @@ func TestRemoveCmd_CorruptedManifest(t *testing.T) {
 
 func TestRepoAddCmd_Error(t *testing.T) {
 	t.Parallel()
-	_, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew", err: errors.New("add repo failed")}})
+	_, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew", "-y"}, []manager.Adapter{&mockAdapter{name: "brew", err: errors.New("add repo failed")}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "add repo failed")
 }
@@ -446,7 +446,7 @@ func TestRepoAddCmd_CorruptedManifest(t *testing.T) {
 
 func TestRepoRemoveCmd_Error(t *testing.T) {
 	t.Parallel()
-	_, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak"}, []manager.Adapter{&mockAdapter{name: "flatpak", err: errors.New("remove repo failed")}})
+	_, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak", "-y"}, []manager.Adapter{&mockAdapter{name: "flatpak", err: errors.New("remove repo failed")}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "remove repo failed")
 }
@@ -534,7 +534,7 @@ func TestInstallCmd_InvalidName(t *testing.T) {
 
 func TestInstallCmd_GoModulePath(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"install", "github.com/example/tool", "-m", "go"},
+	buf, err := execCmd(t, []string{"install", "github.com/example/tool", "-m", "go", "-y"},
 		[]manager.Adapter{&mockAdapter{name: "go"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "installed github.com/example/tool via go")
@@ -554,7 +554,7 @@ func TestAliasesWork(t *testing.T) {
 		{"add", "htop"}, {"uninstall", "htop"}, {"rm", "htop"}, {"delete", "htop"}, {"del", "htop"},
 	} {
 		t.Run(alias.cmd, func(t *testing.T) {
-			buf, err := execCmd(t, []string{alias.cmd, alias.pkg}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+			buf, err := execCmd(t, []string{alias.cmd, alias.pkg, "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
 			require.NoError(t, err)
 			assert.True(t, strings.Contains(buf.String(), "installed") || strings.Contains(buf.String(), "removed"),
 				"alias %s produced unexpected output: %s", alias.cmd, buf.String())
@@ -571,7 +571,7 @@ func TestRepoAliasesWork(t *testing.T) {
 		{"repo del", "del"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			buf, err := execCmd(t, []string{"repo", tc.args, "mytap", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+			buf, err := execCmd(t, []string{"repo", tc.args, "mytap", "-m", "brew", "-y"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 			require.NoError(t, err)
 			assert.NotEmpty(t, buf.String())
 		})
@@ -604,7 +604,7 @@ func TestSearchResultsToStdout(t *testing.T) {
 
 func TestInstallCmd_WithManagerFlag(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"install", "lazygit", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	buf, err := execCmd(t, []string{"install", "lazygit", "-m", "brew", "-y"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "installed lazygit via brew")
 }
@@ -612,7 +612,7 @@ func TestInstallCmd_WithManagerFlag(t *testing.T) {
 func TestInstallCmd_WithNote(t *testing.T) {
 	t.Parallel()
 	adapter := &mockAdapter{name: "dnf"}
-	buf, err := execCmd(t, []string{"install", "htop", "--note", "needed for work"}, []manager.Adapter{adapter})
+	buf, err := execCmd(t, []string{"install", "htop", "--note", "needed for work", "-y"}, []manager.Adapter{adapter})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "installed htop via dnf")
 }
@@ -629,7 +629,7 @@ func TestRemoveCmd_WithManifestLookup(t *testing.T) {
 	root1 := NewRootCmd(WithAdapters(adapters), WithConfigPath(cPath), WithManifestPath(mPath))
 	root1.SetOut(installBuf)
 	root1.SetErr(installBuf)
-	root1.SetArgs([]string{"install", "htop"})
+	root1.SetArgs([]string{"install", "htop", "-y"})
 	require.NoError(t, root1.Execute())
 
 	// Now remove should find htop in manifest and use dnf
@@ -637,14 +637,14 @@ func TestRemoveCmd_WithManifestLookup(t *testing.T) {
 	root2 := NewRootCmd(WithAdapters(adapters), WithConfigPath(cPath), WithManifestPath(mPath))
 	root2.SetOut(removeBuf)
 	root2.SetErr(removeBuf)
-	root2.SetArgs([]string{"remove", "htop"})
+	root2.SetArgs([]string{"remove", "htop", "-y"})
 	require.NoError(t, root2.Execute())
 	assert.Contains(t, removeBuf.String(), "removed htop via dnf")
 }
 
 func TestRepoAddCmd_WithURL(t *testing.T) {
 	t.Parallel()
-	buf, err := execCmd(t, []string{"repo", "add", "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo", "-m", "flatpak"},
+	buf, err := execCmd(t, []string{"repo", "add", "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo", "-m", "flatpak", "-y"},
 		[]manager.Adapter{&mockAdapter{name: "flatpak"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "added repo flathub via flatpak")
@@ -653,7 +653,7 @@ func TestRepoAddCmd_WithURL(t *testing.T) {
 func TestResolveAmbiguousInInstall(t *testing.T) {
 	t.Parallel()
 	// Adapter "apt" not in default precedence → Tier 3 returns "specify --manager"
-	_, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&mockAdapter{name: "apt"}})
+	_, err := execCmd(t, []string{"install", "htop", "-y"}, []manager.Adapter{&mockAdapter{name: "apt"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "specify --manager")
 }
@@ -901,7 +901,7 @@ func TestMiddleware_CancelsCommandOnSigint(t *testing.T) {
 	_ = w.Close()
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"install", "htop"})
+	root.SetArgs([]string{"install", "htop", "-y"})
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- root.Execute() }()

@@ -61,6 +61,9 @@ func (m *Zypper) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via zypper.
 func (m *Zypper) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -74,6 +77,9 @@ func (m *Zypper) Install(ctx context.Context, pkg string) error {
 
 // Reinstall reinstalls a package via zypper.
 func (m *Zypper) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -87,6 +93,9 @@ func (m *Zypper) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove removes a package via zypper.
 func (m *Zypper) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -97,6 +106,52 @@ func (m *Zypper) Remove(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// PreviewInstall previews installing pkg.
+// zypper install --dry-run prints the transaction without applying it.
+func (m *Zypper) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, m.cmd, "install", "--dry-run", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "Nothing to do.")}, nil
+}
+
+// PreviewRemove previews removing pkg.
+func (m *Zypper) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, m.cmd, "remove", "--dry-run", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "Nothing to do.") || strings.Contains(s, "not installed")}, nil
+}
+
+// PreviewReinstall previews reinstalling pkg.
+// zypper reinstall is `install --force`, which is a real operation whether or
+// not the package is already installed, so it is never a no-op.
+func (m *Zypper) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, m.cmd, "install", "--force", "--dry-run", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
+	}
+	return Preview{Output: string(out)}, nil
+}
+
+var _ Previewer = (*Zypper)(nil)
 
 // Search searches for packages via zypper.
 func (m *Zypper) Search(ctx context.Context, query string) ([]string, error) {
@@ -129,6 +184,9 @@ func (m *Zypper) Doctor(_ context.Context) (string, error) {
 
 // Update runs a full system upgrade via zypper.
 func (m *Zypper) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	args := sudoCmd(m.cmd, "update", "-y")
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
@@ -160,6 +218,11 @@ func (m *Zypper) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 
 // Clean runs zypper clean to clear the package cache.
 func (m *Zypper) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -182,6 +245,11 @@ func (m *Zypper) Provides(ctx context.Context, query string) ([]string, error) {
 
 // AutoRemove removes unneeded dependencies via zypper rm -u.
 func (m *Zypper) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}

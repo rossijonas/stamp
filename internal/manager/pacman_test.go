@@ -164,7 +164,7 @@ func TestPacman_Operations(t *testing.T) {
 			assert.Equal(t, "pacman", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -296,7 +296,7 @@ func TestPacman_CheckUpdateExecError(t *testing.T) {
 	manager := NewPacman()
 	// Plain error (not exit 1) → wrapped error
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -306,7 +306,7 @@ func TestPacman_CheckUpdate(t *testing.T) {
 	manager := NewPacman()
 	manager.exec = mockExecutorHelper("htop 3.2.1 -> 3.2.2\ngit 2.43.0 -> 2.43.2\n", nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -318,7 +318,7 @@ func TestPacman_CheckUpdate_Fails(t *testing.T) {
 	t.Parallel()
 	manager := NewPacman()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -337,7 +337,7 @@ func TestPacman_ProvidesError(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "/usr/bin/htop")
+	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
 	require.Error(t, err)
 }
 
@@ -345,7 +345,7 @@ func TestPacman_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("", nil)
-	pkgs, err := m.AutoRemove(context.Background(), true)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -365,7 +365,7 @@ func TestPacman_AutoRemove_WithOrphans(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	pkgs, err := m.AutoRemove(context.Background(), false)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"libfoo", "libbar"}, pkgs)
 	assert.Equal(t, 2, call)
@@ -375,7 +375,7 @@ func TestPacman_AutoRemove_ExecError(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list orphans")
 }
@@ -384,14 +384,14 @@ func TestPacman_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestPacman_CleanDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
-	result, err := m.Clean(context.Background(), true)
+	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
@@ -420,7 +420,7 @@ func TestPacman_Hold_AddsToIgnorePkg(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := m.Hold(context.Background(), "htop")
+	err := m.Hold(WithYes(context.Background()), "htop")
 	require.NoError(t, err)
 	assert.Equal(t, 2, call)
 }
@@ -429,7 +429,7 @@ func TestPacman_Hold_AlreadyHeld(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper(testPacmanConf, nil)
-	err := m.Hold(context.Background(), "nginx")
+	err := m.Hold(WithYes(context.Background()), "nginx")
 	require.NoError(t, err)
 }
 
@@ -448,7 +448,7 @@ func TestPacman_Hold_AddsNewSection(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := m.Hold(context.Background(), "htop")
+	err := m.Hold(WithYes(context.Background()), "htop")
 	require.NoError(t, err)
 	assert.Equal(t, 2, call)
 }
@@ -468,7 +468,7 @@ func TestPacman_Unhold_RemovesFromIgnorePkg(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := m.Unhold(context.Background(), "nginx")
+	err := m.Unhold(WithYes(context.Background()), "nginx")
 	require.NoError(t, err)
 	assert.Equal(t, 2, call)
 }
@@ -477,7 +477,7 @@ func TestPacman_Unhold_NotHeld(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper(testPacmanConf, nil)
-	err := m.Unhold(context.Background(), "htop")
+	err := m.Unhold(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not held")
 }
@@ -486,7 +486,7 @@ func TestPacman_ListHeld(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper(testPacmanConf, nil)
-	pkgs, err := m.ListHeld(context.Background())
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
 }
@@ -495,7 +495,7 @@ func TestPacman_ListHeld_Empty(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("[options]\nArchitecture = auto\n", nil)
-	pkgs, err := m.ListHeld(context.Background())
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -503,7 +503,7 @@ func TestPacman_ListHeld_Empty(t *testing.T) {
 func TestPacman_Hold_InvalidName(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
-	err := m.Hold(context.Background(), "-invalid")
+	err := m.Hold(WithYes(context.Background()), "-invalid")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid package name")
 }
@@ -511,7 +511,7 @@ func TestPacman_Hold_InvalidName(t *testing.T) {
 func TestPacman_Unhold_InvalidName(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
-	err := m.Unhold(context.Background(), "-invalid")
+	err := m.Unhold(WithYes(context.Background()), "-invalid")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid package name")
 }
@@ -520,7 +520,7 @@ func TestPacman_Hold_ReadError(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Hold(context.Background(), "nginx")
+	err := m.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read pacman.conf")
 }
@@ -529,7 +529,7 @@ func TestPacman_Unhold_ReadError(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Unhold(context.Background(), "nginx")
+	err := m.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read pacman.conf")
 }
@@ -538,7 +538,7 @@ func TestPacman_ListHeld_ReadError(t *testing.T) {
 	t.Parallel()
 	m := NewPacman()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.ListHeld(context.Background())
+	_, err := m.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read pacman.conf")
 }
@@ -558,7 +558,7 @@ func TestPacman_Hold_WriteError(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := m.Hold(context.Background(), "htop")
+	err := m.Hold(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to write pacman.conf")
 }

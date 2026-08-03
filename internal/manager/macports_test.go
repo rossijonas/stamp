@@ -170,7 +170,7 @@ func TestMacPorts_Operations(t *testing.T) {
 			assert.Equal(t, "macports", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -326,7 +326,7 @@ func TestMacPorts_CheckUpdateExecError(t *testing.T) {
 	t.Parallel()
 	manager := NewMacPorts()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to sync ports tree")
 }
@@ -336,7 +336,7 @@ func TestMacPorts_CheckUpdate(t *testing.T) {
 	manager := NewMacPorts()
 	manager.exec = mockExecutorHelper("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n", nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -354,7 +354,7 @@ func TestMacPorts_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
 		return nil, assert.AnError // port outdated fails
 	}
 
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -373,14 +373,14 @@ func TestMacPorts_ProvidesError(t *testing.T) {
 	t.Parallel()
 	m := NewMacPorts()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "/usr/bin/htop")
+	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
 	require.Error(t, err)
 }
 
 func TestMacPorts_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewMacPorts()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -388,7 +388,7 @@ func TestMacPorts_Hold_NotSupported(t *testing.T) {
 func TestMacPorts_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewMacPorts()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -396,7 +396,7 @@ func TestMacPorts_Unhold_NotSupported(t *testing.T) {
 func TestMacPorts_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewMacPorts()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -405,7 +405,7 @@ func TestMacPorts_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewMacPorts()
 	m.exec = mockExecutorHelper("", nil)
-	pkgs, err := m.AutoRemove(context.Background(), true)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, pkgs)
 }
@@ -414,7 +414,7 @@ func TestMacPorts_AutoRemove(t *testing.T) {
 	t.Parallel()
 	m := NewMacPorts()
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
@@ -422,14 +422,14 @@ func TestMacPorts_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewMacPorts()
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestMacPorts_CleanDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewMacPorts()
-	result, err := m.Clean(context.Background(), true)
+	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }

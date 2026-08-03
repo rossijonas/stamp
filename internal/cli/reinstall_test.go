@@ -36,7 +36,7 @@ manager = "brew"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reinstall", "htop"})
+	root.SetArgs([]string{"reinstall", "htop", "-y"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ system = "linux"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reinstall", "htop"})
+	root.SetArgs([]string{"reinstall", "htop", "-y"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -102,7 +102,7 @@ system = "linux"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reinstall", "htop", "-m", "brew"})
+	root.SetArgs([]string{"reinstall", "htop", "-m", "brew", "-y"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestReinstallCmd_PreExistingAmbiguous(t *testing.T) {
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reinstall", "htop"})
+	root.SetArgs([]string{"reinstall", "htop", "-y"})
 
 	err := root.Execute()
 	require.Error(t, err)
@@ -152,7 +152,7 @@ manager = "dnf"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reinstall", "htop"})
+	root.SetArgs([]string{"reinstall", "htop", "-y"})
 
 	err := root.Execute()
 	require.Error(t, err)
@@ -182,7 +182,7 @@ manager = "brew"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"reinstall", "htop"})
+	root.SetArgs([]string{"reinstall", "htop", "-y"})
 
 	err := root.Execute()
 	require.Error(t, err)
@@ -206,7 +206,7 @@ func TestReinstallCmd_CorruptedManifest(t *testing.T) {
 	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
 
 	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
-	root.SetArgs([]string{"reinstall", "htop"})
+	root.SetArgs([]string{"reinstall", "htop", "-y"})
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse manifest")

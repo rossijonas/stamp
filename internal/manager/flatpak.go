@@ -61,6 +61,9 @@ func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install executes the native installation command.
 func (m *Flatpak) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -74,6 +77,9 @@ func (m *Flatpak) Install(ctx context.Context, pkg string) error {
 
 // Reinstall executes the native reinstallation command.
 func (m *Flatpak) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -86,6 +92,9 @@ func (m *Flatpak) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove executes the native removal command.
 func (m *Flatpak) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -95,6 +104,43 @@ func (m *Flatpak) Remove(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// PreviewInstall previews installing pkg.
+// flatpak install --dry-run simulates the installation without changes.
+func (m *Flatpak) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, "flatpak", "install", "--dry-run", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "Nothing to do.")}, nil
+}
+
+// PreviewRemove previews removing pkg.
+func (m *Flatpak) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, "flatpak", "uninstall", "--dry-run", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "Nothing to uninstall") || strings.Contains(s, "No such ref") || strings.Contains(s, "is not installed")}, nil
+}
+
+// PreviewReinstall previews reinstalling pkg.
+// flatpak reinstalls via the same install operation.
+func (m *Flatpak) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+	return m.PreviewInstall(ctx, pkg)
+}
+
+var _ Previewer = (*Flatpak)(nil)
 
 // Search queries the native package manager for the given package name.
 func (m *Flatpak) Search(ctx context.Context, query string) ([]string, error) {
@@ -152,6 +198,9 @@ func parseFlatpakRemotes(output []byte) []RepositoryInfo {
 
 // AddRepo enables a third-party remote.
 func (m *Flatpak) AddRepo(ctx context.Context, name, url string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if url == "" {
 		return fmt.Errorf("flatpak requires a url to add remote %s", name)
 	}
@@ -164,6 +213,9 @@ func (m *Flatpak) AddRepo(ctx context.Context, name, url string) error {
 
 // RemoveRepo disables a third-party remote.
 func (m *Flatpak) RemoveRepo(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	_, err := m.exec(WithStreamIO(ctx), "flatpak", "remote-delete", name)
 	if err != nil {
 		return fmt.Errorf("failed to remove remote %s: %w", name, err)
@@ -190,6 +242,9 @@ func (m *Flatpak) Doctor(_ context.Context) (string, error) {
 
 // Update runs the native flatpak update command.
 func (m *Flatpak) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	args := []string{"update", "-y"}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
@@ -249,6 +304,11 @@ func (m *Flatpak) Provides(_ context.Context, _ string) ([]string, error) {
 
 // AutoRemove removes unused runtimes via flatpak uninstall --unused.
 func (m *Flatpak) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}

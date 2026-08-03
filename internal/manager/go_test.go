@@ -45,7 +45,7 @@ func TestGo_Install(t *testing.T) {
 		assert.Equal(t, []string{"install", "github.com/example/tool@latest"}, args)
 		return nil, nil
 	}
-	err := mgr.Install(context.Background(), "github.com/example/tool")
+	err := mgr.Install(WithYes(context.Background()), "github.com/example/tool")
 	require.NoError(t, err)
 	assert.Equal(t, 1, calls)
 }
@@ -53,7 +53,7 @@ func TestGo_Install(t *testing.T) {
 func TestGo_Install_ShortName(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	err := mgr.Install(context.Background(), "tool")
+	err := mgr.Install(WithYes(context.Background()), "tool")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "full module path")
 }
@@ -61,7 +61,7 @@ func TestGo_Install_ShortName(t *testing.T) {
 func TestGo_Install_InvalidChars(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	err := mgr.Install(context.Background(), "github.com/too;l/evil")
+	err := mgr.Install(WithYes(context.Background()), "github.com/too;l/evil")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid module path")
 }
@@ -75,7 +75,7 @@ func TestGo_Reinstall(t *testing.T) {
 		assert.Equal(t, []string{"install", "github.com/example/tool@latest"}, args)
 		return nil, nil
 	}
-	err := mgr.Reinstall(context.Background(), "github.com/example/tool")
+	err := mgr.Reinstall(WithYes(context.Background()), "github.com/example/tool")
 	require.NoError(t, err)
 	assert.Equal(t, 1, calls)
 }
@@ -98,7 +98,7 @@ func TestGo_ListInstalled(t *testing.T) {
 	mgr := NewGo()
 	mgr.exec = goExecTest(nil, tmpDir, nil)
 
-	pkgs, err := mgr.ListInstalled(context.Background())
+	pkgs, err := mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	// go version -m fails on test fixtures → fallback to binary names
 	assert.ElementsMatch(t, []string{"htop", "jq", "lazygit"}, pkgs)
@@ -108,7 +108,7 @@ func TestGo_ListInstalled_DirNotExist(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
 	mgr.exec = goExecTest(nil, "/nonexistent/gopath", nil)
-	pkgs, err := mgr.ListInstalled(context.Background())
+	pkgs, err := mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -126,7 +126,7 @@ func TestGo_Remove(t *testing.T) {
 	mgr := NewGo()
 	mgr.exec = goExecTest(nil, tmpDir, nil)
 
-	err := mgr.Remove(context.Background(), "github.com/example/tool")
+	err := mgr.Remove(WithYes(context.Background()), "github.com/example/tool")
 	require.NoError(t, err)
 	// Verify the file was actually removed via os.Remove
 	_, err = os.Stat(binPath)
@@ -137,7 +137,7 @@ func TestGo_Remove_Missing(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
 	mgr.exec = goExecTest(nil, "/nonexistent/gopath", nil)
-	err := mgr.Remove(context.Background(), "github.com/example/tool")
+	err := mgr.Remove(WithYes(context.Background()), "github.com/example/tool")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found in go bin directory")
 }
@@ -145,7 +145,7 @@ func TestGo_Remove_Missing(t *testing.T) {
 func TestGo_Remove_InvalidBinName(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	err := mgr.Remove(context.Background(), "github.com/example/..")
+	err := mgr.Remove(WithYes(context.Background()), "github.com/example/..")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "binary name must be a simple filename")
 }
@@ -163,7 +163,7 @@ func TestGo_Remove_BaseNormalized(t *testing.T) {
 	mgr := NewGo()
 	mgr.exec = goExecTest(nil, tmpDir, nil)
 
-	err := mgr.Remove(context.Background(), "github.com/example/a/b/tool")
+	err := mgr.Remove(WithYes(context.Background()), "github.com/example/a/b/tool")
 	require.NoError(t, err)
 	// Verify the correct binary was removed
 	_, err = os.Stat(binPath)
@@ -186,7 +186,7 @@ func TestGo_Info(t *testing.T) {
 		return []byte("module info"), nil
 	})
 
-	res, err := mgr.Info(context.Background(), "github.com/example/tool")
+	res, err := mgr.Info(WithYes(context.Background()), "github.com/example/tool")
 	require.NoError(t, err)
 	assert.Equal(t, "module info", res)
 }
@@ -194,7 +194,7 @@ func TestGo_Info(t *testing.T) {
 func TestGo_Info_TraversalGuard(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	_, err := mgr.Info(context.Background(), "github.com/example/..")
+	_, err := mgr.Info(WithYes(context.Background()), "github.com/example/..")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "binary name must be a simple filename")
 }
@@ -208,7 +208,7 @@ func TestGo_Update_Single(t *testing.T) {
 		assert.Equal(t, []string{"install", "github.com/example/tool@latest"}, args)
 		return nil, nil
 	}
-	err := mgr.Update(context.Background(), "github.com/example/tool")
+	err := mgr.Update(WithYes(context.Background()), "github.com/example/tool")
 	require.NoError(t, err)
 	assert.Equal(t, 1, calls)
 }
@@ -238,7 +238,7 @@ func TestGo_Update_Batch(t *testing.T) {
 		return nil, nil
 	}
 
-	err := mgr.Update(context.Background(), "")
+	err := mgr.Update(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	// "tool" has no "/" → skipped; no install calls
 	assert.Len(t, calls, 3) // GOBIN + GOPATH + version -m
@@ -277,7 +277,7 @@ func TestGo_Update_Batch_AllFail(t *testing.T) {
 		return nil, nil
 	}
 
-	err := mgr.Update(context.Background(), "")
+	err := mgr.Update(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Positive(t, installCalls)
 	assert.ErrorIs(t, err, assert.AnError)
@@ -320,7 +320,7 @@ func TestGo_Update_Batch_PartialFail(t *testing.T) {
 		return nil, nil
 	}
 
-	err := mgr.Update(context.Background(), "")
+	err := mgr.Update(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Equal(t, 2, callCount)
 	assert.ErrorIs(t, err, assert.AnError)
@@ -329,7 +329,7 @@ func TestGo_Update_Batch_PartialFail(t *testing.T) {
 func TestGo_Search_Error(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	results, err := mgr.Search(context.Background(), "anything")
+	results, err := mgr.Search(WithYes(context.Background()), "anything")
 	require.Error(t, err)
 	assert.Nil(t, results)
 	assert.Contains(t, err.Error(), "search not supported")
@@ -338,7 +338,7 @@ func TestGo_Search_Error(t *testing.T) {
 func TestGo_UnsupportedOperations(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	ctx := context.Background()
+	ctx := WithYes(context.Background())
 
 	_, err := mgr.Doctor(ctx)
 	require.Error(t, err)
@@ -370,14 +370,14 @@ func TestGo_GoBinDir_Cache(t *testing.T) {
 	var execCalls int
 	mgr.exec = goExecTest(&execCalls, tmpDir, nil)
 
-	pkgs, err := mgr.ListInstalled(context.Background())
+	pkgs, err := mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Len(t, pkgs, 1)
 	// First call: GOBIN(1) + GOPATH(2) + version-m(3)
 	assert.Equal(t, 3, execCalls)
 
 	// Second call: binDir cached, only version -m per binary
-	pkgs, err = mgr.ListInstalled(context.Background())
+	pkgs, err = mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Len(t, pkgs, 1)
 	assert.Equal(t, 4, execCalls)
@@ -400,7 +400,7 @@ func TestGo_GoBinDir_GOBIN(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	pkgs, err := mgr.ListInstalled(context.Background())
+	pkgs, err := mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"gtop"}, pkgs)
 }
@@ -432,7 +432,7 @@ func TestGo_GoBinDir_MultiGOPATH(t *testing.T) {
 	}
 
 	// Should use the first GOPATH entry
-	dir, err := mgr.goBinDir(context.Background())
+	dir, err := mgr.goBinDir(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(tmpDir, "bin"), dir)
 }
@@ -460,7 +460,7 @@ func TestGo_ListInstalled_ModulePaths(t *testing.T) {
 		return nil, nil
 	}
 
-	pkgs, err := mgr.ListInstalled(context.Background())
+	pkgs, err := mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"github.com/example/tool"}, pkgs)
 }
@@ -486,7 +486,7 @@ func TestGo_ListInstalled_ModulePathFallback(t *testing.T) {
 		return nil, assert.AnError
 	})
 
-	pkgs, err := mgr.ListInstalled(context.Background())
+	pkgs, err := mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"github.com/example/modern", "legacy"}, pkgs)
 }
@@ -514,7 +514,7 @@ func TestGo_ListInstalled_GoBinDirFallback(t *testing.T) {
 	}
 
 	t.Setenv("HOME", tmpDir)
-	pkgs, err := mgr.ListInstalled(context.Background())
+	pkgs, err := mgr.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.NotEmpty(t, pkgs)
 	// 2 exec calls (GOBIN + GOPATH), HOME fallback used, then version -m
@@ -554,7 +554,7 @@ func TestValidateModulePath(t *testing.T) {
 func TestGo_CheckUpdate_Unsupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	_, err := mgr.CheckUpdate(context.Background(), "")
+	_, err := mgr.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrCheckUnsupported)
 }
@@ -566,7 +566,7 @@ func TestGo_GoBinDir_AllErrors(t *testing.T) {
 	}
 	t.Setenv("HOME", "/nonexistent_home_for_test")
 	// GOBIN + GOPATH fail → falls back to $HOME/go/bin
-	dir, err := mgr.goBinDir(context.Background())
+	dir, err := mgr.goBinDir(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Equal(t, "/nonexistent_home_for_test/go/bin", dir)
 }
@@ -580,7 +580,7 @@ func TestGo_Name(t *testing.T) {
 func TestGo_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	_, err := mgr.Provides(context.Background(), "htop")
+	_, err := mgr.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -588,7 +588,7 @@ func TestGo_ProvidesNotSupported(t *testing.T) {
 func TestGo_AutoRemoveNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -596,7 +596,7 @@ func TestGo_AutoRemoveNotSupported(t *testing.T) {
 func TestGo_CleanNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	_, err := mgr.Clean(context.Background(), false)
+	_, err := mgr.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -604,7 +604,7 @@ func TestGo_CleanNotSupported(t *testing.T) {
 func TestGo_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -612,7 +612,7 @@ func TestGo_Hold_NotSupported(t *testing.T) {
 func TestGo_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -620,7 +620,7 @@ func TestGo_Unhold_NotSupported(t *testing.T) {
 func TestGo_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewGo()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -636,6 +636,6 @@ func TestGo_Remove_ExecError(t *testing.T) {
 		}
 		return nil, assert.AnError // go version or removal fails
 	}
-	err := mgr.Remove(context.Background(), "github.com/example/tool")
+	err := mgr.Remove(WithYes(context.Background()), "github.com/example/tool")
 	require.Error(t, err)
 }

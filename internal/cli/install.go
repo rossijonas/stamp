@@ -70,7 +70,14 @@ func newInstallCmd() *cobra.Command {
 				installCtx = manager.WithGroup(installCtx)
 			}
 
-			if err := adapter.Install(installCtx, pkgName); err != nil {
+			// Confirmation gate: prompts unless -y is passed. Non-interactive
+			// runs without -y abort (fail closed).
+			if !confirmDestructive(installCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+				adapter, previewInstall, "Install", pkgName) {
+				return nil
+			}
+
+			if err := adapter.Install(manager.WithYes(installCtx), pkgName); err != nil {
 				return fmt.Errorf("install failed: %w", err)
 			}
 
@@ -177,7 +184,14 @@ func newRemoveCmd() *cobra.Command {
 				removeCtx = manager.WithGroup(removeCtx)
 			}
 
-			if err := adapter.Remove(removeCtx, pkgName); err != nil {
+			// Confirmation gate: prompts unless -y is passed. Non-interactive
+			// runs without -y abort (fail closed).
+			if !confirmDestructive(removeCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+				adapter, previewRemove, "Remove", pkgName) {
+				return nil
+			}
+
+			if err := adapter.Remove(manager.WithYes(removeCtx), pkgName); err != nil {
 				return fmt.Errorf("remove failed: %w", err)
 			}
 

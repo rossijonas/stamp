@@ -101,6 +101,9 @@ func parseAPTSources() ([]RepositoryInfo, error) {
 
 // AddRepo enables a third-party repository.
 func (m *APT) AddRepo(ctx context.Context, name, url string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if url == "" {
 		if _, err := lookPath("add-apt-repository"); err != nil {
 			return fmt.Errorf("add-apt-repository not found: install 'software-properties-common' to use PPAs")
@@ -138,6 +141,9 @@ func (m *APT) AddRepo(ctx context.Context, name, url string) error {
 
 // RemoveRepo disables a third-party repository.
 func (m *APT) RemoveRepo(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	listPath := filepath.Join(aptSourcesDir, fmt.Sprintf("%s.list", name))
 	if _, err := os.Stat(listPath); err == nil {
 		args := sudoCmd("rm", "-f", listPath)

@@ -10,7 +10,7 @@ import (
 )
 
 func TestHoldCmd_Success(t *testing.T) {
-	buf, err := execCmd(t, []string{"hold", "nginx", "-m", "apt"}, []manager.Adapter{
+	buf, err := execCmd(t, []string{"hold", "nginx", "-m", "apt", "-y"}, []manager.Adapter{
 		&manager.Mock{ManagerName: "apt"},
 	})
 	require.NoError(t, err)
@@ -19,7 +19,7 @@ func TestHoldCmd_Success(t *testing.T) {
 
 func TestHoldCmd_UnsupportedManager(t *testing.T) {
 	// mockAdapter.Hold returns ErrNotSupported → CLI skips it and falls through
-	_, err := execCmd(t, []string{"hold", "nginx", "-m", "dnf"}, []manager.Adapter{
+	_, err := execCmd(t, []string{"hold", "nginx", "-m", "dnf", "-y"}, []manager.Adapter{
 		&mockAdapter{name: "dnf"},
 	})
 	require.Error(t, err)
@@ -35,7 +35,7 @@ func TestHoldCmd_UnknownManager(t *testing.T) {
 }
 
 func TestUnholdCmd_Success(t *testing.T) {
-	buf, err := execCmd(t, []string{"unhold", "nginx", "-m", "apt"}, []manager.Adapter{
+	buf, err := execCmd(t, []string{"unhold", "nginx", "-m", "apt", "-y"}, []manager.Adapter{
 		&manager.Mock{ManagerName: "apt"},
 	})
 	require.NoError(t, err)

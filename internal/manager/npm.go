@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Npm implements the Adapter interface for npm (globally installed CLI tools).
@@ -67,6 +68,9 @@ func parseNpmLs(output []byte) []string {
 
 // Install runs npm install -g <pkg>.
 func (m *Npm) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -80,11 +84,17 @@ func (m *Npm) Install(ctx context.Context, pkg string) error {
 
 // Reinstall is the same as Install (npm install is idempotent).
 func (m *Npm) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	return m.Install(ctx, pkg)
 }
 
 // Remove runs npm uninstall -g <pkg>.
 func (m *Npm) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -95,6 +105,43 @@ func (m *Npm) Remove(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// PreviewInstall previews installing pkg.
+// npm install --dry-run reports what would be installed without changes.
+func (m *Npm) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, "npm", "install", "--dry-run", "-g", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "up to date")}, nil
+}
+
+// PreviewRemove previews removing pkg.
+func (m *Npm) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, "npm", "uninstall", "--dry-run", "-g", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "up to date")}, nil
+}
+
+// PreviewReinstall previews reinstalling pkg.
+// npm reinstalls via the same install operation.
+func (m *Npm) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+	return m.PreviewInstall(ctx, pkg)
+}
+
+var _ Previewer = (*Npm)(nil)
 
 // Search is not supported for npm.
 func (m *Npm) Search(_ context.Context, _ string) ([]string, error) {
@@ -120,6 +167,9 @@ func (m *Npm) Doctor(_ context.Context) (string, error) {
 
 // Update runs npm update -g for batch or a single package.
 func (m *Npm) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	var args []string
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {

@@ -3,6 +3,7 @@
 package manager
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -81,6 +82,9 @@ func (m *Brew) IsCask(ctx context.Context, pkg string) (bool, error) {
 // Install executes the native installation command.
 // Adds --cask when the context is marked as cask (via WithCask).
 func (m *Brew) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -99,6 +103,9 @@ func (m *Brew) Install(ctx context.Context, pkg string) error {
 // Reinstall executes the native reinstallation command.
 // Adds --cask when the context is marked as cask (via WithCask).
 func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -117,6 +124,9 @@ func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
 // Remove executes the native removal command.
 // Adds --cask when the context is marked as cask (via WithCask).
 func (m *Brew) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -131,6 +141,67 @@ func (m *Brew) Remove(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// PreviewInstall previews installing pkg.
+// brew install --dry-run prints what would be installed without changing
+// anything and without requiring root.
+func (m *Brew) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	args := []string{"install", "--dry-run"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkg)
+	out, err := m.exec(ctx, "brew", args...)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "is already installed")}, nil
+}
+
+// PreviewRemove previews removing pkg.
+func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	args := []string{"uninstall", "--dry-run"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkg)
+	out, err := m.exec(ctx, "brew", args...)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "No such keg") || strings.Contains(s, "is not installed")}, nil
+}
+
+// PreviewReinstall previews reinstalling pkg.
+func (m *Brew) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	args := []string{"reinstall", "--dry-run"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkg)
+	out, err := m.exec(ctx, "brew", args...)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "No such keg") || strings.Contains(s, "is not installed")}, nil
+}
+
+var _ Previewer = (*Brew)(nil)
 
 // Search queries the native package manager for the given package name.
 func (m *Brew) Search(ctx context.Context, query string) ([]string, error) {
@@ -161,6 +232,9 @@ func (m *Brew) ListRepos(ctx context.Context) ([]RepositoryInfo, error) {
 
 // AddRepo enables a third-party tap.
 func (m *Brew) AddRepo(ctx context.Context, name, url string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	var err error
 	if url != "" {
 		_, err = m.exec(WithStreamIO(ctx), "brew", "tap", name, url)
@@ -175,6 +249,9 @@ func (m *Brew) AddRepo(ctx context.Context, name, url string) error {
 
 // RemoveRepo disables a third-party tap.
 func (m *Brew) RemoveRepo(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	_, err := m.exec(WithStreamIO(ctx), "brew", "untap", name)
 	if err != nil {
 		return fmt.Errorf("failed to untap %s: %w", name, err)
@@ -207,6 +284,9 @@ func (m *Brew) Doctor(ctx context.Context) (string, error) {
 // For batch, also runs brew upgrade --cask to update casks.
 // If pkg is non-empty, upgrades only that package.
 func (m *Brew) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err
@@ -307,6 +387,11 @@ func (m *Brew) Provides(_ context.Context, _ string) ([]string, error) {
 
 // AutoRemove removes orphaned formulae via brew autoremove.
 func (m *Brew) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -319,6 +404,11 @@ func (m *Brew) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 
 // Clean runs brew cleanup to remove old package versions.
 func (m *Brew) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	args := []string{"cleanup"}
 	if dryRun {
 		args = append(args, "--dry-run")

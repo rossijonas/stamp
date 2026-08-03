@@ -87,6 +87,9 @@ func parseDPKGQueryInstalled(output []byte) []string {
 
 // Install executes the native installation command.
 func (m *APT) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -100,6 +103,9 @@ func (m *APT) Install(ctx context.Context, pkg string) error {
 
 // Reinstall executes the native reinstallation command.
 func (m *APT) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -113,6 +119,9 @@ func (m *APT) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove executes the native removal command.
 func (m *APT) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -123,6 +132,54 @@ func (m *APT) Remove(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// PreviewInstall previews installing pkg.
+// --assume-no implies --simulate: no root, no locks, no system change.
+func (m *APT) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, m.cmd, "install", "--assume-no", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	}
+	s := string(out)
+	noop := strings.Contains(s, "is already the newest version") || strings.Contains(s, "0 newly installed")
+	return Preview{Output: s, Noop: noop}, nil
+}
+
+// PreviewRemove previews removing pkg.
+// See PreviewInstall for the --assume-no semantics.
+func (m *APT) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, m.cmd, "remove", "--assume-no", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	}
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "is not installed") || strings.Contains(s, "0 to remove")}, nil
+}
+
+// PreviewReinstall previews reinstalling pkg.
+func (m *APT) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, m.cmd, "install", "--reinstall", "--assume-no", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
+	}
+	s := string(out)
+	noop := strings.Contains(s, "is already the newest version") || strings.Contains(s, "0 newly installed")
+	return Preview{Output: s, Noop: noop}, nil
+}
+
+var _ Previewer = (*APT)(nil)
 
 // Search queries the native package manager for the given package name.
 func (m *APT) Search(ctx context.Context, query string) ([]string, error) {
@@ -171,6 +228,9 @@ func (m *APT) Doctor(_ context.Context) (string, error) {
 // Update runs apt update then apt upgrade (two-phase).
 // If pkg is non-empty, updates only that package via apt install --only-upgrade.
 func (m *APT) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err
@@ -222,7 +282,26 @@ func (m *APT) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check updates: %w", err)
 	}
-	return parseAPTUpgradable(out), nil
+	result := parseAPTUpgradable(out)
+	// A bare "Listing..." header means no upgrades; anything else that did not
+	// parse signals the vendor changed the output format.
+	if len(result) == 0 && !aptOnlyUpgradableHeader(out) {
+		return nil, fmt.Errorf("unrecognized apt list --upgradable output (parser may be outdated)")
+	}
+	return result, nil
+}
+
+// aptOnlyUpgradableHeader reports whether the output consists solely of the
+// "Listing..." header (i.e. there are no upgrades).
+func aptOnlyUpgradableHeader(output []byte) bool {
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 || bytes.HasPrefix(trimmed, []byte("Listing")) {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func parseAPTUpgradable(output []byte) []UpdateInfo {
@@ -266,6 +345,11 @@ func (m *APT) Provides(ctx context.Context, query string) ([]string, error) {
 
 // AutoRemove removes orphaned packages via apt autoremove.
 func (m *APT) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -279,6 +363,11 @@ func (m *APT) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 
 // Clean runs apt clean to clear the package cache.
 func (m *APT) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -292,6 +381,9 @@ func (m *APT) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 
 // Hold pins a package via apt-mark hold.
 func (m *APT) Hold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -305,6 +397,9 @@ func (m *APT) Hold(ctx context.Context, pkg string) error {
 
 // Unhold removes a version pin via apt-mark unhold.
 func (m *APT) Unhold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}

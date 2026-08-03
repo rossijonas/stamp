@@ -43,8 +43,12 @@ Scoped to a single manager with the --manager flag.`,
 			}
 
 			hasWork := false
+			// Real cleanups require explicit consent; dry-run is read-only.
+			if !dryRun && !requireConsent(cmd, "Proceed with clean") {
+				return nil
+			}
 			for _, a := range targets {
-				result, err := a.Clean(cmd.Context(), dryRun)
+				result, err := a.Clean(manager.WithYes(cmd.Context()), dryRun)
 				if err != nil {
 					if errors.Is(err, manager.ErrNotSupported) {
 						continue

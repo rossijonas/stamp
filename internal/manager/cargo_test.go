@@ -163,7 +163,7 @@ func TestCargo_Operations(t *testing.T) {
 			assert.Equal(t, "cargo", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -252,7 +252,7 @@ func TestCargo_ListInstalled_Empty(t *testing.T) {
 	manager := NewCargo()
 	manager.exec = mockExecutorHelper("", nil)
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -262,7 +262,7 @@ func TestCargo_Update_Single(t *testing.T) {
 	manager := NewCargo()
 	manager.exec = mockExecutorHelper("", nil)
 
-	err := manager.Update(context.Background(), "ripgrep")
+	err := manager.Update(WithYes(context.Background()), "ripgrep")
 	require.NoError(t, err)
 }
 
@@ -271,7 +271,7 @@ func TestCargo_Search_Supported(t *testing.T) {
 	manager := NewCargo()
 	manager.exec = mockExecutorHelper("serde = \"1.0.215\"\n", nil)
 
-	results, err := manager.Search(context.Background(), "serde")
+	results, err := manager.Search(WithYes(context.Background()), "serde")
 	require.NoError(t, err)
 	assert.NotEmpty(t, results)
 }
@@ -282,7 +282,7 @@ func TestCargo_Info_Supported(t *testing.T) {
 	expected := "serde — https://serde.rs\nA serialization framework\n"
 	manager.exec = mockExecutorHelper(expected, nil)
 
-	info, err := manager.Info(context.Background(), "serde")
+	info, err := manager.Info(WithYes(context.Background()), "serde")
 	require.NoError(t, err)
 	assert.Equal(t, expected, info)
 }
@@ -290,7 +290,7 @@ func TestCargo_Info_Supported(t *testing.T) {
 func TestCargo_CheckUpdate_NotSupported(t *testing.T) {
 	t.Parallel()
 	manager := NewCargo()
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrCheckUnsupported)
 }
@@ -298,7 +298,7 @@ func TestCargo_CheckUpdate_NotSupported(t *testing.T) {
 func TestCargo_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
-	_, err := mgr.Provides(context.Background(), "htop")
+	_, err := mgr.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -306,7 +306,7 @@ func TestCargo_ProvidesNotSupported(t *testing.T) {
 func TestCargo_AutoRemoveNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -314,7 +314,7 @@ func TestCargo_AutoRemoveNotSupported(t *testing.T) {
 func TestCargo_CleanNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
-	_, err := mgr.Clean(context.Background(), false)
+	_, err := mgr.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -322,7 +322,7 @@ func TestCargo_CleanNotSupported(t *testing.T) {
 func TestCargo_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -330,7 +330,7 @@ func TestCargo_Hold_NotSupported(t *testing.T) {
 func TestCargo_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -338,7 +338,7 @@ func TestCargo_Unhold_NotSupported(t *testing.T) {
 func TestCargo_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -347,7 +347,7 @@ func TestCargo_Update_Batch_ListError(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	err := mgr.Update(context.Background(), "")
+	err := mgr.Update(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list installed packages for update")
 }
@@ -356,7 +356,7 @@ func TestCargo_Update_Single_Error(t *testing.T) {
 	t.Parallel()
 	mgr := NewCargo()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	err := mgr.Update(context.Background(), "ripgrep")
+	err := mgr.Update(WithYes(context.Background()), "ripgrep")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update")
 }

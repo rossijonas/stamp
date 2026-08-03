@@ -100,7 +100,10 @@ func newRepoAddCmd() *cobra.Command {
 				return fmt.Errorf("manager %q not found (required)", managerFlag)
 			}
 
-			if err := adapter.AddRepo(cmd.Context(), name, url); err != nil {
+			if !requireConsent(cmd, fmt.Sprintf("Add repo %s via %s", name, managerFlag)) {
+				return nil
+			}
+			if err := adapter.AddRepo(manager.WithYes(cmd.Context()), name, url); err != nil {
 				return fmt.Errorf("failed to add repo: %w", err)
 			}
 
@@ -158,7 +161,10 @@ func newRepoRemoveCmd() *cobra.Command {
 				return fmt.Errorf("manager %q not found (required)", managerFlag)
 			}
 
-			if err := adapter.RemoveRepo(cmd.Context(), name); err != nil {
+			if !requireConsent(cmd, fmt.Sprintf("Remove repo %s via %s", name, managerFlag)) {
+				return nil
+			}
+			if err := adapter.RemoveRepo(manager.WithYes(cmd.Context()), name); err != nil {
 				return fmt.Errorf("failed to remove repo: %w", err)
 			}
 

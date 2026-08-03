@@ -42,7 +42,7 @@ the confirmation prompt.`,
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "⚠ Stamp is already initialized on this system.")
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  This will re-write manifest.toml and baseline snapshots.")
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  The existing manifest will be backed up before continuing.")
-				if !promptYesNo(cmd.ErrOrStderr(), cmd.InOrStdin(), "Continue? [y/N]: ", false) {
+				if !promptYesNo(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(), "Continue? [y/N]: ", false) {
 					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "re-init aborted")
 					return nil
 				}

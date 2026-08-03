@@ -61,6 +61,9 @@ func (m *Snap) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a snap package.
 func (m *Snap) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -74,6 +77,9 @@ func (m *Snap) Install(ctx context.Context, pkg string) error {
 
 // Reinstall reinstalls a snap package via remove + install.
 func (m *Snap) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -92,6 +98,9 @@ func (m *Snap) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove removes a snap package.
 func (m *Snap) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -134,6 +143,9 @@ func (m *Snap) Doctor(_ context.Context) (string, error) {
 
 // Update refreshes all installed snaps.
 func (m *Snap) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	args := sudoCmd("snap", "refresh")
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
@@ -233,6 +245,11 @@ func parseSnapRevisions(output []byte) map[string]string {
 // Clean removes old snap revisions to free disk space.
 // Keeps active revisions; removes all inactive (old) revisions.
 func (m *Snap) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	activeOut, err := m.exec(ctx, "snap", "list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list active snaps: %w", err)

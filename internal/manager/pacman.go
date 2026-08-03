@@ -57,6 +57,9 @@ func (m *Pacman) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via pacman.
 func (m *Pacman) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -70,6 +73,9 @@ func (m *Pacman) Install(ctx context.Context, pkg string) error {
 
 // Reinstall reinstalls a package via pacman.
 func (m *Pacman) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -83,6 +89,9 @@ func (m *Pacman) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove removes a package and its unneeded dependencies via pacman.
 func (m *Pacman) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -94,6 +103,42 @@ func (m *Pacman) Remove(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// PreviewInstall previews installing pkg.
+// -S --print prints the resolved targets without modifying the system and
+// without requiring root.
+func (m *Pacman) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, "pacman", "-S", "--print", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	}
+	return Preview{Output: string(out)}, nil
+}
+
+// PreviewRemove previews removing pkg.
+func (m *Pacman) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	out, err := m.exec(ctx, "pacman", "-R", "--print", pkg)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	}
+	return Preview{Output: string(out), Noop: strings.Contains(string(out), "was not found")}, nil
+}
+
+// PreviewReinstall previews reinstalling pkg.
+// pacman reinstalls via the same -S operation as install.
+func (m *Pacman) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+	return m.PreviewInstall(ctx, pkg)
+}
+
+var _ Previewer = (*Pacman)(nil)
 
 // Search searches for packages via pacman.
 func (m *Pacman) Search(ctx context.Context, query string) ([]string, error) {
@@ -126,6 +171,9 @@ func (m *Pacman) Doctor(_ context.Context) (string, error) {
 
 // Update syncs and upgrades all packages via pacman.
 func (m *Pacman) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	var args []string
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
@@ -168,6 +216,11 @@ func (m *Pacman) Provides(ctx context.Context, query string) ([]string, error) {
 
 // AutoRemove lists orphans and removes them.
 func (m *Pacman) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	// List orphans first
 	out, err := m.exec(ctx, "pacman", "-Qdtq")
 	if err != nil {
@@ -191,6 +244,11 @@ func (m *Pacman) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) 
 
 // Clean runs pacman -Sc to clear the package cache.
 func (m *Pacman) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -229,7 +287,12 @@ func (m *Pacman) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, err
 		}
 		return nil, fmt.Errorf("failed to check updates: %w", err)
 	}
-	return parsePacmanQu(out), nil
+	result := parsePacmanQu(out)
+	// Surface unrecognized output instead of silently reporting no updates.
+	if len(result) == 0 && len(bytes.TrimSpace(out)) > 0 {
+		return nil, fmt.Errorf("unrecognized pacman -Qu output (parser may be outdated)")
+	}
+	return result, nil
 }
 
 func parsePacmanQu(output []byte) []UpdateInfo {
@@ -316,6 +379,9 @@ func pacmanIgnorePkg(ctx context.Context, exec Executor) ([]string, error) {
 
 // Hold adds a package to IgnorePkg in pacman.conf to prevent upgrades.
 func (m *Pacman) Hold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -374,6 +440,9 @@ func (m *Pacman) Hold(ctx context.Context, pkg string) error {
 
 // Unhold removes a package from IgnorePkg in pacman.conf.
 func (m *Pacman) Unhold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}

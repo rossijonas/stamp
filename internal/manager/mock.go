@@ -9,38 +9,43 @@ import (
 
 // Mock is a dummy implementation of Adapter for testing.
 type Mock struct {
-	ManagerName      string
-	InstalledPkgs    []string
-	InstalledRepos   []RepositoryInfo
-	AvailablePkgs    []string
-	TrackedRepos     []string
-	ListErr          error
-	ListReposErr     error
-	InstallErr       error
-	ReinstallErr     error
-	RemoveErr        error
-	SearchErr        error
-	AddRepoErr       error
-	RemoveRepoErr    error
-	InfoErr          error
-	InfoResult       string
-	DoctorResult     string
-	DoctorErr        error
-	UpdateErr        error
-	CheckUpdateErr   error
-	RefreshErr       error
-	CheckUpdates     []UpdateInfo
-	ProvidesErr      error
-	ProvidesResult   []string
-	AutoRemoveErr    error
-	AutoRemoveResult []string
-	CleanErr         error
-	CleanResult      []string
-	OverrideFunc     func(ctx context.Context, appID string, flags OverrideFlags) error
-	HoldErr          error
-	UnholdErr        error
-	ListHeldErr      error
-	HeldPkgs         []string
+	ManagerName         string
+	InstalledPkgs       []string
+	InstalledRepos      []RepositoryInfo
+	AvailablePkgs       []string
+	TrackedRepos        []string
+	ListErr             error
+	ListReposErr        error
+	InstallErr          error
+	ReinstallErr        error
+	RemoveErr           error
+	SearchErr           error
+	AddRepoErr          error
+	RemoveRepoErr       error
+	InfoErr             error
+	InfoResult          string
+	DoctorResult        string
+	DoctorErr           error
+	UpdateErr           error
+	CheckUpdateErr      error
+	RefreshErr          error
+	CheckUpdates        []UpdateInfo
+	ProvidesErr         error
+	ProvidesResult      []string
+	AutoRemoveErr       error
+	AutoRemoveResult    []string
+	CleanErr            error
+	CleanResult         []string
+	OverrideFunc        func(ctx context.Context, appID string, flags OverrideFlags) error
+	HoldErr             error
+	UnholdErr           error
+	ListHeldErr         error
+	HeldPkgs            []string
+	PreviewInstallErr   error
+	PreviewRemoveErr    error
+	PreviewReinstallErr error
+	PreviewResult       string
+	PreviewNoop         bool
 }
 
 // Name returns the package manager identifier.
@@ -76,7 +81,10 @@ func (m *Mock) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 }
 
 // Install executes the native installation command.
-func (m *Mock) Install(_ context.Context, pkg string) error {
+func (m *Mock) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -93,7 +101,10 @@ func (m *Mock) Install(_ context.Context, pkg string) error {
 }
 
 // Reinstall executes the native reinstallation command.
-func (m *Mock) Reinstall(_ context.Context, pkg string) error {
+func (m *Mock) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -112,7 +123,10 @@ func (m *Mock) Reinstall(_ context.Context, pkg string) error {
 }
 
 // Remove executes the native removal command.
-func (m *Mock) Remove(_ context.Context, pkg string) error {
+func (m *Mock) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -147,7 +161,10 @@ func (m *Mock) Search(_ context.Context, query string) ([]string, error) {
 }
 
 // AddRepo adds a repository to the mock.
-func (m *Mock) AddRepo(_ context.Context, name, _ string) error {
+func (m *Mock) AddRepo(ctx context.Context, name, _ string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if m.AddRepoErr != nil {
 		return m.AddRepoErr
 	}
@@ -156,7 +173,10 @@ func (m *Mock) AddRepo(_ context.Context, name, _ string) error {
 }
 
 // RemoveRepo removes a repository from the mock.
-func (m *Mock) RemoveRepo(_ context.Context, name string) error {
+func (m *Mock) RemoveRepo(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if m.RemoveRepoErr != nil {
 		return m.RemoveRepoErr
 	}
@@ -184,6 +204,57 @@ func (m *Mock) Info(_ context.Context, pkg string) (string, error) {
 	return fmt.Sprintf("Name: %s\nVersion: 1.0.0\nDescription: mock details", pkg), nil
 }
 
+// PreviewInstall returns mock dry-run output for installing a package.
+func (m *Mock) PreviewInstall(_ context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	if m.PreviewInstallErr != nil {
+		return Preview{}, m.PreviewInstallErr
+	}
+	if m.PreviewNoop {
+		return Preview{Output: "Nothing to do.", Noop: true}, nil
+	}
+	if m.PreviewResult != "" {
+		return Preview{Output: m.PreviewResult}, nil
+	}
+	return Preview{Output: fmt.Sprintf("Install: %s@1.0.0", pkg)}, nil
+}
+
+// PreviewRemove returns mock dry-run output for removing a package.
+func (m *Mock) PreviewRemove(_ context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	if m.PreviewRemoveErr != nil {
+		return Preview{}, m.PreviewRemoveErr
+	}
+	if m.PreviewNoop {
+		return Preview{Output: "Nothing to remove.", Noop: true}, nil
+	}
+	if m.PreviewResult != "" {
+		return Preview{Output: m.PreviewResult}, nil
+	}
+	return Preview{Output: fmt.Sprintf("Remove: %s", pkg)}, nil
+}
+
+// PreviewReinstall returns mock dry-run output for reinstalling a package.
+func (m *Mock) PreviewReinstall(_ context.Context, pkg string) (Preview, error) {
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	if m.PreviewReinstallErr != nil {
+		return Preview{}, m.PreviewReinstallErr
+	}
+	if m.PreviewNoop {
+		return Preview{Output: "Nothing to do.", Noop: true}, nil
+	}
+	if m.PreviewResult != "" {
+		return Preview{Output: m.PreviewResult}, nil
+	}
+	return Preview{Output: fmt.Sprintf("Reinstall: %s@1.0.0", pkg)}, nil
+}
+
 // Doctor runs mock doctor diagnostic.
 func (m *Mock) Doctor(_ context.Context) (string, error) {
 	if m.DoctorErr != nil {
@@ -196,7 +267,10 @@ func (m *Mock) Doctor(_ context.Context) (string, error) {
 }
 
 // Update runs mock update — succeeds unless UpdateErr is set.
-func (m *Mock) Update(_ context.Context, _ string) error {
+func (m *Mock) Update(ctx context.Context, _ string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if m.UpdateErr != nil {
 		return m.UpdateErr
 	}
@@ -252,7 +326,12 @@ func (m *Mock) Provides(_ context.Context, query string) ([]string, error) {
 }
 
 // AutoRemove returns mock autoremove result or error.
-func (m *Mock) AutoRemove(_ context.Context, _ bool) ([]string, error) {
+func (m *Mock) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if m.AutoRemoveErr != nil {
 		return nil, m.AutoRemoveErr
 	}
@@ -271,7 +350,12 @@ func (m *Mock) Override(ctx context.Context, appID string, flags OverrideFlags) 
 }
 
 // Clean returns mock clean result or error.
-func (m *Mock) Clean(_ context.Context, _ bool) ([]string, error) {
+func (m *Mock) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if m.CleanErr != nil {
 		return nil, m.CleanErr
 	}
@@ -282,7 +366,10 @@ func (m *Mock) Clean(_ context.Context, _ bool) ([]string, error) {
 }
 
 // Hold mocks pinning a package at its current version.
-func (m *Mock) Hold(_ context.Context, pkg string) error {
+func (m *Mock) Hold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -296,7 +383,10 @@ func (m *Mock) Hold(_ context.Context, pkg string) error {
 }
 
 // Unhold mocks removing a version pin.
-func (m *Mock) Unhold(_ context.Context, pkg string) error {
+func (m *Mock) Unhold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}

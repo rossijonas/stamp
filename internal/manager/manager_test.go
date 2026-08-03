@@ -24,7 +24,7 @@ func TestMockManager(t *testing.T) {
 		AvailablePkgs: []string{"git", "curl", "htop", "jq", "docker"},
 	}
 
-	ctx := context.Background()
+	ctx := WithYes(context.Background())
 
 	assert.Equal(t, "mock", mock.Name())
 
@@ -76,7 +76,7 @@ func TestMockManagerErrors(t *testing.T) {
 		UpdateErr:     expectedErr,
 	}
 
-	ctx := context.Background()
+	ctx := WithYes(context.Background())
 
 	_, err := mock.ListInstalled(ctx)
 	require.ErrorIs(t, err, expectedErr)
@@ -237,7 +237,7 @@ func TestPrefixWriter_EmptyInput(t *testing.T) {
 }
 
 func TestWithOutputPrefix(t *testing.T) {
-	ctx := context.Background()
+	ctx := WithYes(context.Background())
 	prefixed := WithOutputPrefix(ctx, "[brew] ")
 
 	prefix := getOutputPrefix(prefixed)

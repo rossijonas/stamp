@@ -80,6 +80,9 @@ func (m *MacPorts) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a port via MacPorts.
 func (m *MacPorts) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -93,6 +96,9 @@ func (m *MacPorts) Install(ctx context.Context, pkg string) error {
 
 // Reinstall reinstalls a port via MacPorts.
 func (m *MacPorts) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -106,6 +112,9 @@ func (m *MacPorts) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove removes a port via MacPorts.
 func (m *MacPorts) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -148,6 +157,9 @@ func (m *MacPorts) Doctor(_ context.Context) (string, error) {
 
 // Update runs selfupdate then upgrades outdated ports.
 func (m *MacPorts) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err
@@ -194,6 +206,11 @@ func (m *MacPorts) Provides(ctx context.Context, query string) ([]string, error)
 
 // AutoRemove runs port reclaim to remove inactive ports.
 func (m *MacPorts) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -206,6 +223,11 @@ func (m *MacPorts) AutoRemove(ctx context.Context, dryRun bool) ([]string, error
 
 // Clean runs port clean --all installed to clear build cache.
 func (m *MacPorts) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
