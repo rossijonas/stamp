@@ -59,4 +59,44 @@
       }
     }
   });
+  // Latest version pill (issue #171): fetch the newest release tag once, cache
+  // it for 24h to stay well under GitHub's 60 req/hr unauthenticated limit, and
+  // hide the pill on any failure so the static site degrades gracefully.
+  var versionPill = document.getElementById('version-pill');
+  if (versionPill) {
+    var VERSION_CACHE_KEY = 'stamp_latest_version';
+    var VERSION_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+    function renderVersion(tag) {
+      versionPill.textContent = tag;
+      versionPill.hidden = false;
+    }
+    function hideVersion() {
+      versionPill.hidden = true;
+    }
+
+    var cached = null;
+    try {
+      cached = JSON.parse(localStorage.getItem(VERSION_CACHE_KEY) || 'null');
+    } catch (e) {
+      cached = null;
+    }
+    if (cached && cached.tag && Date.now() - cached.ts < VERSION_CACHE_TTL) {
+      renderVersion(cached.tag);
+    } else {
+      fetch('https://api.github.com/repos/rossijonas/stamp/releases/latest')
+        .then(function(res) {
+          if (!res.ok) { throw new Error('bad status ' + res.status); }
+          return res.json();
+        })
+        .then(function(data) {
+          if (!data || typeof data.tag_name !== 'string') { throw new Error('unexpected payload'); }
+          renderVersion(data.tag_name);
+          try {
+            localStorage.setItem(VERSION_CACHE_KEY, JSON.stringify({ tag: data.tag_name, ts: Date.now() }));
+          } catch (e) { /* storage unavailable — ignore */ }
+        })
+        .catch(hideVersion);
+    }
+  }
 })();

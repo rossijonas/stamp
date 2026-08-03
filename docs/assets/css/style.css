@@ -114,6 +114,20 @@ a:hover { color: var(--accent-dim); }
   border-color: var(--text-muted);
 }
 
+/* ─── Latest version pill (issue #171) ─── */
+#version-pill {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  white-space: nowrap;
+}
+#version-pill[hidden] { display: none; }
+
 /* ─── Header ─── */
 .site-header {
   border-bottom: 1px solid var(--border);

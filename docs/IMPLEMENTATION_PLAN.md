@@ -395,6 +395,9 @@ Deliver reliable Ctrl+C behavior for all commands that spawn privileged children
 | 8 | 45b | Adapter-owned no-op (remove/reinstall via own `ListInstalled`) + warn-and-prompt | ✓ |
 | 8 | 45c | dnf `makecache` refresh + `CheckUpdate` unrecognized-output guards | ✓ |
 | 8 | 45d | ADR-016: unified preview contract | ✓ |
+| 9 | 46 | Docs site: live latest-version pill in nav (#171) | ✓ |
+| 9 | 46a | `main.js` GitHub release fetch + 24h cache + graceful hide | ✓ |
+| 9 | 46b | Nav hook (`#version-pill`) + pill CSS | ✓ |
 
 ### Phase 8: Fail-Closed Consent for Destructive Commands (#168)
 
@@ -416,4 +419,13 @@ Standardize install/remove/reinstall previews on the typed, adapter-owned model 
 *   **Acceptance:** `stamp remove -m dnf htop` and `stamp reinstall -m dnf htop` preview the real native transaction; install no-op fails fast; preview errors warn-and-prompt; `stamp update` refresh is real for dnf.
 *   **Verify:** `task check` passes; manual smokes for remove/reinstall/install/update.
 *   **Files:** `internal/manager/{exec,manager,mock,dnf,apt,pacman,brew,flatpak,zypper,npm}.go`, `internal/cli/confirm.go`, manager/cli tests, `docs/decisions/ADR-016-unified-preview-contract.md`, `docs/decisions/ADR-015-fail-closed-consent.md`, `docs/project/spec.md`
+*   **Status:** ✓ Completed
+
+### Phase 9: Docs Site Live Version Indicator (#171)
+
+**Task 46: Live latest-version pill in nav (#171)**
+*   **Description:** Show the latest release tag on every docs page via a nav-bar text pill. `main.js` fetches `https://api.github.com/repos/rossijonas/stamp/releases/latest`, reads `tag_name`, renders it into `#version-pill` with `textContent` (no injection surface), and caches it in `localStorage` for 24h to stay under GitHub's 60 req/hr unauthenticated limit. On any failure (non-2xx, rate limit, malformed payload, storage unavailable) the pill is hidden — the static site degrades gracefully. Text pill only (nav), shields.io/badge row deferred.
+*   **Acceptance:** All pages show `vX.Y.Z` in the nav; blocking the API hides the pill without breaking the site; `task check` and Jekyll build remain green.
+*   **Verify:** `bundle exec jekyll build`; manual `jekyll serve` (pill renders, hides when API blocked).
+*   **Files:** `docs/assets/js/main.js`, `docs/_includes/nav.html`, `docs/assets/css/style.css`
 *   **Status:** ✓ Completed
