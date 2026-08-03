@@ -135,6 +135,9 @@ func (m *Go) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install runs go install <pkg>@latest.
 func (m *Go) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidateModulePath(pkg); err != nil {
 		return err
 	}
@@ -147,11 +150,17 @@ func (m *Go) Install(ctx context.Context, pkg string) error {
 
 // Reinstall is the same as Install (go install is idempotent).
 func (m *Go) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	return m.Install(ctx, pkg)
 }
 
 // Remove removes a binary installed via go install.
 func (m *Go) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidateModulePath(pkg); err != nil {
 		return err
 	}
@@ -211,6 +220,9 @@ func (m *Go) Doctor(_ context.Context) (string, error) {
 // Update runs go install <pkg>@latest for a single package, or
 // reinstalls all tools with recoverable module paths for batch.
 func (m *Go) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if pkg != "" {
 		return m.Install(ctx, pkg)
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 func TestAutoremoveCmd_Runs(t *testing.T) {
-	buf, err := execCmd(t, []string{"autoremove"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	buf, err := execCmd(t, []string{"autoremove", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
 	require.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 }
@@ -22,7 +22,7 @@ func TestAutoremoveCmd_DryRun(t *testing.T) {
 }
 
 func TestAutoremoveCmd_ManagerFlag(t *testing.T) {
-	buf, err := execCmd(t, []string{"autoremove", "-m", "dnf"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	buf, err := execCmd(t, []string{"autoremove", "-m", "dnf", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
 	require.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 }
@@ -34,7 +34,7 @@ func TestAutoremoveCmd_WithOrphans(t *testing.T) {
 			AutoRemoveResult: []string{"libfoo", "libbar"},
 		},
 	}
-	buf, err := execCmd(t, []string{"autoremove"}, adapters)
+	buf, err := execCmd(t, []string{"autoremove", "-y"}, adapters)
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "removed 2 package(s)")
 }

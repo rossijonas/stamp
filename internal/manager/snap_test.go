@@ -170,7 +170,7 @@ func TestSnap_Operations(t *testing.T) {
 			assert.Equal(t, "snap", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -299,7 +299,7 @@ func TestSnap_CheckUpdateExecError(t *testing.T) {
 	t.Parallel()
 	manager := NewSnap()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -309,7 +309,7 @@ func TestSnap_CheckUpdate(t *testing.T) {
 	manager := NewSnap()
 	manager.exec = mockExecutorHelper("htop                 3.2.2     123   stable\ngit                  2.43.2    456   stable\n", nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -344,7 +344,7 @@ func TestSnap_Clean(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	result, err := m.Clean(context.Background(), false)
+	result, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 	assert.Len(t, result, 1)
 	assert.Contains(t, result[0], "rev 5")
@@ -355,7 +355,7 @@ func TestSnap_CheckUpdate_Error(t *testing.T) {
 	t.Parallel()
 	m := NewSnap()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.CheckUpdate(context.Background(), "")
+	_, err := m.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -363,7 +363,7 @@ func TestSnap_CheckUpdate_Error(t *testing.T) {
 func TestSnap_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	m := NewSnap()
-	_, err := m.Provides(context.Background(), "htop")
+	_, err := m.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -371,7 +371,7 @@ func TestSnap_ProvidesNotSupported(t *testing.T) {
 func TestSnap_AutoRemoveNotSupported(t *testing.T) {
 	t.Parallel()
 	m := NewSnap()
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -379,7 +379,7 @@ func TestSnap_AutoRemoveNotSupported(t *testing.T) {
 func TestSnap_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewSnap()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -387,7 +387,7 @@ func TestSnap_Hold_NotSupported(t *testing.T) {
 func TestSnap_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewSnap()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -395,7 +395,7 @@ func TestSnap_Unhold_NotSupported(t *testing.T) {
 func TestSnap_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewSnap()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -417,7 +417,7 @@ func TestSnap_CleanDryRun(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	result, err := m.Clean(context.Background(), true)
+	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Contains(t, result[0], "rev 5")
@@ -439,7 +439,7 @@ func TestSnap_Clean_NoInactive(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	result, err := m.Clean(context.Background(), false)
+	result, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 	assert.Empty(t, result)
 	assert.Equal(t, 2, call)
@@ -449,7 +449,7 @@ func TestSnap_Clean_ActiveListError(t *testing.T) {
 	t.Parallel()
 	m := NewSnap()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list active snaps")
 }
@@ -465,7 +465,7 @@ func TestSnap_Clean_AllListError(t *testing.T) {
 		}
 		return nil, assert.AnError
 	}
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list all snap revisions")
 }

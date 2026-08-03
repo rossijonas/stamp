@@ -56,6 +56,9 @@ func parseUvToolList(output []byte) []string {
 
 // Install runs uv tool install <pkg>.
 func (m *UvTool) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -68,6 +71,9 @@ func (m *UvTool) Install(ctx context.Context, pkg string) error {
 
 // Reinstall runs uv tool install --force <pkg>.
 func (m *UvTool) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -80,6 +86,9 @@ func (m *UvTool) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove runs uv tool uninstall <pkg>.
 func (m *UvTool) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -124,6 +133,9 @@ func (m *UvTool) Doctor(_ context.Context) (string, error) {
 
 // Update runs uv tool upgrade for a single package or --all for batch.
 func (m *UvTool) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err

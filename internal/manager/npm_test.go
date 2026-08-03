@@ -144,7 +144,7 @@ func TestNpm_Operations(t *testing.T) {
 			assert.Equal(t, "npm", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -225,7 +225,7 @@ func TestNpm_ListInstalled_Empty(t *testing.T) {
 	manager := NewNpm()
 	manager.exec = mockExecutorHelper("/usr/lib\n", nil)
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -235,7 +235,7 @@ func TestNpm_ListInstalled_NoGlobals(t *testing.T) {
 	manager := NewNpm()
 	manager.exec = mockExecutorHelper("/usr/lib\n(empty)\n", nil)
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -243,7 +243,7 @@ func TestNpm_ListInstalled_NoGlobals(t *testing.T) {
 func TestNpm_Search_NotSupported(t *testing.T) {
 	t.Parallel()
 	manager := NewNpm()
-	_, err := manager.Search(context.Background(), "typescript")
+	_, err := manager.Search(WithYes(context.Background()), "typescript")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not supported")
 }
@@ -251,7 +251,7 @@ func TestNpm_Search_NotSupported(t *testing.T) {
 func TestNpm_CheckUpdate_NotSupported(t *testing.T) {
 	t.Parallel()
 	manager := NewNpm()
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrCheckUnsupported)
 }
@@ -302,7 +302,7 @@ func TestParseNpmLs(t *testing.T) {
 func TestNpm_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewNpm()
-	_, err := mgr.Provides(context.Background(), "htop")
+	_, err := mgr.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -310,7 +310,7 @@ func TestNpm_ProvidesNotSupported(t *testing.T) {
 func TestNpm_AutoRemoveNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewNpm()
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -318,7 +318,7 @@ func TestNpm_AutoRemoveNotSupported(t *testing.T) {
 func TestNpm_CleanNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewNpm()
-	_, err := mgr.Clean(context.Background(), false)
+	_, err := mgr.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }

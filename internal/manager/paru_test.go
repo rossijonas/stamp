@@ -164,7 +164,7 @@ func TestParu_Operations(t *testing.T) {
 			assert.Equal(t, "paru", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -252,7 +252,7 @@ func TestParu_CheckUpdateExecError(t *testing.T) {
 	t.Parallel()
 	manager := NewParu()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -262,7 +262,7 @@ func TestParu_CheckUpdate(t *testing.T) {
 	manager := NewParu()
 	manager.exec = mockExecutorHelper("htop 3.2.1 -> 3.2.2\ngit 2.43.0 -> 2.43.2\n", nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -274,7 +274,7 @@ func TestParu_CheckUpdate_Fails(t *testing.T) {
 	t.Parallel()
 	manager := NewParu()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -287,7 +287,7 @@ func TestParu_Search_AURResults(t *testing.T) {
 		nil,
 	)
 
-	results, err := manager.Search(context.Background(), "paru")
+	results, err := manager.Search(WithYes(context.Background()), "paru")
 	require.NoError(t, err)
 	assert.Contains(t, results, "paru")
 }
@@ -296,7 +296,7 @@ func TestParu_ProvidesError(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "/usr/bin/htop")
+	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
 	require.Error(t, err)
 }
 
@@ -304,7 +304,7 @@ func TestParu_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper("", nil)
-	pkgs, err := m.AutoRemove(context.Background(), true)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -324,7 +324,7 @@ func TestParu_AutoRemove_WithOrphans(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	pkgs, err := m.AutoRemove(context.Background(), false)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"libfoo"}, pkgs)
 }
@@ -333,7 +333,7 @@ func TestParu_AutoRemove_ExecError(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list orphans")
 }
@@ -342,14 +342,14 @@ func TestParu_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestParu_CleanDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
-	result, err := m.Clean(context.Background(), true)
+	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
@@ -369,7 +369,7 @@ func TestParu_Hold(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := m.Hold(context.Background(), "htop")
+	err := m.Hold(WithYes(context.Background()), "htop")
 	require.NoError(t, err)
 }
 
@@ -388,7 +388,7 @@ func TestParu_Unhold(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := m.Unhold(context.Background(), "nginx")
+	err := m.Unhold(WithYes(context.Background()), "nginx")
 	require.NoError(t, err)
 }
 
@@ -396,7 +396,7 @@ func TestParu_ListHeld(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper(testPacmanConf, nil)
-	pkgs, err := m.ListHeld(context.Background())
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
 }
@@ -405,7 +405,7 @@ func TestParu_Hold_ReadError(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Hold(context.Background(), "nginx")
+	err := m.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read pacman.conf")
 }
@@ -414,7 +414,7 @@ func TestParu_Unhold_NotHeld(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper(testPacmanConf, nil)
-	err := m.Unhold(context.Background(), "htop")
+	err := m.Unhold(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not held")
 }
@@ -422,7 +422,7 @@ func TestParu_Unhold_NotHeld(t *testing.T) {
 func TestParu_Hold_InvalidName(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
-	err := m.Hold(context.Background(), "-invalid")
+	err := m.Hold(WithYes(context.Background()), "-invalid")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid package name")
 }

@@ -170,7 +170,7 @@ func TestZypper_Operations(t *testing.T) {
 			assert.Equal(t, "zypper", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -293,7 +293,7 @@ func TestZypper_CheckUpdateExecError(t *testing.T) {
 	t.Parallel()
 	manager := NewZypper()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to refresh repositories")
 }
@@ -303,7 +303,7 @@ func TestZypper_CheckUpdate(t *testing.T) {
 	manager := NewZypper()
 	manager.exec = mockExecutorHelper("S | Repository | Name | Current | Available\n--+------------+------+---------+-----------\nv | main | htop | 3.2.1 | 3.2.2\n", nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 1)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -321,7 +321,7 @@ func TestZypper_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
 		return nil, assert.AnError // zypper list-updates fails
 	}
 
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -339,14 +339,14 @@ func TestZypper_ProvidesError(t *testing.T) {
 	t.Parallel()
 	m := NewZypper()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "htop")
+	_, err := m.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 }
 
 func TestZypper_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewZypper()
-	pkgs, err := m.AutoRemove(context.Background(), true)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, pkgs)
 }
@@ -355,7 +355,7 @@ func TestZypper_AutoRemove(t *testing.T) {
 	t.Parallel()
 	m := NewZypper()
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
@@ -363,7 +363,7 @@ func TestZypper_AutoRemove_Error(t *testing.T) {
 	t.Parallel()
 	m := NewZypper()
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to autoremove")
 }
@@ -372,14 +372,14 @@ func TestZypper_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewZypper()
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestZypper_CleanDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewZypper()
-	result, err := m.Clean(context.Background(), true)
+	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
@@ -387,7 +387,7 @@ func TestZypper_CleanDryRun(t *testing.T) {
 func TestZypper_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewZypper()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -395,7 +395,7 @@ func TestZypper_Hold_NotSupported(t *testing.T) {
 func TestZypper_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewZypper()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -403,7 +403,7 @@ func TestZypper_Unhold_NotSupported(t *testing.T) {
 func TestZypper_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewZypper()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }

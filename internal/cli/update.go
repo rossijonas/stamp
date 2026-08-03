@@ -32,7 +32,7 @@ func needsSudo(adapters []manager.Adapter) bool {
 
 func runUpdate(ctx context.Context, w io.Writer, a manager.Adapter, pkg string, prefix string) bool {
 	ctx = manager.WithOutputPrefix(ctx, prefix)
-	if err := a.Update(ctx, pkg); err != nil {
+	if err := a.Update(manager.WithYes(ctx), pkg); err != nil {
 		_, _ = fmt.Fprintf(w, "⚠ update failed for %s: %v\n", a.Name(), err)
 		return false
 	}
@@ -132,6 +132,7 @@ func newUpdateCmd() *cobra.Command {
   stamp update
 
   # dry-run: check for updates without applying them
+  # (refreshes package metadata first — may require sudo and network access)
   stamp update --check
 
   # skip check phase, auto-confirm (useful in scripts)
@@ -149,6 +150,7 @@ func newUpdateCmd() *cobra.Command {
 
 By default, checks for available updates, displays them, and prompts for confirmation before upgrading.
 Use --check to only run the check phase (dry-run).
+Note: the check phase refreshes package metadata first, which may require sudo and network access.
 Use -y to skip the check phase and auto-confirm for maximum speed.
 Use -m to scope to a single package manager.
 Use -p to update a single package (requires -m).
@@ -238,11 +240,15 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 					return nil
 				}
 
-				// Prompt
-				if isTerminal(cmd.InOrStdin()) {
-					if !promptYesNo(errOut, cmd.InOrStdin(), "Proceed with updates? [Y/n]: ", true) {
-						return nil
-					}
+				// Prompt (fail closed: non-interactive without -y aborts; an
+				// interrupted run aborts too).
+				if ctx.Err() != nil {
+					_, _ = fmt.Fprintln(errOut, "aborted")
+					return nil
+				}
+				if !promptYesNo(ctx, errOut, cmd.InOrStdin(), "Proceed with updates? [y/N]: ", false) {
+					_, _ = fmt.Fprintln(errOut, "aborted")
+					return nil
 				}
 			}
 

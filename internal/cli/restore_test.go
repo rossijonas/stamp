@@ -84,7 +84,7 @@ manager = "brew"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore"})
+	root.SetArgs([]string{"restore", "-y"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -124,7 +124,7 @@ manager = "brew"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore"})
+	root.SetArgs([]string{"restore", "-y"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -169,7 +169,7 @@ manager = "brew"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore"})
+	root.SetArgs([]string{"restore", "-y"})
 
 	err := root.Execute()
 	require.Error(t, err)
@@ -207,7 +207,7 @@ manager = "flatpak"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore"})
+	root.SetArgs([]string{"restore", "-y"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -283,7 +283,7 @@ manager = "dnf"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore", "-m", "brew"})
+	root.SetArgs([]string{"restore", "-m", "brew", "-y"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -359,7 +359,7 @@ manager = "dnf"
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore"})
+	root.SetArgs([]string{"restore", "-y"})
 
 	err := root.Execute()
 	require.Error(t, err)
@@ -388,7 +388,7 @@ func TestRestore_CorruptedManifest(t *testing.T) {
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
-	root.SetArgs([]string{"restore"})
+	root.SetArgs([]string{"restore", "-y"})
 
 	err := root.Execute()
 	require.Error(t, err)

@@ -143,6 +143,9 @@ func parseDNFRepos(output []byte) []string {
 
 // AddRepo enables a third-party repository.
 func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if url != "" {
 		content := fmt.Sprintf("[%s]\nname=%s\nbaseurl=%s\nenabled=1\ngpgcheck=0\n", name, name, url)
 		tmpFile, err := os.CreateTemp("", fmt.Sprintf("stamp-%s-*.repo", name))
@@ -176,6 +179,9 @@ func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 
 // RemoveRepo disables a third-party repository.
 func (m *DNF) RemoveRepo(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	args := sudoCmd(m.cmd, "copr", "disable", "-y", name)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {

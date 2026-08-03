@@ -71,6 +71,9 @@ func parsePipxText(output []byte) []string {
 
 // Install executes the native installation command.
 func (m *Pipx) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -83,6 +86,9 @@ func (m *Pipx) Install(ctx context.Context, pkg string) error {
 
 // Reinstall re-executes the native installation command with force.
 func (m *Pipx) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -95,6 +101,9 @@ func (m *Pipx) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove executes the native removal command.
 func (m *Pipx) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -141,6 +150,9 @@ func (m *Pipx) Doctor(_ context.Context) (string, error) {
 
 // Update runs pipx upgrade for a single package or upgrade-all for batch.
 func (m *Pipx) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err

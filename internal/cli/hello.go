@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -40,7 +41,7 @@ Use -y to skip all prompts for scripting.`,
 
 			// Step 1: Shell Completions
 			_, _ = fmt.Fprintln(errOut, "Step 1 of 4: Shell Completions")
-			if autoAccept || promptYesNo(errOut, cmd.InOrStdin(), "  Install shell completions? [Y/n]: ", true) {
+			if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), "  Install shell completions? [Y/n]: ", true) {
 				runCompletion(cmd)
 			} else {
 				_, _ = fmt.Fprintln(errOut, "  Run 'stamp completion' later")
@@ -49,7 +50,7 @@ Use -y to skip all prompts for scripting.`,
 
 			// Step 2: Man Pages
 			_, _ = fmt.Fprintln(errOut, "Step 2 of 4: Man Pages")
-			if autoAccept || promptYesNo(errOut, cmd.InOrStdin(), "  Install man pages? [Y/n]: ", true) {
+			if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), "  Install man pages? [Y/n]: ", true) {
 				runSubcommand(cmd, "man", "install")
 			} else {
 				_, _ = fmt.Fprintln(errOut, "  Run 'stamp man install' later")
@@ -69,7 +70,7 @@ Use -y to skip all prompts for scripting.`,
 				promptText = "  Re-initialize (backup old configuration)? [y/N]: "
 				promptDefault = false
 			}
-			if autoAccept || promptYesNo(errOut, cmd.InOrStdin(), promptText, promptDefault) {
+			if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), promptText, promptDefault) {
 				if isInit {
 					runSubcommand(cmd, "init", "--yes")
 				} else {
@@ -93,20 +94,33 @@ Use -y to skip all prompts for scripting.`,
 	return cmd
 }
 
-func promptYesNo(out io.Writer, in io.Reader, msg string, defaultYes bool) bool {
+func promptYesNo(ctx context.Context, out io.Writer, in io.Reader, msg string, defaultYes bool) bool {
 	if !isTerminal(in) {
 		return defaultYes
 	}
+	// Already interrupted (SIGINT canceled the context): fail closed.
+	if ctx.Err() != nil {
+		return false
+	}
 	_, _ = fmt.Fprint(out, msg)
-	response, err := bufio.NewReader(in).ReadString('\n')
-	if err != nil {
-		return defaultYes
+	ch := make(chan string, 1)
+	go func() {
+		response, err := bufio.NewReader(in).ReadString('\n')
+		if err != nil {
+			ch <- ""
+			return
+		}
+		ch <- strings.TrimSpace(response)
+	}()
+	select {
+	case response := <-ch:
+		if defaultYes {
+			return response == "" || strings.EqualFold(response, "y") || strings.EqualFold(response, "yes")
+		}
+		return strings.EqualFold(response, "y") || strings.EqualFold(response, "yes")
+	case <-ctx.Done():
+		return false
 	}
-	response = strings.TrimSpace(response)
-	if defaultYes {
-		return response == "" || strings.EqualFold(response, "y") || strings.EqualFold(response, "yes")
-	}
-	return strings.EqualFold(response, "y") || strings.EqualFold(response, "yes")
 }
 
 func runCompletion(cmd *cobra.Command) {

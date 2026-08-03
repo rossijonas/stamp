@@ -209,7 +209,7 @@ func TestUpdateCmd_Serial_OneFails(t *testing.T) {
 	assert.Contains(t, output, "updated packages via flatpak")
 }
 
-func TestUpdateCmd_WithUpdatesAutoProceeds(t *testing.T) {
+func TestUpdateCmd_WithUpdatesNonTerminalAborts(t *testing.T) {
 	adapters := []manager.Adapter{
 		&mockAdapter{
 			name: "brew",
@@ -218,12 +218,29 @@ func TestUpdateCmd_WithUpdatesAutoProceeds(t *testing.T) {
 			},
 		},
 	}
-	// No -y, updates available, stdin is a pipe → auto-proceeds (non-TTY)
+	// No -y, updates available, stdin is a pipe → fail closed (no run phase)
 	buf, err := execUpdateCmd(t, []string{"update"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
 	assert.Contains(t, output, "Checking for updates")
 	assert.Contains(t, output, "brew: htop 3.2.1 → 3.2.2")
+	assert.Contains(t, output, "aborted")
+	assert.NotContains(t, output, "updated packages via brew")
+}
+
+func TestUpdateCmd_WithUpdatesYesProceeds(t *testing.T) {
+	adapters := []manager.Adapter{
+		&mockAdapter{
+			name: "brew",
+			checkUpdates: []manager.UpdateInfo{
+				{Package: "htop", CurrentVersion: "3.2.1", AvailableVersion: "3.2.2"},
+			},
+		},
+	}
+	buf, err := execUpdateCmd(t, []string{"update", "-y"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.NotContains(t, output, "Checking for updates")
 	assert.Contains(t, output, "updated packages via brew")
 }
 
@@ -281,12 +298,10 @@ func TestUpdateCmd_UnsupportedStillRuns(t *testing.T) {
 	adapters := []manager.Adapter{
 		&mockAdapter{name: "pipx", checkUpdatesErr: manager.ErrCheckUnsupported},
 	}
-	buf, err := execUpdateCmd(t, []string{"update"}, adapters)
+	buf, err := execUpdateCmd(t, []string{"update", "-y"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "pipx: cannot preview updates")
-	// With unsupported adapter present, run phase still proceeds (no -y)
-	// but since mockAdapter returns nil err for Update, it succeeds
+	assert.Contains(t, output, "updated packages via pipx")
 }
 
 func TestUpdateCmd_NoUpdates(t *testing.T) {

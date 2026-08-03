@@ -201,7 +201,7 @@ func TestDNF_Operations(t *testing.T) {
 			assert.Equal(t, "dnf", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -489,7 +489,7 @@ func TestDNF_ListInstalledFallback(t *testing.T) {
 		return []byte("htop-3.2.2-1.fc37.x86_64\n"), nil
 	}
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"htop"}, pkgs)
 	assert.Equal(t, 2, calls)
@@ -504,7 +504,7 @@ func TestDNF_ListInstalledFallbackError(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	_, err := manager.ListInstalled(context.Background())
+	_, err := manager.ListInstalled(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
 }
@@ -514,7 +514,7 @@ func TestDNF_CheckUpdateExecError(t *testing.T) {
 	manager := NewDNF("dnf")
 	// Plain error (not exit 100) → wrapped error
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -527,7 +527,7 @@ func TestDNF_CheckUpdate(t *testing.T) {
 		assert.Contains(t, args, "check-update")
 		return []byte("htop.x86_64 3.2.1 updates\n"), nil
 	}
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 1)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -547,7 +547,7 @@ func TestDNF_ListRepos_ThroughAdapter(t *testing.T) {
 	), 0o644))
 
 	manager := NewDNF("dnf")
-	repos, err := manager.ListRepos(context.Background())
+	repos, err := manager.ListRepos(WithYes(context.Background()))
 	require.NoError(t, err)
 	require.Len(t, repos, 1)
 	assert.Equal(t, "custom-repo", repos[0].Name)
@@ -559,7 +559,7 @@ func TestDNF_AddRepo_URL_ExecError(t *testing.T) {
 	manager := NewDNF("dnf")
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	err := manager.AddRepo(context.Background(), "testrepo", "https://example.com/repo")
+	err := manager.AddRepo(WithYes(context.Background()), "testrepo", "https://example.com/repo")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to add repo")
 }
@@ -625,7 +625,7 @@ func TestDNF_ProvidesError(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(context.Background(), "/usr/bin/htop")
+	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
 	require.Error(t, err)
 }
 
@@ -635,7 +635,7 @@ func TestDNF_CheckUpdate_ExitCodeNot100(t *testing.T) {
 	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
 		return nil, fmt.Errorf("exit status 1")
 	}
-	_, err := m.CheckUpdate(context.Background(), "")
+	_, err := m.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -644,7 +644,7 @@ func TestDNF_CheckUpdate_PkgScoped(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("htop.x86_64 3.2.1 updates\n", nil)
-	updates, err := m.CheckUpdate(context.Background(), "htop")
+	updates, err := m.CheckUpdate(WithYes(context.Background()), "htop")
 	require.NoError(t, err)
 	require.Len(t, updates, 1)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -654,7 +654,7 @@ func TestDNF_Reinstall_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Reinstall(context.Background(), "htop")
+	err := m.Reinstall(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to reinstall")
 }
@@ -663,7 +663,7 @@ func TestDNF_Clean_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to clean dnf cache")
 }
@@ -672,7 +672,7 @@ func TestDNF_AutoRemove_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to autoremove")
 }
@@ -681,14 +681,14 @@ func TestDNF_AutoRemove(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.AutoRemove(context.Background(), false)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestDNF_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
-	pkgs, err := m.AutoRemove(context.Background(), true)
+	pkgs, err := m.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, pkgs)
 }
@@ -697,14 +697,14 @@ func TestDNF_Clean(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", nil)
-	_, err := m.Clean(context.Background(), false)
+	_, err := m.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestDNF_CleanDryRun(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
-	result, err := m.Clean(context.Background(), true)
+	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
@@ -713,7 +713,7 @@ func TestDNF_Hold(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", nil)
-	err := m.Hold(context.Background(), "nginx")
+	err := m.Hold(WithYes(context.Background()), "nginx")
 	require.NoError(t, err)
 }
 
@@ -721,7 +721,7 @@ func TestDNF_Unhold(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", nil)
-	err := m.Unhold(context.Background(), "nginx")
+	err := m.Unhold(WithYes(context.Background()), "nginx")
 	require.NoError(t, err)
 }
 
@@ -729,7 +729,7 @@ func TestDNF_ListHeld(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("nginx\nredis\n", nil)
-	pkgs, err := m.ListHeld(context.Background())
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
 }
@@ -738,7 +738,7 @@ func TestDNF_ListHeld_Empty(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", nil)
-	pkgs, err := m.ListHeld(context.Background())
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.Empty(t, pkgs)
 }
@@ -747,7 +747,7 @@ func TestDNF_Hold_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Hold(context.Background(), "nginx")
+	err := m.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to hold")
 }
@@ -755,7 +755,7 @@ func TestDNF_Hold_Error(t *testing.T) {
 func TestDNF_Hold_InvalidName(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
-	err := m.Hold(context.Background(), "-invalid")
+	err := m.Hold(WithYes(context.Background()), "-invalid")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid package name")
 }
@@ -764,7 +764,7 @@ func TestDNF_Unhold_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Unhold(context.Background(), "nginx")
+	err := m.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unhold")
 }
@@ -773,7 +773,7 @@ func TestDNF_ListHeld_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.ListHeld(context.Background())
+	_, err := m.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list held packages")
 }
@@ -786,7 +786,7 @@ func TestDNF_GroupInstall(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := m.Install(WithGroup(context.Background()), "Development Tools")
+	err := m.Install(WithGroup(WithYes(context.Background())), "Development Tools")
 	require.NoError(t, err)
 	assert.Contains(t, args, "group")
 	assert.Contains(t, args, "install")
@@ -797,7 +797,7 @@ func TestDNF_GroupInstall_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Install(WithGroup(context.Background()), "Development Tools")
+	err := m.Install(WithGroup(WithYes(context.Background())), "Development Tools")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to install group")
 }
@@ -810,7 +810,7 @@ func TestDNF_GroupRemove(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := m.Remove(WithGroup(context.Background()), "Development Tools")
+	err := m.Remove(WithGroup(WithYes(context.Background())), "Development Tools")
 	require.NoError(t, err)
 	assert.Contains(t, args, "group")
 	assert.Contains(t, args, "remove")
@@ -821,7 +821,7 @@ func TestDNF_GroupRemove_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Remove(WithGroup(context.Background()), "Development Tools")
+	err := m.Remove(WithGroup(WithYes(context.Background())), "Development Tools")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to remove group")
 }
@@ -830,7 +830,7 @@ func TestDNF_GroupSearch(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("   Development Tools\n   C Development Tools\n   Backup Client\n", nil)
-	pkgs, err := m.Search(WithGroup(context.Background()), "Development")
+	pkgs, err := m.Search(WithGroup(WithYes(context.Background())), "Development")
 	require.NoError(t, err)
 	assert.Contains(t, pkgs, "Development Tools")
 	assert.Contains(t, pkgs, "C Development Tools")
@@ -841,7 +841,7 @@ func TestDNF_GroupSearch_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Search(WithGroup(context.Background()), "Development")
+	_, err := m.Search(WithGroup(WithYes(context.Background())), "Development")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list groups")
 }
@@ -854,7 +854,7 @@ func TestDNF_GroupInfo(t *testing.T) {
 		args = a
 		return []byte("Group: Development Tools\n"), nil
 	}
-	info, err := m.Info(WithGroup(context.Background()), "Development Tools")
+	info, err := m.Info(WithGroup(WithYes(context.Background())), "Development Tools")
 	require.NoError(t, err)
 	assert.Contains(t, args, "group")
 	assert.Contains(t, args, "info")
@@ -865,7 +865,7 @@ func TestDNF_GroupInfo_Error(t *testing.T) {
 	t.Parallel()
 	m := NewDNF("dnf")
 	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Info(WithGroup(context.Background()), "Development Tools")
+	_, err := m.Info(WithGroup(WithYes(context.Background())), "Development Tools")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get group info")
 }

@@ -136,7 +136,7 @@ func TestUv_Operations(t *testing.T) {
 			assert.Equal(t, "uv", mgr.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -204,7 +204,7 @@ func TestUv_Operations(t *testing.T) {
 func TestUv_CheckUpdate_Unsupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	_, err := mgr.CheckUpdate(context.Background(), "")
+	_, err := mgr.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrCheckUnsupported)
 }
@@ -212,7 +212,7 @@ func TestUv_CheckUpdate_Unsupported(t *testing.T) {
 func TestUv_UnsupportedOperations(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	ctx := context.Background()
+	ctx := WithYes(context.Background())
 
 	err := mgr.AddRepo(ctx, "repo", "url")
 	require.Error(t, err)
@@ -230,7 +230,7 @@ func TestUv_UnsupportedOperations(t *testing.T) {
 func TestUv_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	_, err := mgr.Provides(context.Background(), "htop")
+	_, err := mgr.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -238,7 +238,7 @@ func TestUv_ProvidesNotSupported(t *testing.T) {
 func TestUv_AutoRemoveNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -246,7 +246,7 @@ func TestUv_AutoRemoveNotSupported(t *testing.T) {
 func TestUv_CleanNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	_, err := mgr.Clean(context.Background(), false)
+	_, err := mgr.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -254,7 +254,7 @@ func TestUv_CleanNotSupported(t *testing.T) {
 func TestUv_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -262,7 +262,7 @@ func TestUv_Hold_NotSupported(t *testing.T) {
 func TestUv_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -270,7 +270,7 @@ func TestUv_Unhold_NotSupported(t *testing.T) {
 func TestUv_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -279,7 +279,7 @@ func TestUv_Info_Error(t *testing.T) {
 	t.Parallel()
 	mgr := NewUv()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	_, err := mgr.Info(context.Background(), "ruff")
+	_, err := mgr.Info(WithYes(context.Background()), "ruff")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get info")
 }

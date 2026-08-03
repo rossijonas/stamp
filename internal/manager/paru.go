@@ -34,6 +34,9 @@ func (m *Paru) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via paru.
 func (m *Paru) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -47,6 +50,9 @@ func (m *Paru) Install(ctx context.Context, pkg string) error {
 
 // Reinstall reinstalls a package via paru.
 func (m *Paru) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -60,6 +66,9 @@ func (m *Paru) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove removes a package and its unneeded dependencies via paru.
 func (m *Paru) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -103,6 +112,9 @@ func (m *Paru) Doctor(_ context.Context) (string, error) {
 
 // Update syncs and upgrades all packages via paru (official + AUR).
 func (m *Paru) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	var args []string
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
@@ -145,6 +157,11 @@ func (m *Paru) Provides(ctx context.Context, query string) ([]string, error) {
 
 // AutoRemove lists orphans and removes them via pacman.
 func (m *Paru) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	out, err := m.exec(ctx, "pacman", "-Qdtq")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list orphans: %w", err)
@@ -167,6 +184,11 @@ func (m *Paru) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 
 // Clean runs paru -Sc to clear the package cache.
 func (m *Paru) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -210,6 +232,9 @@ func (m *Paru) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error
 
 // Hold adds a package to IgnorePkg in pacman.conf (shared with pacman).
 func (m *Paru) Hold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -267,6 +292,9 @@ func (m *Paru) Hold(ctx context.Context, pkg string) error {
 
 // Unhold removes a package from IgnorePkg in pacman.conf.
 func (m *Paru) Unhold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}

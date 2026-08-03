@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"path/filepath"
 	"sync"
@@ -152,6 +153,66 @@ func TestSetupCmd_Reinit_Decline(t *testing.T) {
 	require.NoError(t, err)
 	output := buf.String()
 	assert.Contains(t, output, "requires initialization to work properly")
+}
+
+func TestPromptYesNo_NonTerminal(t *testing.T) {
+	// A non-*os.File reader is not a terminal, so promptYesNo returns defaultYes
+	// without reading input or printing the message.
+	cases := []struct {
+		name       string
+		defaultYes bool
+		want       bool
+	}{
+		{name: "default no", defaultYes: false, want: false},
+		{name: "default yes", defaultYes: true, want: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out := new(bytes.Buffer)
+			in := bytes.NewBufferString("y\n")
+			got := promptYesNo(context.Background(), out, in, "proceed? [y/N]: ", tc.defaultYes)
+			assert.Equal(t, tc.want, got)
+			assert.Empty(t, out.String())
+		})
+	}
+}
+
+func TestPromptYesNo_Terminal(t *testing.T) {
+	saveRestoreTerminal(t)
+	cases := []struct {
+		name       string
+		input      string
+		defaultYes bool
+		want       bool
+	}{
+		{name: "yes lowercase", input: "y", defaultYes: false, want: true},
+		{name: "yes uppercase", input: "Y", defaultYes: false, want: true},
+		{name: "yes word", input: "yes", defaultYes: false, want: true},
+		{name: "no lowercase", input: "n", defaultYes: true, want: false},
+		{name: "no uppercase", input: "N", defaultYes: true, want: false},
+		{name: "empty with default yes", input: "", defaultYes: true, want: true},
+		{name: "empty with default no", input: "", defaultYes: false, want: false},
+		{name: "garbage with default yes", input: "maybe", defaultYes: true, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out := new(bytes.Buffer)
+			got := promptYesNo(context.Background(), out, newLineReader(tc.input), "proceed? [y/N]: ", tc.defaultYes)
+			assert.Equal(t, tc.want, got)
+			assert.Contains(t, out.String(), "proceed?")
+		})
+	}
+}
+
+func TestPromptYesNo_ContextCanceled(t *testing.T) {
+	saveRestoreTerminal(t)
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	out := new(bytes.Buffer)
+	got := promptYesNo(canceled, out, newLineReader("y"), "proceed? [y/N]: ", false)
+	assert.False(t, got)
+	assert.Empty(t, out.String())
 }
 
 func TestSetupCmd_Reinit_Accept(t *testing.T) {

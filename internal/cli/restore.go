@@ -67,6 +67,19 @@ then installs all tracked packages concurrently across package managers.`,
 				return nil
 			}
 
+			// Confirmation gate: prompts unless -y is passed. Non-interactive
+			// runs without -y abort (fail closed). Interrupted runs abort too.
+			if !app.yes {
+				if cmd.Context().Err() != nil {
+					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
+					return nil
+				}
+				if !promptYesNo(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(), "Restore tracked repositories and packages? [y/N]: ", false) {
+					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
+					return nil
+				}
+			}
+
 			restoreRepositories(cmd.Context(), cmd.ErrOrStderr(), app.adapters, repos)
 
 			errs := restorePackages(cmd.Context(), cmd.ErrOrStderr(), app.adapters, pkgs)

@@ -43,8 +43,12 @@ Scoped to a single manager with the --manager flag.`,
 			}
 
 			hasWork := false
+			// Real removals require explicit consent; dry-run is read-only.
+			if !dryRun && !requireConsent(cmd, "Proceed with autoremove") {
+				return nil
+			}
 			for _, a := range targets {
-				pkgs, err := a.AutoRemove(cmd.Context(), dryRun)
+				pkgs, err := a.AutoRemove(manager.WithYes(cmd.Context()), dryRun)
 				if err != nil {
 					if errors.Is(err, manager.ErrNotSupported) {
 						continue

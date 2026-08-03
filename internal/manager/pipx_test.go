@@ -142,7 +142,7 @@ func TestPipx_Operations(t *testing.T) {
 			assert.Equal(t, "pipx", mgr.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -226,7 +226,7 @@ func TestPipx_Operations(t *testing.T) {
 func TestPipx_CheckUpdate_Unsupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	_, err := mgr.CheckUpdate(context.Background(), "")
+	_, err := mgr.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrCheckUnsupported)
 }
@@ -234,7 +234,7 @@ func TestPipx_CheckUpdate_Unsupported(t *testing.T) {
 func TestPipx_UnsupportedOperations(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	ctx := context.Background()
+	ctx := WithYes(context.Background())
 
 	err := mgr.AddRepo(ctx, "repo", "url")
 	require.Error(t, err)
@@ -252,7 +252,7 @@ func TestPipx_UnsupportedOperations(t *testing.T) {
 func TestPipx_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	_, err := mgr.Provides(context.Background(), "htop")
+	_, err := mgr.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -260,7 +260,7 @@ func TestPipx_ProvidesNotSupported(t *testing.T) {
 func TestPipx_AutoRemoveNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -268,7 +268,7 @@ func TestPipx_AutoRemoveNotSupported(t *testing.T) {
 func TestPipx_CleanNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	_, err := mgr.Clean(context.Background(), false)
+	_, err := mgr.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -276,7 +276,7 @@ func TestPipx_CleanNotSupported(t *testing.T) {
 func TestPipx_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -284,7 +284,7 @@ func TestPipx_Hold_NotSupported(t *testing.T) {
 func TestPipx_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -292,7 +292,7 @@ func TestPipx_Unhold_NotSupported(t *testing.T) {
 func TestPipx_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -301,7 +301,7 @@ func TestPipx_Info_Error(t *testing.T) {
 	t.Parallel()
 	mgr := NewPipx()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	_, err := mgr.Info(context.Background(), "black")
+	_, err := mgr.Info(WithYes(context.Background()), "black")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get info")
 }

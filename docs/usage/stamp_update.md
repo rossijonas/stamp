@@ -11,6 +11,7 @@ Run system upgrade commands for each available package manager using a safe two-
 
 By default, checks for available updates, displays them, and prompts for confirmation before upgrading.
 Use --check to only run the check phase (dry-run).
+Note: the check phase refreshes package metadata first, which may require sudo and network access.
 Use -y to skip the check phase and auto-confirm for maximum speed.
 Use -m to scope to a single package manager.
 Use -p to update a single package (requires -m).
@@ -27,6 +28,7 @@ stamp update [flags]
   stamp update
 
   # dry-run: check for updates without applying them
+  # (refreshes package metadata first — may require sudo and network access)
   stamp update --check
 
   # skip check phase, auto-confirm (useful in scripts)

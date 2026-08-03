@@ -49,7 +49,10 @@ Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePk
 			}
 
 			for _, a := range targets {
-				err := a.Hold(cmd.Context(), pkgName)
+				if !requireConsent(cmd, fmt.Sprintf("Hold %s via %s", pkgName, a.Name())) {
+					return nil
+				}
+				err := a.Hold(manager.WithYes(cmd.Context()), pkgName)
 				if err != nil {
 					if errors.Is(err, manager.ErrNotSupported) {
 						continue
@@ -105,7 +108,10 @@ Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePk
 			}
 
 			for _, a := range targets {
-				err := a.Unhold(cmd.Context(), pkgName)
+				if !requireConsent(cmd, fmt.Sprintf("Unhold %s via %s", pkgName, a.Name())) {
+					return nil
+				}
+				err := a.Unhold(manager.WithYes(cmd.Context()), pkgName)
 				if err != nil {
 					if errors.Is(err, manager.ErrNotSupported) {
 						continue

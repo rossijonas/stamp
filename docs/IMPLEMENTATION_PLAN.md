@@ -385,3 +385,35 @@ Deliver reliable Ctrl+C behavior for all commands that spawn privileged children
 | 6 | 42d | ADR-011: update check + confirm | ✓ |
 | 6 | 42e | Docs: SPEC, FEATURE_MATRIX, usage/update.md | ✓ |
 | 7 | 43 | Clean SIGINT abort for all commands (#170) | ✓ |
+| 8 | 44 | Fail-closed consent for destructive commands (#168) | ✓ |
+| 8 | 44a | Native transaction preview (`Previewer`: dnf/apt/pacman/brew/flatpak/zypper/npm) | ✓ |
+| 8 | 44b | `WithYes` consent context + `ErrConfirmationRequired` in all adapters | ✓ |
+| 8 | 44c | CLI gate: install/remove/reinstall/restore/update/autoremove/clean/hold/unhold/repo | ✓ |
+| 8 | 44d | ADR-015: fail-closed consent model | ✓ |
+| 8 | 45 | Unified ADR-011-style preview contract (#168) | ✓ |
+| 8 | 45a | `Preview{Output,Noop}` + combined-output dry-runs | ✓ |
+| 8 | 45b | Adapter-owned no-op (remove/reinstall via own `ListInstalled`) + warn-and-prompt | ✓ |
+| 8 | 45c | dnf `makecache` refresh + `CheckUpdate` unrecognized-output guards | ✓ |
+| 8 | 45d | ADR-016: unified preview contract | ✓ |
+
+### Phase 8: Fail-Closed Consent for Destructive Commands (#168)
+
+Deliver native package-manager UX (preview → prompt, `-y` to skip) for all destructive commands, with fail-closed behavior in non-interactive environments.
+
+**Task 44: Fail-Closed Consent for Destructive Commands (#168)**
+*   **Description:** Shared CLI confirmation gate (`confirmDestructive`/`requireConsent` in `internal/cli/confirm.go`): refresh → native preview → prompt (`[y/N]`, default no) → run, with `-y/--yes` skipping everything. Non-interactive runs without `-y` abort. Destructive adapter methods require `manager.WithYes(ctx)` and return `ErrConfirmationRequired` otherwise (fail closed at the privileged boundary). New optional `manager.Previewer` interface gives read-only dry-run previews (dnf `--assumeno`, apt `--assume-no`, pacman `--print`, brew/flatpak/zypper `--dry-run`, npm `--dry-run`); managers without a native dry-run fall back to `Info`. `stamp restore` gains the prompt it previously only documented; `stamp update` prompt is now fail-closed (no silent CI proceed). Documented in ADR-015.
+*   **Acceptance:** `stamp reinstall htop -m dnf` shows a transaction preview and prompts; decline installs nothing. `-y` skips refresh/preview/prompt. Non-TTY without `-y` aborts for every destructive command. Adapters refuse destructive calls without consent.
+*   **Verify:** `task check` passes; manual: `echo | stamp install htop` → "aborted", no install.
+*   **Files:** `internal/cli/confirm.go` (new), `internal/cli/confirm_test.go` (new), `internal/cli/confirm_cmd_test.go` (new), `internal/cli/require_consent_test.go` (new), `internal/manager/consent_test.go` (new), `internal/manager/preview_test.go` (new), all `internal/manager/*.go` adapters, `internal/manager/mock.go`, `internal/cli/{install,reinstall,restore,restore_exec,update,autoremove,clean,hold,repo}.go`, `docs/decisions/ADR-015-fail-closed-consent.md`, README, `docs/project/spec.md`
+*   **Status:** ✓ Completed
+
+### Phase 8b: Unified Preview Contract (ADR-011 model)
+
+Standardize install/remove/reinstall previews on the typed, adapter-owned model `update` already uses (ADR-011), removing CLI heuristics.
+
+**Task 45: Unified ADR-011-style preview contract (#168)**
+*   **Description:** Replace the raw `(string, error)` previews with `manager.Preview{Output, Noop}` returned by the adapters; combined stdout+stderr dry-runs (`WithCombinedOutput` → `cmd.CombinedOutput`) fix dnf5's stderr transaction UI. Adapters own all no-op decisions (remove/reinstall check their own `ListInstalled`); the CLI renders verbatim, warns-and-prompts on preview error (no `Info` fallback), and fails fast on `Noop`. Update hardening: dnf/yum `Refresh` runs `makecache`; dnf/apt/pacman `CheckUpdate` surface unrecognized output (`parser may be outdated`). Documented in ADR-016.
+*   **Acceptance:** `stamp remove -m dnf htop` and `stamp reinstall -m dnf htop` preview the real native transaction; install no-op fails fast; preview errors warn-and-prompt; `stamp update` refresh is real for dnf.
+*   **Verify:** `task check` passes; manual smokes for remove/reinstall/install/update.
+*   **Files:** `internal/manager/{exec,manager,mock,dnf,apt,pacman,brew,flatpak,zypper,npm}.go`, `internal/cli/confirm.go`, manager/cli tests, `docs/decisions/ADR-016-unified-preview-contract.md`, `docs/decisions/ADR-015-fail-closed-consent.md`, `docs/project/spec.md`
+*   **Status:** ✓ Completed

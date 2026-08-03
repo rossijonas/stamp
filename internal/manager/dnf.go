@@ -123,6 +123,9 @@ func parseDNFHistoryUserInstalled(output []byte) []string {
 
 // Install executes the native installation command.
 func (m *DNF) Install(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if isGroup(ctx) {
 		args := sudoCmd(m.cmd, "group", "install", "-y", pkg)
 		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
@@ -144,6 +147,9 @@ func (m *DNF) Install(ctx context.Context, pkg string) error {
 
 // Reinstall executes the native reinstallation command.
 func (m *DNF) Reinstall(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if isGroup(ctx) {
 		// Reinstall is same as install for groups
 		return m.Install(ctx, pkg)
@@ -161,6 +167,9 @@ func (m *DNF) Reinstall(ctx context.Context, pkg string) error {
 
 // Remove executes the native removal command.
 func (m *DNF) Remove(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if isGroup(ctx) {
 		args := sudoCmd(m.cmd, "group", "remove", "-y", pkg)
 		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
@@ -179,6 +188,80 @@ func (m *DNF) Remove(ctx context.Context, pkg string) error {
 	}
 	return nil
 }
+
+// PreviewInstall previews installing pkg.
+// dnf resolves the transaction only when run with privileges, so this runs
+// under sudo; --assumeno answers "no" to the confirmation prompt, so no
+// system change occurs.
+func (m *DNF) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
+	ctx = WithCombinedOutput(ctx)
+	if isGroup(ctx) {
+		args := sudoCmd(m.cmd, "group", "install", "--assumeno", pkg)
+		out, err := m.exec(ctx, args[0], args[1:]...)
+		if err != nil && len(bytes.TrimSpace(out)) == 0 {
+			return Preview{}, fmt.Errorf("failed to preview group install %s: %w", pkg, err)
+		}
+		return Preview{Output: string(out), Noop: strings.Contains(string(out), "Nothing to do.")}, nil
+	}
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	args := sudoCmd(m.cmd, "install", "--assumeno", pkg)
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	}
+	return Preview{Output: string(out), Noop: strings.Contains(string(out), "Nothing to do.")}, nil
+}
+
+// PreviewRemove previews removing pkg.
+// See PreviewInstall for the privilege/--assumeno notes.
+func (m *DNF) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
+	ctx = WithCombinedOutput(ctx)
+	if isGroup(ctx) {
+		// Groups may contain spaces, so skip package-name validation.
+		args := sudoCmd(m.cmd, "group", "remove", "--assumeno", pkg)
+		out, err := m.exec(ctx, args[0], args[1:]...)
+		if err != nil && len(bytes.TrimSpace(out)) == 0 {
+			return Preview{}, fmt.Errorf("failed to preview group remove %s: %w", pkg, err)
+		}
+		return Preview{Output: string(out), Noop: strings.Contains(string(out), "Nothing to do.")}, nil
+	}
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	args := sudoCmd(m.cmd, "remove", "--assumeno", pkg)
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	}
+	// dnf remove of an absent package errors "No match for argument".
+	return Preview{Output: string(out), Noop: strings.Contains(string(out), "No match for argument")}, nil
+}
+
+// PreviewReinstall previews reinstalling pkg.
+// See PreviewInstall for the privilege/--assumeno notes.
+func (m *DNF) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+	if isGroup(ctx) {
+		return m.PreviewInstall(ctx, pkg)
+	}
+	if err := ValidatePackageName(pkg); err != nil {
+		return Preview{}, err
+	}
+	ctx = WithCombinedOutput(ctx)
+	args := sudoCmd(m.cmd, "reinstall", "--assumeno", pkg)
+	out, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
+	}
+	// Reinstalling an installed package is always a real operation; only an
+	// absent package is a no-op (dnf errors "No match for argument"/"not
+	// installed"). Reinstall is never a no-op just because a version matches.
+	s := string(out)
+	return Preview{Output: s, Noop: strings.Contains(s, "No match for argument") || strings.Contains(s, "not installed")}, nil
+}
+
+var _ Previewer = (*DNF)(nil)
 
 // parseDNFGroupList parses the output of 'dnf group list' and returns group names.
 // Format:
@@ -261,6 +344,9 @@ func (m *DNF) Doctor(_ context.Context) (string, error) {
 
 // Update runs the native system upgrade command.
 func (m *DNF) Update(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	args := sudoCmd(m.cmd, "upgrade", "-y")
 	if pkg != "" {
 		if err := ValidatePackageName(pkg); err != nil {
@@ -291,11 +377,23 @@ func (m *DNF) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error)
 			return nil, fmt.Errorf("failed to check updates: %w", err)
 		}
 	}
-	return parseDNFCheckUpdate(out), nil
+	result := parseDNFCheckUpdate(out)
+	// A non-empty check-update output that the parser could not recognize means
+	// the vendor changed the format; surface it instead of silently reporting
+	// "all up to date".
+	if len(result) == 0 && len(bytes.TrimSpace(out)) > 0 {
+		return nil, fmt.Errorf("unrecognized %s check-update output (parser may be outdated)", m.cmd)
+	}
+	return result, nil
 }
 
-// Refresh is a no-op for this manager.
-func (m *DNF) Refresh(_ context.Context) error {
+// Refresh syncs dnf metadata via makecache so subsequent checks are fresh.
+func (m *DNF) Refresh(ctx context.Context) error {
+	args := sudoCmd(m.cmd, "makecache", "-q")
+	_, err := m.exec(ctx, args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to refresh metadata: %w", err)
+	}
 	return nil
 }
 
@@ -331,6 +429,11 @@ func (m *DNF) Provides(ctx context.Context, query string) ([]string, error) {
 
 // AutoRemove removes orphaned packages via dnf autoremove.
 func (m *DNF) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -344,6 +447,11 @@ func (m *DNF) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 
 // Clean runs dnf clean all to clear the package cache.
 func (m *DNF) Clean(ctx context.Context, dryRun bool) ([]string, error) {
+	if !dryRun {
+		if err := requireConsent(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if dryRun {
 		return nil, nil
 	}
@@ -357,6 +465,9 @@ func (m *DNF) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 
 // Hold pins a package via dnf versionlock add.
 func (m *DNF) Hold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
@@ -370,6 +481,9 @@ func (m *DNF) Hold(ctx context.Context, pkg string) error {
 
 // Unhold removes a version pin via dnf versionlock delete.
 func (m *DNF) Unhold(ctx context.Context, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}

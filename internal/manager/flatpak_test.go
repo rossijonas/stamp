@@ -185,7 +185,7 @@ func TestFlatpak_Operations(t *testing.T) {
 			assert.Equal(t, "flatpak", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -315,7 +315,7 @@ func TestFlatpak_ListRepos(t *testing.T) {
 		nil,
 	)
 
-	repos, err := manager.ListRepos(context.Background())
+	repos, err := manager.ListRepos(WithYes(context.Background()))
 	require.NoError(t, err)
 	require.Len(t, repos, 2)
 	assert.Equal(t, "flathub", repos[0].Name)
@@ -328,7 +328,7 @@ func TestFlatpak_ListReposError(t *testing.T) {
 	manager := NewFlatpak()
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	_, err := manager.ListRepos(context.Background())
+	_, err := manager.ListRepos(WithYes(context.Background()))
 	require.Error(t, err)
 }
 
@@ -346,7 +346,7 @@ func TestFlatpak_ListInstalledMerged(t *testing.T) {
 		}
 	}
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"com.spotify.Client", "org.mozilla.firefox", "org.gimp.GIMP"}, pkgs)
 }
@@ -363,7 +363,7 @@ func TestFlatpak_ListInstalledSkipsHeader(t *testing.T) {
 		}
 	}
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.NotContains(t, pkgs, "Application ID")
 	assert.ElementsMatch(t, []string{"com.github.fabiocolacio.marker", "com.slack.Slack"}, pkgs)
@@ -374,7 +374,7 @@ func TestFlatpak_ListInstalledBothFail(t *testing.T) {
 	manager := NewFlatpak()
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	_, err := manager.ListInstalled(context.Background())
+	_, err := manager.ListInstalled(WithYes(context.Background()))
 	require.Error(t, err)
 }
 
@@ -384,7 +384,7 @@ func TestFlatpak_CheckUpdate(t *testing.T) {
 	out := "Looking for updates…\nUpdates for 'com.spotify.Client' in remote 'flathub'\nUpdates for 'org.gimp.GIMP' in remote 'flathub'\nNothing to update.\n"
 	manager.exec = mockExecutorHelper(out, nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 2)
 	assert.Equal(t, "com.spotify.Client", updates[0].Package)
@@ -395,7 +395,7 @@ func TestFlatpak_CheckUpdate_Unsupported(t *testing.T) {
 	t.Parallel()
 	manager := NewFlatpak()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrCheckUnsupported)
 }
@@ -412,7 +412,7 @@ func TestParseFlatpakDryRun(t *testing.T) {
 func TestFlatpak_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
-	_, err := mgr.Provides(context.Background(), "firefox")
+	_, err := mgr.Provides(WithYes(context.Background()), "firefox")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -421,14 +421,14 @@ func TestFlatpak_AutoRemove(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
 	mgr.exec = mockExecutorHelper("", nil)
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestFlatpak_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
-	pkgs, err := mgr.AutoRemove(context.Background(), true)
+	pkgs, err := mgr.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, pkgs)
 }
@@ -436,7 +436,7 @@ func TestFlatpak_AutoRemoveDryRun(t *testing.T) {
 func TestFlatpak_CleanNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
-	_, err := mgr.Clean(context.Background(), false)
+	_, err := mgr.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -444,7 +444,7 @@ func TestFlatpak_CleanNotSupported(t *testing.T) {
 func TestFlatpak_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -452,7 +452,7 @@ func TestFlatpak_Hold_NotSupported(t *testing.T) {
 func TestFlatpak_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -460,7 +460,7 @@ func TestFlatpak_Unhold_NotSupported(t *testing.T) {
 func TestFlatpak_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -473,7 +473,7 @@ func TestFlatpak_Override_Filesystem(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Filesystem: []string{"host", "home"},
 	})
 	require.NoError(t, err)
@@ -491,7 +491,7 @@ func TestFlatpak_Override_Socket(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Socket: []string{"wayland", "pulseaudio"},
 	})
 	require.NoError(t, err)
@@ -507,7 +507,7 @@ func TestFlatpak_Override_Device(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Device: []string{"dri", "all"},
 	})
 	require.NoError(t, err)
@@ -523,7 +523,7 @@ func TestFlatpak_Override_Env(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Env: []string{"MY_VAR=value", "OTHER=val"},
 	})
 	require.NoError(t, err)
@@ -539,7 +539,7 @@ func TestFlatpak_Override_Reset(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Reset: true,
 	})
 	require.NoError(t, err)
@@ -551,7 +551,7 @@ func TestFlatpak_Override_Show(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
 	mgr.exec = mockExecutorHelper("filesystem=host\nsocket=wayland\n", nil)
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Show: true,
 	})
 	require.NoError(t, err)
@@ -565,7 +565,7 @@ func TestFlatpak_Override_System(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		System: true,
 	})
 	require.NoError(t, err)
@@ -576,7 +576,7 @@ func TestFlatpak_Override_Error(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Filesystem: []string{"host"},
 	})
 	require.Error(t, err)
@@ -586,7 +586,7 @@ func TestFlatpak_Override_Error(t *testing.T) {
 func TestFlatpak_Override_InvalidName(t *testing.T) {
 	t.Parallel()
 	mgr := NewFlatpak()
-	err := mgr.Override(context.Background(), "-invalid", OverrideFlags{})
+	err := mgr.Override(WithYes(context.Background()), "-invalid", OverrideFlags{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid package name")
 }
@@ -599,7 +599,7 @@ func TestFlatpak_Override_AllFlags(t *testing.T) {
 		args = a
 		return []byte(""), nil
 	}
-	err := mgr.Override(context.Background(), "firefox", OverrideFlags{
+	err := mgr.Override(WithYes(context.Background()), "firefox", OverrideFlags{
 		Filesystem: []string{"host"},
 		Socket:     []string{"wayland"},
 		Device:     []string{"dri"},

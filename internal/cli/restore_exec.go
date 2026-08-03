@@ -34,7 +34,7 @@ func restoreRepositories(ctx context.Context, w io.Writer, adapters []manager.Ad
 			_, _ = fmt.Fprintf(w, "  warning: manager %s not available for repository %s\n", r.Manager, r.Name)
 			continue
 		}
-		if err := adapter.AddRepo(ctx, r.Name, r.URL); err != nil {
+		if err := adapter.AddRepo(manager.WithYes(ctx), r.Name, r.URL); err != nil {
 			_, _ = fmt.Fprintf(w, "  warning: failed to add repository %s (%s): %v\n", r.Name, r.Manager, err)
 		} else {
 			_, _ = fmt.Fprintf(w, "  restored repository %s via %s\n", r.Name, r.Manager)
@@ -86,7 +86,7 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 						break
 					}
 				}
-				if err := a.Install(installCtx, pName); err != nil {
+				if err := a.Install(manager.WithYes(installCtx), pName); err != nil {
 					errMu.Lock()
 					errors = append(errors, restoreError{Manager: a.Name(), Pkg: pName, Err: err})
 					errMu.Unlock()

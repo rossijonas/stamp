@@ -191,7 +191,7 @@ func TestBrew_Operations(t *testing.T) {
 			assert.Equal(t, "brew", manager.Name())
 
 			var err error
-			ctx := context.Background()
+			ctx := WithYes(context.Background())
 
 			switch tt.operation {
 			case "list":
@@ -329,7 +329,7 @@ func TestBrew_ListRepos(t *testing.T) {
 	manager := NewBrew()
 	manager.exec = mockExecutorHelper("aovestdipaperino/tap\nyvgude/lean-ctx\n", nil)
 
-	repos, err := manager.ListRepos(context.Background())
+	repos, err := manager.ListRepos(WithYes(context.Background()))
 	require.NoError(t, err)
 	require.Len(t, repos, 2)
 	assert.Equal(t, "aovestdipaperino/tap", repos[0].Name)
@@ -340,7 +340,7 @@ func TestBrew_CleanError(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	_, err := mgr.Clean(context.Background(), false)
+	_, err := mgr.Clean(WithYes(context.Background()), false)
 	require.Error(t, err)
 }
 
@@ -348,7 +348,7 @@ func TestBrew_Doctor_Error(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	_, err := mgr.Doctor(context.Background())
+	_, err := mgr.Doctor(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "brew doctor failed")
 }
@@ -357,7 +357,7 @@ func TestBrew_IsCask_ExecError(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	_, err := mgr.IsCask(context.Background(), "firefox")
+	_, err := mgr.IsCask(WithYes(context.Background()), "firefox")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check cask status")
 }
@@ -366,7 +366,7 @@ func TestBrew_AutoRemove_Error(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to autoremove")
 }
@@ -375,7 +375,7 @@ func TestBrew_CheckUpdate_OutdatedFails_AfterRefresh(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
 	mgr.exec = mockExecutorHelper("", assert.AnError)
-	_, err := mgr.CheckUpdate(context.Background(), "")
+	_, err := mgr.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -384,7 +384,7 @@ func TestBrew_CheckUpdate_Pkg_NotFound(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
 	mgr.exec = mockExecutorHelper(`{"formulae":[]}`, nil)
-	updates, err := mgr.CheckUpdate(context.Background(), "nonexistent")
+	updates, err := mgr.CheckUpdate(WithYes(context.Background()), "nonexistent")
 	require.NoError(t, err)
 	assert.Empty(t, updates)
 }
@@ -393,7 +393,7 @@ func TestBrew_CheckUpdateExecError(t *testing.T) {
 	t.Parallel()
 	manager := NewBrew()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -403,7 +403,7 @@ func TestBrew_CheckUpdate(t *testing.T) {
 	manager := NewBrew()
 	manager.exec = mockExecutorHelper(`{"formulae":[{"name":"htop","installed_versions":["3.2.1"],"current_version":"3.2.2"}]}`, nil)
 
-	updates, err := manager.CheckUpdate(context.Background(), "")
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	require.Len(t, updates, 1)
 	assert.Equal(t, "htop", updates[0].Package)
@@ -415,7 +415,7 @@ func TestBrew_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
 	t.Parallel()
 	manager := NewBrew()
 	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(context.Background(), "")
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
@@ -434,7 +434,7 @@ func TestBrew_ListInstalled_WithCasks(t *testing.T) {
 		return []byte("firefox\niterm2\n"), nil
 	}
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"htop", "jq", "firefox", "iterm2"}, pkgs)
 }
@@ -452,7 +452,7 @@ func TestBrew_ListInstalled_CaskFail_ReturnsFormulas(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	pkgs, err := manager.ListInstalled(context.Background())
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"htop", "jq"}, pkgs)
 }
@@ -465,7 +465,7 @@ func TestBrew_CaskInstall(t *testing.T) {
 		return []byte(""), nil
 	}
 
-	err := manager.Install(WithCask(context.Background()), "firefox")
+	err := manager.Install(WithCask(WithYes(context.Background())), "firefox")
 	require.NoError(t, err)
 }
 
@@ -477,7 +477,7 @@ func TestBrew_CaskRemove(t *testing.T) {
 		return []byte(""), nil
 	}
 
-	err := manager.Remove(WithCask(context.Background()), "firefox")
+	err := manager.Remove(WithCask(WithYes(context.Background())), "firefox")
 	require.NoError(t, err)
 }
 
@@ -489,7 +489,7 @@ func TestBrew_CaskReinstall(t *testing.T) {
 		return []byte(""), nil
 	}
 
-	err := manager.Reinstall(WithCask(context.Background()), "firefox")
+	err := manager.Reinstall(WithCask(WithYes(context.Background())), "firefox")
 	require.NoError(t, err)
 }
 
@@ -500,7 +500,7 @@ func TestBrew_IsCask_True(t *testing.T) {
 		return []byte("firefox: 1.0\n"), nil
 	}
 
-	result, err := manager.IsCask(context.Background(), "firefox")
+	result, err := manager.IsCask(WithYes(context.Background()), "firefox")
 	require.NoError(t, err)
 	assert.True(t, result)
 }
@@ -512,7 +512,7 @@ func TestBrew_IsCask_False(t *testing.T) {
 		return nil, fmt.Errorf("Error: No available Cask")
 	}
 
-	result, err := manager.IsCask(context.Background(), "htop")
+	result, err := manager.IsCask(WithYes(context.Background()), "htop")
 	require.NoError(t, err)
 	assert.False(t, result)
 }
@@ -538,7 +538,7 @@ func TestBrew_Update_IncludesCasks(t *testing.T) {
 		}
 	}
 
-	err := manager.Update(context.Background(), "")
+	err := manager.Update(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	assert.Equal(t, 3, call)
 }
@@ -560,7 +560,7 @@ func TestBrew_Update_CaskFailureIsBestEffort(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := mgr.Update(context.Background(), "")
+	err := mgr.Update(WithYes(context.Background()), "")
 	require.NoError(t, err)
 	assert.Equal(t, 3, call)
 }
@@ -580,7 +580,7 @@ func TestBrew_Update_FormulaFailureIsError(t *testing.T) {
 			return nil, assert.AnError
 		}
 	}
-	err := mgr.Update(context.Background(), "")
+	err := mgr.Update(WithYes(context.Background()), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to upgrade packages")
 	assert.Equal(t, 2, call)
@@ -591,14 +591,14 @@ func TestBrew_ListReposError(t *testing.T) {
 	manager := NewBrew()
 	manager.exec = mockExecutorHelper("", assert.AnError)
 
-	_, err := manager.ListRepos(context.Background())
+	_, err := manager.ListRepos(WithYes(context.Background()))
 	require.Error(t, err)
 }
 
 func TestBrew_ProvidesNotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
-	_, err := mgr.Provides(context.Background(), "htop")
+	_, err := mgr.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -607,14 +607,14 @@ func TestBrew_AutoRemove(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
 	mgr.exec = mockExecutorHelper("", nil)
-	_, err := mgr.AutoRemove(context.Background(), false)
+	_, err := mgr.AutoRemove(WithYes(context.Background()), false)
 	require.NoError(t, err)
 }
 
 func TestBrew_AutoRemoveDryRun(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
-	pkgs, err := mgr.AutoRemove(context.Background(), true)
+	pkgs, err := mgr.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, pkgs)
 }
@@ -626,7 +626,7 @@ func TestBrew_CleanDryRun(t *testing.T) {
 		assert.Equal(t, []string{"cleanup", "--dry-run"}, args)
 		return []byte("Would remove: 1 old version\n"), nil
 	}
-	result, err := mgr.Clean(context.Background(), true)
+	result, err := mgr.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Contains(t, result, "Would remove: 1 old version")
 }
@@ -638,7 +638,7 @@ func TestBrew_Clean(t *testing.T) {
 		assert.Equal(t, []string{"cleanup"}, args)
 		return []byte("Removed: 1 old version\n"), nil
 	}
-	result, err := mgr.Clean(context.Background(), false)
+	result, err := mgr.Clean(WithYes(context.Background()), false)
 	require.NoError(t, err)
 	assert.NotEmpty(t, result)
 }
@@ -646,7 +646,7 @@ func TestBrew_Clean(t *testing.T) {
 func TestBrew_Hold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
-	err := mgr.Hold(context.Background(), "nginx")
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -654,7 +654,7 @@ func TestBrew_Hold_NotSupported(t *testing.T) {
 func TestBrew_Unhold_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
-	err := mgr.Unhold(context.Background(), "nginx")
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
@@ -662,7 +662,7 @@ func TestBrew_Unhold_NotSupported(t *testing.T) {
 func TestBrew_ListHeld_NotSupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
-	_, err := mgr.ListHeld(context.Background())
+	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
 }

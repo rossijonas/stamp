@@ -15,6 +15,7 @@ type contextKey int
 const (
 	streamIOKey contextKey = iota
 	outputPrefixKey
+	combinedOutputKey
 )
 
 // WithStreamIO returns a new context that signals the executor to stream I/O.
@@ -24,6 +25,19 @@ func WithStreamIO(ctx context.Context) context.Context {
 
 func isStreamIO(ctx context.Context) bool {
 	b, _ := ctx.Value(streamIOKey).(bool)
+	return b
+}
+
+// WithCombinedOutput returns a new context that signals the executor to
+// capture stdout and stderr together (cmd.CombinedOutput). Used by transaction
+// previews: managers such as dnf5 render their transaction UI to stderr and
+// exit non-zero when the dry-run aborts, so stdout-only capture loses it.
+func WithCombinedOutput(ctx context.Context) context.Context {
+	return context.WithValue(ctx, combinedOutputKey, true)
+}
+
+func isCombinedOutput(ctx context.Context) bool {
+	b, _ := ctx.Value(combinedOutputKey).(bool)
 	return b
 }
 
@@ -108,6 +122,13 @@ func defaultExecutor(ctx context.Context, name string, args ...string) ([]byte, 
 			return nil, err
 		}
 		return nil, nil
+	}
+
+	if isCombinedOutput(ctx) {
+		// CombinedOutput returns the captured stdout+stderr even when the
+		// command exits non-zero (e.g. a dnf --assumeno dry-run that displays
+		// the transaction then aborts).
+		return cmd.CombinedOutput()
 	}
 
 	out, err := cmd.Output()
