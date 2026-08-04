@@ -59,18 +59,18 @@ check "doctor runs" stamp doctor
 check "search finds results" timeout $TIMEOUT_EXTRA stamp search rocky-release -m dnf
 
 echo "=== DNF Install/Remove ==="
-check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf
+check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf -y
 check "list shows htop" bash -c "timeout $TIMEOUT stamp list | grep -q htop"
-check "remove htop via dnf" timeout $TIMEOUT_LONG stamp remove htop -m dnf
+check "remove htop via dnf" timeout $TIMEOUT_LONG stamp remove htop -m dnf -y
 check "list no longer shows htop" bash -c "timeout $TIMEOUT stamp list | grep -qv htop"
 
 echo "=== Brew ==="
 check "brew search htop" timeout $TIMEOUT stamp search htop -m brew
 
 echo "=== Brew Install/Remove ==="
-check "brew install hello" timeout $TIMEOUT_EXTRA stamp install hello -m brew
+check "brew install hello" timeout $TIMEOUT_EXTRA stamp install hello -m brew -y
 check "list shows hello" bash -c "timeout $TIMEOUT stamp list | grep -q hello"
-check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew
+check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew -y
 check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -qv hello"
 
 echo "=== Flatpak ==="
@@ -113,9 +113,9 @@ check "reconcile --dry-run" timeout $TIMEOUT stamp reconcile --dry-run -m dnf
 check "reconcile runs" timeout $TIMEOUT stamp reconcile -m dnf
 
 echo "=== Update ==="
-check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf
-check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew
-check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
+check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf -y
+check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew -y
+check "update single package" timeout $TIMEOUT stamp update -p hello -m brew -y
 
 echo "=== Restore ==="
 check "restore --dry-run shows results" bash -c "timeout $TIMEOUT stamp restore --dry-run 2>&1 | grep -q ."
@@ -133,8 +133,8 @@ else
 fi
 
 echo "=== Alias Tests ==="
-check "install via add alias" timeout $TIMEOUT_LONG stamp add hello -m dnf
-check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m dnf
+check "install via add alias" timeout $TIMEOUT_LONG stamp add hello -m dnf -y
+check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m dnf -y
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m dnf
 
 echo

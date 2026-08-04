@@ -59,19 +59,19 @@ check "doctor runs" stamp doctor
 check "search finds results" bash -c "timeout $TIMEOUT stamp search htop -m dnf | grep -q ."
 
 echo "=== DNF Install/Remove ==="
-check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf
+check "install htop via dnf" timeout $TIMEOUT_LONG stamp install htop -m dnf -y
 check "list shows htop" bash -c "timeout $TIMEOUT stamp list | grep -q htop"
-check "reinstall htop via -m flag" timeout $TIMEOUT_LONG stamp reinstall htop -m dnf
-check "remove htop via dnf" timeout $TIMEOUT_LONG stamp remove htop -m dnf
+check "reinstall htop via -m flag" timeout $TIMEOUT_LONG stamp reinstall htop -m dnf -y
+check "remove htop via dnf" timeout $TIMEOUT_LONG stamp remove htop -m dnf -y
 check "list no longer shows htop" bash -c "timeout $TIMEOUT stamp list | grep -qv htop"
 
 echo "=== Brew ==="
 check "brew search htop" timeout $TIMEOUT stamp search htop -m brew
 
 echo "=== Brew Install/Remove ==="
-check "brew install hello" timeout $TIMEOUT_LONG stamp install hello -m brew
+check "brew install hello" timeout $TIMEOUT_LONG stamp install hello -m brew -y
 check "list shows hello" bash -c "timeout $TIMEOUT stamp list | grep -q hello"
-check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew
+check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew -y
 check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -qv hello"
 
 echo "=== Flatpak ==="
@@ -99,7 +99,7 @@ check "reconcile --yes flag" timeout $TIMEOUT stamp reconcile -y -m dnf
 
 echo "=== Flag Tests ==="
 check "search --json" timeout $TIMEOUT_EXTRA stamp search htop --json
-check "install --note" timeout $TIMEOUT_EXTRA stamp install hello -m dnf --note "test note"
+check "install --note" timeout $TIMEOUT_EXTRA stamp install hello -m dnf --note "test note" -y
 check "note persisted in manifest" bash -c "stamp list --json | jq -e 'any(.Notes == \"test note\")' > /dev/null"
 check "list -m dnf" timeout $TIMEOUT stamp list -m dnf
 
@@ -135,13 +135,13 @@ check "stamp update --help" timeout $TIMEOUT stamp update --help
 check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 
 echo "=== Update ==="
-check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf
-check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew
-check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
+check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf -y
+check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew -y
+check "update single package" timeout $TIMEOUT stamp update -p hello -m brew -y
 
 echo "=== Alias Tests ==="
-check "install via add alias" timeout $TIMEOUT_LONG stamp add hello -m dnf
-check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m dnf
+check "install via add alias" timeout $TIMEOUT_LONG stamp add hello -m dnf -y
+check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m dnf -y
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m dnf
 
 echo "=== Snap ==="

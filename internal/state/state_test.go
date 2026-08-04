@@ -397,6 +397,28 @@ func TestBackupSnapshots_NoDir(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to backup snapshots")
 }
 
+// TestBackupSnapshots_SameSecondCollision guards against a same-second re-init
+// (e.g. `stamp init` run twice in quick succession): the second backup must get
+// a suffixed path instead of colliding on the directory rename (ENOTEMPTY).
+func TestBackupSnapshots_SameSecondCollision(t *testing.T) {
+	tmpDir := t.TempDir()
+	snapDir := filepath.Join(tmpDir, "snapshots")
+	require.NoError(t, os.MkdirAll(snapDir, 0700))
+	require.NoError(t, os.WriteFile(filepath.Join(snapDir, "brew.json"), []byte("{}"), 0600))
+
+	first, err := BackupSnapshots(snapDir)
+	require.NoError(t, err)
+
+	// Re-create the snapshots dir, then back it up again immediately — the
+	// timestamp may be identical to the first backup.
+	require.NoError(t, os.MkdirAll(snapDir, 0700))
+	require.NoError(t, os.WriteFile(filepath.Join(snapDir, "brew.json"), []byte("{}"), 0600))
+
+	second, err := BackupSnapshots(snapDir)
+	require.NoError(t, err)
+	assert.NotEqual(t, first, second, "backups must not collide")
+}
+
 func TestSave_WriteFileError(t *testing.T) {
 	// Attempt to save to an invalid directory (should fail on os.WriteFile)
 	snap := Snapshot{

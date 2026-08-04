@@ -220,11 +220,11 @@ func TestUpdateCmd_WithUpdatesNonTerminalAborts(t *testing.T) {
 	}
 	// No -y, updates available, stdin is a pipe → fail closed (no run phase)
 	buf, err := execUpdateCmd(t, []string{"update"}, adapters)
-	require.NoError(t, err)
+	require.Error(t, err)
 	output := buf.String()
 	assert.Contains(t, output, "Checking for updates")
 	assert.Contains(t, output, "brew: htop 3.2.1 → 3.2.2")
-	assert.Contains(t, output, "aborted")
+	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.NotContains(t, output, "updated packages via brew")
 }
 

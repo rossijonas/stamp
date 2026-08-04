@@ -186,6 +186,25 @@ func TestManifestBackup_NoOriginal(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to backup manifest")
 }
 
+// TestManifestBackup_SameSecondCollision guards against a same-second re-init:
+// the second backup must get a suffixed path rather than colliding.
+func TestManifestBackup_SameSecondCollision(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+
+	first := ""
+	for i := 0; i < 3; i++ {
+		require.NoError(t, os.WriteFile(mPath, []byte("version = 1\n"), 0600))
+		p, err := Backup(mPath)
+		require.NoError(t, err)
+		if i > 0 {
+			assert.NotEqual(t, first, p, "backups must not collide")
+		}
+		first = p
+	}
+}
+
 func TestManifestSaveMkdirError(t *testing.T) {
 	t.Parallel()
 	tmpFile, err := os.CreateTemp("", "manifest-mkdir-test-*")

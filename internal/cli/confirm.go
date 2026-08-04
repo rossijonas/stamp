@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -20,23 +21,58 @@ const (
 	previewReinstall
 )
 
+// Sentinel results for the confirmation gates.
+var (
+	// errStopClean is returned when the operation must not run but the command
+	// is still a clean no-op (exit 0): an interactive decline, a no-op preview,
+	// or a SIGINT abort. Callers map it to nil via handleConsent.
+	errStopClean = errors.New("aborted")
+
+	// errNonInteractive is returned when a destructive operation needs consent
+	// but the input is not a terminal and -y/--yes was not passed. Callers
+	// propagate it so the command exits non-zero — a forgotten -y in a script
+	// or CI pipeline must fail loud instead of silently doing nothing.
+	errNonInteractive = errors.New("refusing to run without -y in non-interactive mode")
+)
+
+// consentPrompt prompts with a default of "no". It returns nil when accepted,
+// errStopClean when the user declines (TTY), and errNonInteractive when the
+// input is not a terminal (there is no way to consent).
+func consentPrompt(ctx context.Context, out io.Writer, in io.Reader, msg string) error {
+	if !isTerminal(in) {
+		return errNonInteractive
+	}
+	if !promptYesNo(ctx, out, in, msg, false) {
+		return errStopClean
+	}
+	return nil
+}
+
+// handleConsent maps a gate error to the caller's exit behavior: nil when the
+// operation may proceed or stopped cleanly (exit 0), and the original error
+// when the operation was refused non-interactively (exit non-zero).
+func handleConsent(err error) error {
+	if err == nil || errors.Is(err, errStopClean) {
+		return nil
+	}
+	return err
+}
+
 // confirmDestructive implements the shared confirmation gate for destructive
 // package operations (install, remove, reinstall):
 //
-//   - yes → return true immediately (skip refresh/preview/prompt).
+//   - yes → return nil immediately (skip refresh/preview/prompt).
 //   - otherwise refresh metadata (best-effort, install/reinstall only), render
 //     the adapter's transaction preview, then prompt with a default of "no".
 //
-// A no-op preview (adapter asserts no transaction would occur) fails fast
-// without prompting. A preview that cannot be rendered warns and still prompts
-// — the prompt is the consent gate. A non-terminal input without explicit
-// consent returns false (fail closed), so pipelines and CI never silently
-// mutate the system. Callers must only run the destructive operation when this
-// returns true.
+// A no-op preview (adapter asserts no transaction would occur), an interactive
+// decline, or a SIGINT abort all return errStopClean — the caller stops with
+// exit 0. A non-terminal input without explicit consent returns errNonInteractive
+// so callers exit non-zero (fail closed and fail loud for pipelines/CI).
 func confirmDestructive(ctx context.Context, w io.Writer, in io.Reader, yes bool,
-	adapter manager.Adapter, mode previewMode, verb, pkg string) bool {
+	adapter manager.Adapter, mode previewMode, verb, pkg string) error {
 	if yes {
-		return true
+		return nil
 	}
 
 	if mode != previewRemove {
@@ -50,7 +86,7 @@ func confirmDestructive(ctx context.Context, w io.Writer, in io.Reader, yes bool
 	// Interrupted (SIGINT) during refresh/preview: abort without prompting.
 	if ctx.Err() != nil {
 		_, _ = fmt.Fprintln(w, "aborted")
-		return false
+		return errStopClean
 	}
 
 	switch {
@@ -63,37 +99,43 @@ func confirmDestructive(ctx context.Context, w io.Writer, in io.Reader, yes bool
 			_, _ = fmt.Fprintln(w, pv.Output)
 		}
 		_, _ = fmt.Fprintf(w, "  nothing to do: %s via %s\n", pkg, adapter.Name())
-		return false
+		return errStopClean
 	case strings.TrimSpace(pv.Output) != "":
 		_, _ = fmt.Fprintln(w, pv.Output)
 	}
 
 	msg := fmt.Sprintf("%s %s via %s? [y/N]: ", verb, pkg, adapter.Name())
-	if !promptYesNo(ctx, w, in, msg, false) {
+	if err := consentPrompt(ctx, w, in, msg); err != nil {
+		if errors.Is(err, errNonInteractive) {
+			return fmt.Errorf("%w (%s %s via %s)", errNonInteractive, verb, pkg, adapter.Name())
+		}
 		_, _ = fmt.Fprintln(w, "aborted")
-		return false
+		return errStopClean
 	}
-	return true
+	return nil
 }
 
 // requireConsent prompts for confirmation unless the global -y/--yes flag is
-// set. Non-interactive input without -y fails closed (returns false), so
-// pipelines and CI never silently mutate the system. Callers must only run
-// destructive operations when this returns true.
-func requireConsent(cmd *cobra.Command, verb string) bool {
+// set. Non-interactive input without -y returns errNonInteractive so callers
+// exit non-zero; an interactive decline returns errStopClean (exit 0). Callers
+// must only run destructive operations when this returns nil.
+func requireConsent(cmd *cobra.Command, verb string) error {
 	app := appFromCtx(cmd)
 	if app != nil && app.yes {
-		return true
+		return nil
 	}
 	if cmd.Context().Err() != nil {
 		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
-		return false
+		return errStopClean
 	}
-	if !promptYesNo(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(), fmt.Sprintf("%s? [y/N]: ", verb), false) {
+	if err := consentPrompt(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(), fmt.Sprintf("%s? [y/N]: ", verb)); err != nil {
+		if errors.Is(err, errNonInteractive) {
+			return fmt.Errorf("%w (%s)", errNonInteractive, verb)
+		}
 		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
-		return false
+		return errStopClean
 	}
-	return true
+	return nil
 }
 
 // previewOutput renders the adapter-owned transaction preview for the given

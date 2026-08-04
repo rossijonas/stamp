@@ -44,8 +44,10 @@ Scoped to a single manager with the --manager flag.`,
 
 			hasWork := false
 			// Real cleanups require explicit consent; dry-run is read-only.
-			if !dryRun && !requireConsent(cmd, "Proceed with clean") {
-				return nil
+			if !dryRun {
+				if err := requireConsent(cmd, "Proceed with clean"); err != nil {
+					return handleConsent(err)
+				}
 			}
 			for _, a := range targets {
 				result, err := a.Clean(manager.WithYes(cmd.Context()), dryRun)

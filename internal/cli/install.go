@@ -71,10 +71,10 @@ func newInstallCmd() *cobra.Command {
 			}
 
 			// Confirmation gate: prompts unless -y is passed. Non-interactive
-			// runs without -y abort (fail closed).
-			if !confirmDestructive(installCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
-				adapter, previewInstall, "Install", pkgName) {
-				return nil
+			// runs without -y abort (fail closed, non-zero exit).
+			if err := confirmDestructive(installCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+				adapter, previewInstall, "Install", pkgName); err != nil {
+				return handleConsent(err)
 			}
 
 			if err := adapter.Install(manager.WithYes(installCtx), pkgName); err != nil {
@@ -185,10 +185,10 @@ func newRemoveCmd() *cobra.Command {
 			}
 
 			// Confirmation gate: prompts unless -y is passed. Non-interactive
-			// runs without -y abort (fail closed).
-			if !confirmDestructive(removeCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
-				adapter, previewRemove, "Remove", pkgName) {
-				return nil
+			// runs without -y abort (fail closed, non-zero exit).
+			if err := confirmDestructive(removeCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+				adapter, previewRemove, "Remove", pkgName); err != nil {
+				return handleConsent(err)
 			}
 
 			if err := adapter.Remove(manager.WithYes(removeCtx), pkgName); err != nil {
