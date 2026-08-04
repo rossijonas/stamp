@@ -15,9 +15,9 @@ func TestCleanCmd_Scenarios(t *testing.T) {
 		args    []string
 		wantErr bool
 	}{
-		{"default run", []string{"clean"}, false},
+		{"default run", []string{"clean", "-y"}, false},
 		{"dry-run flag", []string{"clean", "--dry-run"}, false},
-		{"manager flag", []string{"clean", "-m", "dnf"}, false},
+		{"manager flag", []string{"clean", "-m", "dnf", "-y"}, false},
 		{"unknown manager", []string{"clean", "-m", "nonexistent"}, true},
 	}
 	for _, tt := range tests {

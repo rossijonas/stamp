@@ -17,8 +17,8 @@ import (
 func TestInstallCmd_NonTerminalAborts(t *testing.T) {
 	t.Parallel()
 	buf, err := execCmd(t, []string{"install", "htop"}, []manager.Adapter{&manager.Mock{ManagerName: "dnf"}})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "aborted")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.NotContains(t, buf.String(), "installed htop via dnf")
 }
 
@@ -71,9 +71,9 @@ func TestInstallCmd_YesFlagSkipsPrompt(t *testing.T) {
 func TestRemoveCmd_NonTerminalAborts(t *testing.T) {
 	t.Parallel()
 	mockDNF := &manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"htop"}}
-	buf, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{mockDNF})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "aborted")
+	_, err := execCmd(t, []string{"remove", "htop"}, []manager.Adapter{mockDNF})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.Contains(t, mockDNF.InstalledPkgs, "htop")
 }
 
@@ -110,8 +110,9 @@ func TestReinstallCmd_NonTerminalAborts(t *testing.T) {
 	root.SetErr(buf)
 	root.SetArgs([]string{"reinstall", "htop"})
 
-	require.NoError(t, root.Execute())
-	assert.Contains(t, buf.String(), "aborted")
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.NotContains(t, buf.String(), "reinstalled htop via brew")
 }
 

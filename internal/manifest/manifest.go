@@ -169,9 +169,24 @@ func (m *Manifest) HasPackage(name, manager string) bool {
 // Format: <path>.<YYYYMMDD>THHMMSSZ.bak
 func Backup(path string) (string, error) {
 	ts := time.Now().UTC().Format("20060102T150405Z")
-	backupPath := path + "." + ts + ".bak"
+	backupPath := uniqueBackupPath(path, ts)
 	if err := os.Rename(path, backupPath); err != nil {
 		return "", fmt.Errorf("failed to backup manifest to %s: %w", backupPath, err)
 	}
 	return backupPath, nil
+}
+
+// uniqueBackupPath returns <path>.<ts>.bak, appending a numeric suffix if the
+// target already exists (see state.BackupSnapshots — same-second collisions).
+func uniqueBackupPath(path, ts string) string {
+	candidate := path + "." + ts + ".bak"
+	for i := 2; pathExists(candidate); i++ {
+		candidate = fmt.Sprintf("%s.%s.%d.bak", path, ts, i)
+	}
+	return candidate
+}
+
+func pathExists(path string) bool {
+	_, err := os.Lstat(path)
+	return err == nil
 }

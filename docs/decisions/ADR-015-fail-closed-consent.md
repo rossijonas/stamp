@@ -55,7 +55,7 @@ Managers without a native dry-run (snap, cargo, go, pipx, uv, paru) and any mana
 
 ## Consequences
 
-- `install`, `remove`, `reinstall`, `restore`, `update`, `autoremove`, `clean`, `hold`, `unhold`, and `repo add/remove` now prompt unless `-y` is passed; non-interactive runs without `-y` abort.
+- `install`, `remove`, `reinstall`, `restore`, `update`, `autoremove`, `clean`, `hold`, `unhold`, and `repo add/remove` now prompt unless `-y` is passed; non-interactive runs without `-y` refuse with a **non-zero exit** (a forgotten `-y` in CI fails loud). Interactive declines and no-op previews stop cleanly with exit 0.
 - `stamp update` no longer silently proceeds in CI without `-y` (behavior change from ADR-011's fail-open prompt).
 - `stamp restore` gains the prompt it previously only documented.
 - Direct adapter calls (future code, third-party) fail closed instead of mutating the system — defense-in-depth at the privileged boundary.

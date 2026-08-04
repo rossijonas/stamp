@@ -66,10 +66,10 @@ tracked in the manifest, resolve the manager and track it.`,
 			}
 
 			// Confirmation gate: prompts unless -y is passed. Non-interactive
-			// runs without -y abort (fail closed).
-			if !confirmDestructive(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
-				adapter, previewReinstall, "Reinstall", pkgName) {
-				return nil
+			// runs without -y abort (fail closed, non-zero exit).
+			if err := confirmDestructive(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+				adapter, previewReinstall, "Reinstall", pkgName); err != nil {
+				return handleConsent(err)
 			}
 
 			// Execute native reinstall

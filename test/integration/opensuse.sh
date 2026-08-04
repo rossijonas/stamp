@@ -43,18 +43,18 @@ check "doctor runs" stamp doctor
 
 echo "=== Zypper ==="
 check "search finds results" bash -c "timeout $TIMEOUT stamp search htop -m zypper | grep -q ."
-check "install htop via zypper" timeout $TIMEOUT_LONG stamp install htop -m zypper
+check "install htop via zypper" timeout $TIMEOUT_LONG stamp install htop -m zypper -y
 check "list shows htop" bash -c "timeout $TIMEOUT stamp list | grep -q htop"
-check "remove htop via zypper" timeout $TIMEOUT_LONG stamp remove htop -m zypper
+check "remove htop via zypper" timeout $TIMEOUT_LONG stamp remove htop -m zypper -y
 check "list no longer shows htop" bash -c "timeout $TIMEOUT stamp list | grep -qv htop"
 
 echo "=== Brew ==="
 check "brew search htop" timeout $TIMEOUT stamp search htop -m brew
 
 echo "=== Brew Install/Remove ==="
-check "brew install hello" timeout $TIMEOUT_LONG stamp install hello -m brew
+check "brew install hello" timeout $TIMEOUT_LONG stamp install hello -m brew -y
 check "list shows hello" bash -c "timeout $TIMEOUT stamp list | grep -q hello"
-check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew
+check "brew remove hello" timeout $TIMEOUT stamp remove hello -m brew -y
 check "list no longer shows hello" bash -c "timeout $TIMEOUT stamp list | grep -qv hello"
 
 echo "=== Flatpak ==="
@@ -82,8 +82,8 @@ check "stamp restore --help" timeout $TIMEOUT stamp restore --help
 check "stamp update --help" timeout $TIMEOUT stamp update --help
 check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 
-check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew
-check "update single package" timeout $TIMEOUT stamp update -p hello -m brew
+check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew -y
+check "update single package" timeout $TIMEOUT stamp update -p hello -m brew -y
 
 echo "=== Snap ==="
 if command -v snap &>/dev/null; then
@@ -97,8 +97,8 @@ echo "=== Root Command ==="
 check "stamp (no args)" bash -c "stamp 2>/dev/null | head -5 > /dev/null"
 
 echo "=== Alias Tests ==="
-check "install via add alias" timeout $TIMEOUT stamp add hello -m brew
-check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m brew
+check "install via add alias" timeout $TIMEOUT stamp add hello -m brew -y
+check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m brew -y
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m brew
 
 echo

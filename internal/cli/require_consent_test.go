@@ -14,33 +14,31 @@ import (
 
 func TestAutoremoveCmd_NonTerminalAborts(t *testing.T) {
 	mock := &manager.Mock{ManagerName: "brew", AutoRemoveResult: []string{"libfoo"}}
-	buf, err := execCmd(t, []string{"autoremove"}, []manager.Adapter{mock})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "aborted")
-	assert.NotContains(t, buf.String(), "removed")
+	_, err := execCmd(t, []string{"autoremove"}, []manager.Adapter{mock})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 }
 
 func TestCleanCmd_NonTerminalAborts(t *testing.T) {
 	mock := &manager.Mock{ManagerName: "brew", CleanResult: []string{"cache-item"}}
-	buf, err := execCmd(t, []string{"clean"}, []manager.Adapter{mock})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "aborted")
-	assert.NotContains(t, buf.String(), "cleaned")
+	_, err := execCmd(t, []string{"clean"}, []manager.Adapter{mock})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 }
 
 func TestHoldCmd_NonTerminalAborts(t *testing.T) {
 	mock := &manager.Mock{ManagerName: "apt"}
-	buf, err := execCmd(t, []string{"hold", "nginx", "-m", "apt"}, []manager.Adapter{mock})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "aborted")
+	_, err := execCmd(t, []string{"hold", "nginx", "-m", "apt"}, []manager.Adapter{mock})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.Empty(t, mock.HeldPkgs)
 }
 
 func TestRepoAddCmd_NonTerminalAborts(t *testing.T) {
 	mock := &manager.Mock{ManagerName: "brew"}
-	buf, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew"}, []manager.Adapter{mock})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "aborted")
+	_, err := execCmd(t, []string{"repo", "add", "mytap", "-m", "brew"}, []manager.Adapter{mock})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.NotContains(t, mock.TrackedRepos, "mytap")
 }
 
@@ -76,8 +74,9 @@ func TestRestoreCmd_NonTerminalAborts(t *testing.T) {
 	root.SetErr(buf)
 	root.SetArgs([]string{"restore"})
 
-	require.NoError(t, root.Execute())
-	assert.Contains(t, buf.String(), "aborted")
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.NotContains(t, mockBrew.InstalledPkgs, "htop")
 }
 

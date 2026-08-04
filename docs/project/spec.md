@@ -39,7 +39,7 @@ Destructive commands (`install`, `remove`, `reinstall`, `restore`, `update`, `au
 2. Otherwise the command renders the adapter-owned transaction preview (`manager.Previewer` returns a typed `Preview{Output, Noop}`; combined stdout+stderr, never parsed by the CLI — see [ADR-016](../decisions/ADR-016-unified-preview-contract.md)), then prompts with a default of **no** (`[y/N]`).
 3. A `Noop` preview (e.g. package already up to date, or remove of an absent package) fails fast with `nothing to do` — no prompt.
 4. A preview that cannot be rendered warns (`⚠ could not render preview`) and still prompts; managers without a `Previewer` do the same.
-5. **Non-interactive input without `-y` aborts** — pipelines and CI never silently mutate the system.
+5. **Non-interactive input without `-y` refuses with a non-zero exit** — a forgotten `-y` in a script or CI pipeline fails loud instead of silently doing nothing. An interactive decline (and a `Noop` preview) stops cleanly with exit 0.
 6. After confirmation, the CLI marks the context with `manager.WithYes`; destructive adapter methods refuse to run without that marker (`ErrConfirmationRequired`). This is defense-in-depth at the privileged boundary.
 
 `autoremove`/`clean --dry-run` are read-only and never require consent.

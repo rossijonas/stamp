@@ -240,15 +240,14 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 					return nil
 				}
 
-				// Prompt (fail closed: non-interactive without -y aborts; an
-				// interrupted run aborts too).
+				// Prompt (fail closed: non-interactive without -y exits
+				// non-zero; an interrupted run aborts cleanly).
 				if ctx.Err() != nil {
 					_, _ = fmt.Fprintln(errOut, "aborted")
 					return nil
 				}
-				if !promptYesNo(ctx, errOut, cmd.InOrStdin(), "Proceed with updates? [y/N]: ", false) {
-					_, _ = fmt.Fprintln(errOut, "aborted")
-					return nil
+				if err := consentPrompt(ctx, errOut, cmd.InOrStdin(), "Proceed with updates? [y/N]: "); err != nil {
+					return handleConsent(err)
 				}
 			}
 

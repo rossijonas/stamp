@@ -98,11 +98,28 @@ func SnapshotDir() (string, error) {
 	return dir, nil
 }
 
+// uniqueBackupPath returns <path>.<ts>.bak, appending a numeric suffix if the
+// target already exists. Without this, two backups created within the same
+// second (e.g. rapid re-init) would collide — for a directory target the
+// second rename would fail with ENOTEMPTY.
+func uniqueBackupPath(path, ts string) string {
+	candidate := path + "." + ts + ".bak"
+	for i := 2; pathExists(candidate); i++ {
+		candidate = fmt.Sprintf("%s.%s.%d.bak", path, ts, i)
+	}
+	return candidate
+}
+
+func pathExists(path string) bool {
+	_, err := os.Lstat(path)
+	return err == nil
+}
+
 // BackupSnapshots renames the snapshots directory to a timestamped backup.
 // Format: <path>.<YYYYMMDD>THHMMSSZ.bak
 func BackupSnapshots(snapDir string) (string, error) {
 	ts := time.Now().UTC().Format("20060102T150405Z")
-	backupDir := snapDir + "." + ts + ".bak"
+	backupDir := uniqueBackupPath(snapDir, ts)
 	if err := os.Rename(snapDir, backupDir); err != nil {
 		return "", fmt.Errorf("failed to backup snapshots to %s: %w", backupDir, err)
 	}
