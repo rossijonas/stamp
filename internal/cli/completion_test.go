@@ -12,11 +12,14 @@ import (
 	"github.com/rossijonas/stamp/internal/manager"
 )
 
+// TestCompletion_AllShells_Stdout is not parallel: cobra v1.9.1 keeps a
+// global flag-completion registry that GenBashCompletion/GenZshCompletion
+// mutate under a read lock, so concurrent generation races (see the -t flag
+// completion func). Serializing these keeps the race detector clean.
+// Revisit when cobra is upgraded past v1.9.1.
 func TestCompletion_AllShells_Stdout(t *testing.T) {
-	t.Parallel()
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
 		t.Run(shell, func(t *testing.T) {
-			t.Parallel()
 			buf, err := execCmd(t, []string{"completion", shell, "--stdout"}, []manager.Adapter{})
 			require.NoError(t, err)
 			assert.NotEmpty(t, buf.String())
@@ -48,8 +51,9 @@ func TestCompletion_Help(t *testing.T) {
 	assert.Contains(t, output, "powershell")
 }
 
+// Not parallel: see TestCompletion_AllShells_Stdout for the cobra global
+// flag-completion registry race.
 func TestCompletion_StdoutFlag(t *testing.T) {
-	t.Parallel()
 	buf, err := execCmd(t, []string{"completion", "bash", "--stdout"}, []manager.Adapter{})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "bash")
@@ -106,8 +110,9 @@ func TestCompletion_ZshInstructions(t *testing.T) {
 	assert.Contains(t, output, "autoload -U compinit; compinit")
 }
 
+// Not parallel: see TestCompletion_AllShells_Stdout for the cobra global
+// flag-completion registry race.
 func TestCompletion_BashNoInstructions(t *testing.T) {
-	t.Parallel()
 	buf, err := execCmd(t, []string{"completion", "bash"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.NoError(t, err)
 	output := buf.String()

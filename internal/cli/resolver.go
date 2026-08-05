@@ -58,8 +58,8 @@ func (r *Resolver) Resolve(pkg string, override string) (manager.Adapter, error)
 
 	// Tier 3: Ambiguous — fail with instruction
 	if len(r.adapters) > 0 {
-		return nil, fmt.Errorf("package available in multiple managers; specify --manager")
+		return nil, catErr(ErrUsage, "package available in multiple managers; specify --manager")
 	}
 
-	return nil, fmt.Errorf("no package managers available")
+	return nil, catErr(ErrUnavailable, "no package managers available")
 }

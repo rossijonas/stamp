@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rossijonas/stamp/internal/backup"
 	"github.com/rossijonas/stamp/internal/manager"
 )
 
@@ -124,6 +125,13 @@ func BackupSnapshots(snapDir string) (string, error) {
 		return "", fmt.Errorf("failed to backup snapshots to %s: %w", backupDir, err)
 	}
 	return backupDir, nil
+}
+
+// RotateSnapshotBackups prunes snapshot backup directories
+// (<snapDir>.<TS>.bak/) per the given retention policy. Returns the number of
+// backup directories removed.
+func RotateSnapshotBackups(snapDir string, p backup.Policy) (int, error) {
+	return backup.Rotate(snapDir+".*.bak", p)
 }
 
 // Save writes a snapshot as a JSON file to disk.

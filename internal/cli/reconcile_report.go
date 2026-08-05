@@ -34,7 +34,7 @@ func filterAdapters(adapters []manager.Adapter, managerFlag string) ([]manager.A
 		}
 	}
 	if found == nil {
-		return nil, fmt.Errorf("manager %q not available on this system", managerFlag)
+		return nil, catErr(ErrUnavailable, "manager %q not available on this system", managerFlag)
 	}
 	return []manager.Adapter{found}, nil
 }
@@ -80,12 +80,12 @@ func saveAndTrack(discovered []discoveredPkg, discoveredRepos []discoveredRepo, 
 	trackedCount := 0
 	trackedReposCount := 0
 	for _, p := range discovered {
-		if app.manifest.AddPackage(manifest.Package{Name: p.Name, Manager: p.Manager}) {
+		if app.manifest.AddPackage(manifest.Package{Name: p.Name, Manager: p.Manager, Origin: manifest.OriginReconciled}) {
 			trackedCount++
 		}
 	}
 	for _, r := range discoveredRepos {
-		if app.manifest.AddRepository(manifest.Repository{Name: r.Name, Manager: r.Manager, URL: r.URL}) {
+		if app.manifest.AddRepository(manifest.Repository{Name: r.Name, Manager: r.Manager, URL: r.URL, Origin: manifest.OriginReconciled}) {
 			trackedReposCount++
 		}
 	}

@@ -149,7 +149,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 					}
 				}
 				if adapter == nil {
-					return fmt.Errorf("manager %q not available on this system", managerFlag)
+					return catErr(ErrUnavailable, "manager %q not available on this system", managerFlag)
 				}
 				result, err := adapter.Doctor(cmd.Context())
 				if err != nil {

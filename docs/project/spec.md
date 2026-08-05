@@ -61,7 +61,8 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 | `stamp reconcile` | | `--dry-run, -d`, `--manager, -m <name>` | Detects drift since last snapshot and auto-tracks discovered packages and repositories. |
 | `stamp restore` | | `--dry-run, -d`, `--manager, -m <name>` | Reinstalls repos and packages on a new machine. |
 | `stamp update` | `upgrade` | `--manager, -m <name>`, `--package, -p <pkg>`, `--serial, -s` | Runs system upgrades across all managers. Parallel by default. Use `-s` for serial, `-p` for single-package. |
-| `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>` | Lists all intentionally installed packages. |
+| `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>`, `--type, -t <type>` | Lists tracked packages and repos. Filter by entity type and origin (stamped/reconciled). |
+| `stamp manifest` | | `--json, -j` | Manifest management. Subcommands: `history` (list backups), `diff [ts\|hash]` (compare current with a backup). |
 | `stamp doctor` | | `--json, -j`, `--manager, -m <name>` | Checks manager availability, manifest integrity, and UNIX compliance. |
 | `stamp self-update` | `self-upgrade` | `--check, -c` | Checks for and installs the latest version of `stamp`. |
 | `stamp completion [shell]` | | `--stdout, -s` | Generates and installs shell completion scripts. Auto-detects shell if not specified. |
@@ -218,9 +219,10 @@ Detailed specifications, execution behaviors, and business rules for every subco
 
 - **Usage:** Initializes `manifest.toml` and takes a baseline snapshot of current system packages.
 - **Flags:** Accepts global `-y` flag.
-- **Behavior:** Creates `~/.config/stamp` and `~/.local/share/stamp/snapshots` directories. Generates empty manifest.toml. Takes baseline snapshot for each available manager and saves them.
-- **Re-init guard:** If `manifest.toml` already exists (system is initialized), the user is prompted for confirmation (default No) before overwriting. On confirmation, **backup is mandatory** — the existing manifest and snapshots are always timestamp-backed up (`<path>.<YYYYMMDD>THHMMSSZ.bak`) before creating fresh state. The `-y` flag bypasses the prompt for scripting.
+- **Behavior:** Creates `~/.config/stamp` and `~/.local/share/stamp/snapshots` directories. Writes a default `config.toml` (commented `[backup]` template) if absent — never overwrites an existing config, and failure is non-fatal. Generates empty manifest.toml. Takes baseline snapshot for each available manager and saves them.
+- **Re-init guard:** If `manifest.toml` already exists (system is initialized), the user is prompted for confirmation (default No) before overwriting. On confirmation, **backup is mandatory** — the existing manifest and snapshots are always timestamp-backed up (`<path>.<YYYYMMDD>THHMMSSZ.bak`) before creating fresh state, and backup rotation then prunes old backups per the `[backup]` policy (both manifest and snapshot policies). The `-y` flag bypasses the prompt for scripting.
 - **Backup is NOT optional:** When re-init is confirmed, backup always runs before rewriting.
+- **Dry-run:** No config write, no backup, no rotation, no manifest rewrite.
 - **Output:** `manifest initialized and system baseline snapshot taken` to stderr.
 - **Re-init messages:** `existing manifest backed up to <path>`, `existing snapshots backed up to <path>`, `re-init aborted` to stderr.
 
@@ -287,10 +289,10 @@ Detailed specifications, execution behaviors, and business rules for every subco
   - Diffs against the last snapshot.
   - If no drift: exits with "No drift detected".
   - If drift found AND `--dry-run`: shows all discovered packages/repos and exits without tracking.
-  - If drift found (not `--dry-run`): adds all discovered packages to manifest, saves new snapshots.
+  - If drift found (not `--dry-run`): backs up the current manifest (copy-based, original kept), adds all discovered packages to manifest with `origin = "reconciled"`, saves new snapshots, then rotates manifest backups per the `[backup]` policy. Snapshot rotation is NOT triggered by reconcile — it lives in `stamp init` re-init.
   - No interactive prompt. Reconcile is fully deterministic:
     - `stamp reconcile` — auto-tracks, no questions.
-    - `stamp reconcile --dry-run` — preview only, no tracking.
+    - `stamp reconcile --dry-run` — preview only, no tracking, no backups, no rotation.
     - `stamp reconcile -y` — identical to `stamp reconcile` (kept for scripting consistency).
 - **Design Rationale:** Reconcile is the safety net. There is no user decision to make: if a package was installed intentionally, it should be tracked. Users who want to inspect potential drift before committing use `--dry-run`. Pre-existing packages (installed before `stamp init`) are never detected — they are captured in the baseline snapshot. To track a pre-existing package, use `stamp reinstall <pkg>` instead.
 
@@ -388,19 +390,152 @@ Detailed specifications, execution behaviors, and business rules for every subco
 
 ## Data Model
 
-The TOML manifest supports `notes` for user context and a `repositories` block.
+The TOML manifest supports `notes` for user context, an `origin` field for provenance, and a `repositories` block.
 
 ```toml
 [[repositories]]
 name = "flathub"
 manager = "flatpak"
 url = "https://dl.flathub.org/repo/flathub.flatpakrepo"
+origin = "stamped"
 
 [[packages]]
 name = "lazygit"
 manager = "brew"
 notes = "better git TUI than default"
+origin = "stamped"
 ```
+
+### Origin Provenance
+
+Every `[[packages]]` and `[[repositories]]` entry may carry an `origin` field
+recording how it entered the manifest. It is optional (`omitempty`) — an
+absent field is treated as `stamped`, so pre-existing manifests load without
+migration.
+
+| Value | Meaning |
+|-------|---------|
+| `stamped` | Recorded by a direct user action (`stamp install`, `stamp repo add`, `stamp reinstall`) |
+| `reconciled` | Auto-tracked by `stamp reconcile` after drift detection |
+
+The `origin` field powers `stamp list --type` (issue #178) and `stamp manifest
+history` / `stamp manifest diff` (issue #179).
+
+### List Command (`stamp list`)
+
+`stamp list` (alias `ls`) lists tracked packages by default. The `--type, -t`
+flag filters by entity type and origin. All flags compose with AND logic
+(`--type` × `--manager` × `--json`).
+
+Valid `--type` values:
+
+| Value | Description |
+|-------|-------------|
+| `packages` | All packages (default, backward compatible) |
+| `repos` | All repositories |
+| `stamped` | All entries installed via stamp (packages + repos) |
+| `reconciled` | All entries discovered by reconcile (packages + repos) |
+| `stamped-packages` | Packages with `origin = "stamped"` |
+| `stamped-repos` | Repos with `origin = "stamped"` |
+| `reconciled-packages` | Packages with `origin = "reconciled"` |
+| `reconciled-repos` | Repos with `origin = "reconciled"` |
+
+`--type packages` and `--type repos` ignore origin and show all entries of that
+entity type. An unknown value returns `unknown type "<value>"; valid types:
+packages, repos, stamped, reconciled, stamped-packages, stamped-repos,
+reconciled-packages, reconciled-repos`. On a pre-origin manifest (entries
+without an `origin` field) the origin defaults to `stamped`, so
+`--type stamped-packages` shows everything and `--type reconciled-packages`
+shows nothing.
+
+### Manifest Management (`stamp manifest`)
+
+`stamp manifest history` lists the current manifest and every timestamped
+backup (`manifest.toml.<TS>.bak`), newest first, with package/repo counts and a
+short SHA-256 content-hash prefix. `*` marks the current entry; backups whose
+content equals the current manifest are marked unchanged. Corrupted backups are
+skipped with a warning. No backups yet prints a hint pointing at re-init and
+reconcile.
+
+`stamp manifest diff [ts|hash]` compares the current manifest against a backup
+(default: most recent), for both packages and repositories using `name+manager`
+as the identity key. The argument is either a timestamp (`2026-08-02T09:15:00Z`
+or `20260802T091500Z`) or a content-hash prefix (pure hex, ≥ 6 chars) from
+`history`. Added entries render with `+`, removed with `-`. `--manager, -m` and
+`--origin` (stamped/reconciled) filter both sets after diffing. An unknown or
+ambiguous reference errors with `no backup found for <arg>` / `ambiguous hash`.
+Diffing against a corrupted backup errors with `failed to parse backup at
+<path>`. If no backup exists, `diff` errors with `no backup to compare against`.
+
+### Exit Codes
+
+`stamp` follows BSD `sysexits.h` conventions (shipped by glibc on Linux) for
+error categories. Success is always `0`. Unclassified failures exit `1`, the
+POSIX catchall. Scripts can distinguish failure modes by code:
+
+| Code | Constant | Category | Examples |
+|------|----------|----------|----------|
+| `64` | EX_USAGE | Bad command line / flag / argument | invalid `--type`, `--origin`, diff timestamp, repo name/URL; flag-parse errors |
+| `65` | EX_DATAERR | Input data incorrect | corrupt manifest, corrupt backup, ambiguous hash |
+| `66` | EX_NOINPUT | Referenced input absent | `diff` with no backup, no matching timestamp/hash |
+| `69` | EX_UNAVAILABLE | Required resource absent | no package manager available, `-m` manager not installed |
+| `73` | EX_CANTCREAT | Cannot create output | manifest/snapshot save or backup failure |
+| `78` | EX_CONFIG | Unconfigured/misconfigured | invalid `config.toml`, `manifest not found; run stamp init first` |
+
+Backup/rotation failures on reconcile and init are non-fatal (warning to
+stderr, exit `0`).
+
+The mapping and its rationale are recorded in
+[ADR-018](../decisions/ADR-018-sysexits-exit-codes.md) (supersedes the
+exit-code note in ADR-002).
+
+### Backup Retention Policy
+
+Stamp keeps timestamped backups before rewriting the manifest or snapshots.
+Backup naming is lexicographically sortable: `manifest.toml.<YYYYMMDDTHHMMSSZ>.bak`
+(files) and `snapshots.<YYYYMMDDTHHMMSSZ>.bak/` (directories).
+
+Retention is controlled by the `[backup]` section of `config.toml` and mirrors
+logrotate's `rotate`, `minage`, and `maxage` directives:
+
+| Config key | Default | Logrotate equivalent | Meaning |
+|------------|---------|----------------------|---------|
+| `max_manifest_backups` | `10` | `rotate` | Max manifest backups to keep (count cap) |
+| `min_manifest_backups` | `3` | — | Always keep at least this many manifest backups (count floor) |
+| `min_manifest_backup_age_days` | `7` | `minage` | Backups younger than this are never deleted (floor) |
+| `max_manifest_backup_age_days` | `30` | `maxage` | Backups older than this are always deleted (ceiling) |
+| `max_snapshot_backups` | `10` | `rotate` | Max snapshot backup dirs to keep |
+| `min_snapshot_backups` | `3` | — | Always keep at least this many snapshot backups (count floor) |
+| `min_snapshot_backup_age_days` | `7` | `minage` | Snapshot backups younger than this are never deleted |
+| `max_snapshot_backup_age_days` | `30` | `maxage` | Snapshot backups older than this are always deleted |
+
+A value of `0` on any axis means **unlimited** on that axis. The manifest and
+snapshot policies are independent; `stamp reconcile` only rotates manifest
+backups, while `stamp init` re-init rotates both manifest and snapshot backups.
+
+**Precedence (highest to lowest):**
+
+1. **Min-age floor** — backups younger than `min_*_backup_age_days` are
+   **protected**: never deleted, even when the count cap is exceeded.
+2. **Min-count floor** — at least `min_*_backups` backups are always kept.
+   The newest backups survive, so the max-age ceiling can never wipe the
+   backup set to zero.
+3. **Max-age ceiling** — among eligible backups (age ≥ min-age), any backup
+   older than `max_*_backup_age_days` is deleted, except those needed to meet
+   the min-count floor (count does not protect ancient backups beyond the floor).
+4. **Count cap** — if the eligible set still exceeds `max_*_backups`, the
+   oldest surplus backups are deleted, except those needed to meet the
+   min-count floor.
+
+**Worked example (ceiling vs min-count):** `min_manifest_backups=3`,
+`max_manifest_backup_age_days=30`, 5 backups all older than 30 days → the
+ceiling wants to delete all 5, but the min-count floor keeps the newest 3,
+so only 2 are deleted.
+
+**Misconfiguration:** if `min_*_backup_age_days > max_*_backup_age_days`, the
+floor wins on the overlapping window (protective), but the configuration is
+reported as invalid in `stamp doctor` and the docs warn against it. If
+`min_*_backups > max_*_backups`, the min-count floor wins (protective).
 
 ## Project Structure
 

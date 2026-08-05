@@ -87,6 +87,7 @@ func newInstallCmd() *cobra.Command {
 				Notes:   note,
 				Cask:    cask,
 				Group:   groupInstall,
+				Origin:  manifest.OriginStamped,
 			})
 
 			if err := app.saveManifest(); err != nil {
@@ -169,7 +170,7 @@ func newRemoveCmd() *cobra.Command {
 				case len(app.adapters) > 0:
 					adapter = app.adapters[0]
 				default:
-					return fmt.Errorf("no package managers available")
+					return catErr(ErrUnavailable, "no package managers available")
 				}
 			}
 

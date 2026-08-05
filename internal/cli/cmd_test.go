@@ -127,6 +127,7 @@ func TestSaveManifestError(t *testing.T) {
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to save manifest")
+	assert.Equal(t, ExitCanTCreate, exitCodeFor(err))
 }
 
 func TestXDGConfigDir_Fallback(t *testing.T) {
@@ -354,6 +355,7 @@ func TestRemoveCmd_NoAdapters(t *testing.T) {
 	_, err := execCmd(t, []string{"remove", "htop", "-y"}, []manager.Adapter{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no package managers available")
+	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
 }
 
 func TestSearchCmd_NoResults(t *testing.T) {
@@ -517,6 +519,7 @@ func TestRepoAddCmd_InvalidURL(t *testing.T) {
 	_, err := execCmd(t, []string{"repo", "add", "mytap", "invalid-url", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid repository URL")
+	assert.Equal(t, ExitUsage, exitCodeFor(err))
 }
 
 func TestRepoRemoveCmd_InvalidName(t *testing.T) {
@@ -656,6 +659,7 @@ func TestResolveAmbiguousInInstall(t *testing.T) {
 	_, err := execCmd(t, []string{"install", "htop", "-y"}, []manager.Adapter{&mockAdapter{name: "apt"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "specify --manager")
+	assert.Equal(t, ExitUsage, exitCodeFor(err))
 }
 
 func TestRepoListCmd_WithFlags(t *testing.T) {

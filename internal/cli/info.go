@@ -87,7 +87,7 @@ If -m, --manager is specified, displays the native manager's full raw info block
 			}
 
 			if len(targets) == 0 {
-				return fmt.Errorf("no package managers available")
+				return catErr(ErrUnavailable, "no package managers available")
 			}
 
 			type rawResult struct {

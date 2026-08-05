@@ -18,6 +18,17 @@ Controls how Stamp resolves which package manager to use when none is specified 
 # Global priority order (highest to lowest)
 precedence = ["dnf", "flatpak", "brew"]
 
+# Backup retention policy (logrotate-style)
+[backup]
+max_manifest_backups = 10
+min_manifest_backups = 3
+min_manifest_backup_age_days = 7
+max_manifest_backup_age_days = 30
+max_snapshot_backups = 10
+min_snapshot_backups = 3
+min_snapshot_backup_age_days = 7
+max_snapshot_backup_age_days = 30
+
 # Pattern-based routing rules override the global precedence
 [[rules]]
 pattern = "^com\\..*|^org\\..*"
@@ -58,6 +69,27 @@ prefer = "flatpak"
 
 Rules are evaluated in order. The first match wins. If no rule matches, the global `precedence` is used.
 
+#### backup
+
+Controls timestamped backup retention for the manifest and snapshots. Stamp writes a backup before rewriting either file and prunes old backups per this policy. The semantics mirror logrotate's `rotate`, `minage`, and `maxage` directives; a value of `0` on any key means **unlimited** on that axis.
+
+| Key | Default | Logrotate equivalent | Meaning |
+|-----|---------|----------------------|---------|
+| `max_manifest_backups` | `10` | `rotate` | Max manifest backup files to keep |
+| `min_manifest_backups` | `3` | — | Always keep at least this many manifest backups |
+| `min_manifest_backup_age_days` | `7` | `minage` | Backups younger than this are never deleted |
+| `max_manifest_backup_age_days` | `30` | `maxage` | Backups older than this are always deleted |
+| `max_snapshot_backups` | `10` | `rotate` | Max snapshot backup dirs to keep |
+| `min_snapshot_backups` | `3` | — | Always keep at least this many snapshot backups |
+| `min_snapshot_backup_age_days` | `7` | `minage` | Snapshot backups younger than this are never deleted |
+| `max_snapshot_backup_age_days` | `30` | `maxage` | Snapshot backups older than this are always deleted |
+
+**Precedence (highest to lowest):** (1) min-age floor — backups younger than the min age are protected and never deleted; (2) min-count floor — at least `min_*_backups` backups are always kept (the newest survive, so the max-age ceiling can never wipe the set to zero); (3) max-age ceiling — eligible backups older than the max age are deleted, except those needed to meet the min-count floor; (4) count cap — if the eligible set still exceeds the max count, the oldest surplus are deleted, except those needed to meet the min-count floor. Avoid `min_*_backup_age_days > max_*_backup_age_days` (the floor wins on the overlap; `stamp doctor` reports it as invalid). If `min_*_backups > max_*_backups`, the min-count floor wins.
+
+`stamp reconcile` rotates manifest backups only; `stamp init` re-init rotates both manifest and snapshot backups. Backup files are named `manifest.toml.<YYYYMMDDTHHMMSSZ>.bak`; snapshot backup dirs `snapshots.<YYYYMMDDTHHMMSSZ>.bak/`.
+
+`config.toml` is auto-created by `stamp init` when absent (a commented template with the defaults above). An existing file is never overwritten.
+
 ### Resolution order
 
 When running `stamp install <pkg>` without `-m`:
@@ -84,11 +116,13 @@ manager = "apt"
 name = "lazygit"
 manager = "brew"
 notes = "better git TUI than default"
+origin = "stamped"
 
 [[repositories]]
 name = "flathub"
 manager = "flatpak"
 url = "https://dl.flathub.org/repo/flathub.flatpakrepo"
+origin = "stamped"
 ```
 
 #### version
@@ -108,6 +142,7 @@ Each entry tracks a package you've installed:
 | `name` | ✓ | Package name |
 | `manager` | ✓ | Manager used to install it |
 | `notes` | | Optional description of why you installed it |
+| `origin` | | Provenance: `stamped` (user action) or `reconciled` (auto-tracked); absent = `stamped` |
 
 #### [[repositories]]
 
@@ -118,6 +153,7 @@ Each entry tracks a third-party repository you've added:
 | `name` | ✓ | Repository alias |
 | `manager` | ✓ | Manager that owns the repository |
 | `url` | | Repository URL (when applicable) |
+| `origin` | | Provenance: `stamped` (user action) or `reconciled` (auto-tracked); absent = `stamped` |
 
 ### Storage locations
 

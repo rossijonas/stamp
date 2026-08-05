@@ -11,6 +11,16 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
+
+	"github.com/rossijonas/stamp/internal/backup"
+)
+
+// Origin values for Package and Repository entries.
+const (
+	// OriginStamped marks an entry recorded by a direct user action.
+	OriginStamped = "stamped"
+	// OriginReconciled marks an entry auto-tracked by stamp reconcile.
+	OriginReconciled = "reconciled"
 )
 
 // Package represents a single installed application or tool in the manifest.
@@ -21,6 +31,20 @@ type Package struct {
 	Notes    string `toml:"notes,omitempty"`
 	Cask     bool   `toml:"cask,omitempty"`
 	Group    bool   `toml:"group,omitempty"`
+	// Origin records how the entry entered the manifest. Read it via
+	// OriginEffective, which defaults an absent value to stamped so pre-origin
+	// manifests load without migration.
+	Origin string `toml:"origin,omitempty"`
+}
+
+// OriginEffective returns the effective origin, defaulting to stamped when
+// the field is absent (pre-origin manifests). Consumers must use this method
+// rather than reading Origin directly.
+func (p Package) OriginEffective() string {
+	if p.Origin == "" {
+		return OriginStamped
+	}
+	return p.Origin
 }
 
 // Repository represents a tracked third-party repository or tap.
@@ -28,6 +52,20 @@ type Repository struct {
 	Name    string `toml:"name"`
 	Manager string `toml:"manager"`
 	URL     string `toml:"url,omitempty"`
+	// Origin records how the entry entered the manifest. Read it via
+	// OriginEffective, which defaults an absent value to stamped so pre-origin
+	// manifests load without migration.
+	Origin string `toml:"origin,omitempty"`
+}
+
+// OriginEffective returns the effective origin, defaulting to stamped when
+// the field is absent (pre-origin manifests). Consumers must use this method
+// rather than reading Origin directly.
+func (r Repository) OriginEffective() string {
+	if r.Origin == "" {
+		return OriginStamped
+	}
+	return r.Origin
 }
 
 // Manifest represents the structure of the user's intended state.
@@ -174,6 +212,45 @@ func Backup(path string) (string, error) {
 		return "", fmt.Errorf("failed to backup manifest to %s: %w", backupPath, err)
 	}
 	return backupPath, nil
+}
+
+// CopyBackup creates a timestamped copy of the manifest file, leaving the
+// original in place. Format: <path>.<YYYYMMDDTHHMMSSZ>.bak. Used by reconcile,
+// which must keep the live manifest (the no-drift path never saves it).
+func CopyBackup(path string) (string, error) {
+	ts := time.Now().UTC().Format(backup.BackupTimeLayout)
+	backupPath := uniqueBackupPath(path, ts)
+
+	//nolint:gosec // path is resolved internally via config, not user input
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read manifest for backup: %w", err)
+	}
+
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".bak.*.tmp")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp backup: %w", err)
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return "", fmt.Errorf("failed to write backup to %s: %w", tmpName, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return "", fmt.Errorf("failed to close backup %s: %w", tmpName, err)
+	}
+	if err := os.Rename(tmpName, backupPath); err != nil {
+		return "", fmt.Errorf("failed to rename backup to %s: %w", backupPath, err)
+	}
+	return backupPath, nil
+}
+
+// RotateBackups prunes manifest backup files (<path>.<TS>.bak) per the given
+// retention policy. Returns the number of backups removed.
+func RotateBackups(path string, p backup.Policy) (int, error) {
+	return backup.Rotate(path+".*.bak", p)
 }
 
 // uniqueBackupPath returns <path>.<ts>.bak, appending a numeric suffix if the

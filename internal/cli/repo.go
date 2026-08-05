@@ -17,10 +17,10 @@ var validRepoName = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/\+\:]*$`)
 
 func validateRepoName(name string) error {
 	if strings.HasPrefix(name, "-") {
-		return fmt.Errorf("repository name %q cannot start with '-'", name)
+		return catErr(ErrUsage, "repository name %q cannot start with '-'", name)
 	}
 	if !validRepoName.MatchString(name) {
-		return fmt.Errorf("repository name %q contains invalid characters", name)
+		return catErr(ErrUsage, "repository name %q contains invalid characters", name)
 	}
 	return nil
 }
@@ -31,10 +31,10 @@ func validateRepoURL(rawURL string) error {
 	}
 	parsed, err := url.ParseRequestURI(rawURL)
 	if err != nil {
-		return fmt.Errorf("invalid repository URL: %w", err)
+		return catErr(ErrUsage, "invalid repository URL: %w", err)
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return fmt.Errorf("unsupported URL scheme %q; must be http or https", parsed.Scheme)
+		return catErr(ErrUsage, "unsupported URL scheme %q; must be http or https", parsed.Scheme)
 	}
 	return nil
 }
@@ -111,6 +111,7 @@ func newRepoAddCmd() *cobra.Command {
 				Name:    name,
 				Manager: adapter.Name(),
 				URL:     url,
+				Origin:  manifest.OriginStamped,
 			})
 
 			if err := app.saveManifest(); err != nil {

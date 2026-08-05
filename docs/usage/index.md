@@ -37,6 +37,7 @@ Stamp wraps all your package managers into a single CLI. Below are guides groupe
 - [Reconciling Changes](/usage/reconcile.html) — Track external installations and auto-reconcile
 - [Restoring Environment](/usage/restore.html) — Rebuild on a new machine from manifest
 - [Listing Packages](/usage/listing-packages.html) — View tracked packages with JSON and filters
+- [Manifest Management](/usage/managing-manifests.html) — Backup history, diff against backups, restore from a backup
 
 ### Updates & Self
 

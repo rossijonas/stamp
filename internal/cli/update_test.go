@@ -107,6 +107,7 @@ func TestUpdateCmd_NoAdapters(t *testing.T) {
 	_, err := execUpdateCmd(t, []string{"update"}, []manager.Adapter{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no package managers available")
+	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
 }
 
 func TestUpdateCmd_AllFail(t *testing.T) {
@@ -165,6 +166,7 @@ func TestUpdateCmd_SinglePackage_NoManager(t *testing.T) {
 	_, err := execUpdateCmd(t, []string{"update", "-p", "htop"}, adapters)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "specify --manager")
+	assert.Equal(t, ExitUsage, exitCodeFor(err))
 }
 
 func TestUpdateCmd_GoSinglePackage(t *testing.T) {

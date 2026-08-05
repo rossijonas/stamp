@@ -33,6 +33,7 @@ stamp [flags]
 * [stamp install](stamp_install.html)	 - Install a package and record intent
 * [stamp list](stamp_list.html)	 - List all intentionally installed packages
 * [stamp man](stamp_man.html)	 - Manage stamp troff man pages
+* [stamp manifest](stamp_manifest.html)	 - Inspect manifest backups and changes
 * [stamp outdated](stamp_outdated.html)	 - Check for available updates (alias for stamp update --check)
 * [stamp override](stamp_override.html)	 - Manage Flatpak sandbox permissions
 * [stamp provides](stamp_provides.html)	 - Find which package provides a given file

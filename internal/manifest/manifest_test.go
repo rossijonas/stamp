@@ -1,12 +1,16 @@
 package manifest
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/rossijonas/stamp/internal/backup"
 )
 
 func TestManifestAddAndRemove(t *testing.T) {
@@ -216,4 +220,196 @@ func TestManifestSaveMkdirError(t *testing.T) {
 	err = m.Save(filepath.Join(tmpFile.Name(), "subdir", "manifest.toml"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create manifest directory")
+}
+
+func TestManifestCopyBackup_KeepsOriginal(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	originalContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(originalContent), 0600))
+
+	backupPath, err := CopyBackup(mPath)
+	require.NoError(t, err)
+	assert.Contains(t, backupPath, ".bak")
+
+	_, err = os.Stat(mPath)
+	require.NoError(t, err, "original manifest must remain")
+
+	//nolint:gosec // path is a controlled temp file
+	data, err := os.ReadFile(backupPath)
+	require.NoError(t, err)
+	assert.Equal(t, originalContent, string(data))
+}
+
+func TestManifestCopyBackup_NoOriginal(t *testing.T) {
+	t.Parallel()
+	_, err := CopyBackup("/nonexistent/manifest.toml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read manifest for backup")
+}
+
+func TestManifestCopyBackup_TempCreateError(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	roDir := filepath.Join(tmpDir, "readonly")
+	require.NoError(t, os.Mkdir(roDir, 0700))
+
+	mPath := filepath.Join(roDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("version = 1\n"), 0600))
+	require.NoError(t, os.Chmod(roDir, 0500))       //nolint:gosec // readable but not writable
+	t.Cleanup(func() { _ = os.Chmod(roDir, 0700) }) //nolint:gosec // restore perms for cleanup
+
+	_, err := CopyBackup(mPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create temp backup")
+}
+
+func TestManifestCopyBackup_SameSecondCollision(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+
+	first := ""
+	for i := 0; i < 3; i++ {
+		require.NoError(t, os.WriteFile(mPath, []byte("version = 1\n"), 0600))
+		p, err := CopyBackup(mPath)
+		require.NoError(t, err)
+		if i > 0 {
+			assert.NotEqual(t, first, p, "copy backups must not collide")
+		}
+		first = p
+	}
+}
+
+func TestManifestRotateBackups(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("version = 1\n"), 0600))
+
+	for _, age := range []int{1, 2, 3, 4} {
+		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
+		require.NoError(t, os.WriteFile(fmt.Sprintf("%s.%s.bak", mPath, ts), []byte("old"), 0600))
+	}
+
+	n, err := RotateBackups(mPath, backup.Policy{MaxKeep: 2})
+	require.NoError(t, err)
+	assert.Equal(t, 2, n)
+}
+
+func TestManifestRotateBackups_NoBackups(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	n, err := RotateBackups(mPath, backup.Policy{MaxKeep: 2})
+	require.NoError(t, err)
+	assert.Zero(t, n)
+}
+
+func TestManifestRotateBackups_InvalidGlob(t *testing.T) {
+	t.Parallel()
+	_, err := RotateBackups("[", backup.Policy{MaxKeep: 1})
+	require.Error(t, err)
+}
+
+func TestPackageOriginEffective(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		origin   string
+		expected string
+	}{
+		{name: "empty defaults to stamped", origin: "", expected: OriginStamped},
+		{name: "explicit stamped", origin: OriginStamped, expected: OriginStamped},
+		{name: "explicit reconciled", origin: OriginReconciled, expected: OriginReconciled},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := Package{Name: "htop", Manager: "dnf", Origin: tt.origin}
+			assert.Equal(t, tt.expected, p.OriginEffective())
+		})
+	}
+}
+
+func TestRepositoryOriginEffective(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		origin   string
+		expected string
+	}{
+		{name: "empty defaults to stamped", origin: "", expected: OriginStamped},
+		{name: "explicit stamped", origin: OriginStamped, expected: OriginStamped},
+		{name: "explicit reconciled", origin: OriginReconciled, expected: OriginReconciled},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := Repository{Name: "flathub", Manager: "flatpak", Origin: tt.origin}
+			assert.Equal(t, tt.expected, r.OriginEffective())
+		})
+	}
+}
+
+func TestManifestOriginRoundTrip(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+
+	m := &Manifest{
+		Version: 1,
+		System:  "linux",
+		Packages: []Package{
+			{Name: "htop", Manager: "dnf", Origin: OriginStamped},
+			{Name: "vim", Manager: "dnf", Origin: OriginReconciled},
+			{Name: "git", Manager: "apt"},
+		},
+		Repositories: []Repository{
+			{Name: "flathub", Manager: "flatpak", URL: "https://dl.flathub.org/repo/flathub.flatpakrepo", Origin: OriginStamped},
+			{Name: "copr", Manager: "dnf", Origin: OriginReconciled},
+		},
+	}
+	require.NoError(t, m.Save(manifestPath))
+
+	loaded, err := Load(manifestPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 3)
+	assert.Equal(t, OriginStamped, loaded.Packages[0].Origin)
+	assert.Equal(t, OriginReconciled, loaded.Packages[1].Origin)
+	assert.Equal(t, OriginStamped, loaded.Packages[2].OriginEffective(), "absent origin effective is stamped")
+	require.Len(t, loaded.Repositories, 2)
+	assert.Equal(t, OriginStamped, loaded.Repositories[0].Origin)
+	assert.Equal(t, OriginReconciled, loaded.Repositories[1].OriginEffective())
+}
+
+func TestManifestOriginAbsentDefaultsStamped(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+
+[[repositories]]
+name = "flathub"
+manager = "flatpak"
+`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(content), 0600))
+
+	loaded, err := Load(manifestPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 1)
+	assert.Equal(t, OriginStamped, loaded.Packages[0].OriginEffective())
+	require.Len(t, loaded.Repositories, 1)
+	assert.Equal(t, OriginStamped, loaded.Repositories[0].OriginEffective())
 }

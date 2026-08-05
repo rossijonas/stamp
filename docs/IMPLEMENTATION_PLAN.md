@@ -429,3 +429,171 @@ Standardize install/remove/reinstall previews on the typed, adapter-owned model 
 *   **Verify:** `bundle exec jekyll build`; manual `jekyll serve` (pill renders, hides when API blocked).
 *   **Files:** `docs/assets/js/main.js`, `docs/_includes/nav.html`, `docs/assets/css/style.css`
 *   **Status:** ✓ Completed
+
+### Phase 10: Manifest Origin Segmentation, Backup Rotation & Config Generation (#177)
+
+Manifest entries gain an `origin` provenance field (`stamped`/`reconciled`),
+backup rotation adopts a logrotate-aligned 3-axis retention policy
+(count / min-age floor / max-age ceiling), and `stamp init` generates a
+`config.toml` template when absent. Full spec: `docs/project/spec.md`
+(Data Model + Backup Retention Policy). ADR: `docs/decisions/ADR-017-manifest-origin-and-backup-rotation.md`.
+
+**Task 47: Backup config model (#177)**
+*   **Description:** Add `BackupConfig` with 8 fields to `internal/cli/config.go`: `max_manifest_backups`, `min_manifest_backups`, `max_snapshot_backups`, `min_snapshot_backups`, `min_manifest_backup_age_days`, `max_manifest_backup_age_days`, `min_snapshot_backup_age_days`, `max_snapshot_backup_age_days`. Defaults `10/3/10/3/7/30/7/30`; `0` = unlimited per axis. `DefaultBackupConfig()` and commented `DefaultConfigTOML()` template (written only if absent, non-fatal). `LoadConfig` merges `[backup]` onto defaults. `ManifestPolicy()`/`SnapshotPolicy()` convert to `backup.Policy`.
+*   **Acceptance:** `LoadConfig` returns defaults when `[backup]` absent; parses explicit values; `0`/absent = unlimited per axis.
+*   **Verify:** `go test ./internal/cli/ -run Config` ; `task check`.
+*   **Files:** `internal/cli/config.go`, `internal/cli/config_test.go`
+*   **Status:** ✓ Completed
+
+**Task 48: Origin field on manifest (#177)**
+*   **Description:** Add optional `Origin string toml:"origin,omitempty"` to `manifest.Package` and `manifest.Repository`; constants `OriginStamped = "stamped"`, `OriginReconciled = "reconciled"`; accessor `OriginEffective()` returning `stamped` when empty. `Load`/`Save` round-trip without migration.
+*   **Acceptance:** Old manifests load with effective origin `stamped`; explicit values preserved on save.
+*   **Verify:** `go test ./internal/manifest/` (100% coverage on new funcs).
+*   **Files:** `internal/manifest/manifest.go`, `internal/manifest/manifest_test.go`
+*   **Status:** ✓ Completed
+
+**Task 49: Origin write sites (#177)**
+*   **Description:** Set origin at the 4 manifest-mutation sites: `install.go` and `reinstall.go` (existing branch) → `OriginStamped`; `repo.go` (`repo add`) → `OriginStamped`; `reconcile_report.go` (`saveAndTrack`) → `OriginReconciled`. `override.go` and `tap.go` do not mutate the manifest and are untouched.
+*   **Acceptance:** `stamp install`/`stamp repo add` produce `origin = "stamped"`; `stamp reconcile` drift produces `origin = "reconciled"` in the manifest.
+*   **Verify:** Golden-file CLI tests per command; `task check`.
+*   **Files:** `internal/cli/install.go`, `internal/cli/reinstall.go`, `internal/cli/repo.go`, `internal/cli/reconcile_report.go` + tests
+*   **Status:** ✓ Completed
+
+**Task 50: Manifest backup + rotation (#177)**
+*   **Description:** `manifest.CopyBackup(path)` copy-based atomic timestamped backup (original kept). `manifest.RotateBackups(path, policy BackupConfig) (int, error)` globs `<path>.<TS>.bak`, `time.Parse` sorts, applies retention precedence (min-age floor protect → **min-count floor keep ≥ N** → max-age ceiling delete → count cap trim, shared deletion budget of `len(entries)-MinKeep`), uses `os.Remove`. `0` axes = unlimited. No backups present = no-op. Retention logic lives in the shared `internal/backup` package (`Policy{MaxKeep,MinKeep,MinAge,MaxAge}` + `Rotate`), used by both manifest and state.
+*   **Acceptance:** Table tests cover: protected-by-min-age, min-count floor survives all-ancient ceiling, min > max precedence, max-age ceiling, count cap, `0` axes, none-present, mixed. 100% coverage.
+*   **Verify:** `go test ./internal/manifest/` with race detector.
+*   **Files:** `internal/manifest/manifest.go`, `internal/manifest/manifest_test.go`
+*   **Status:** ✓ Completed
+
+**Task 51: Snapshot backup rotation (#177)**
+*   **Description:** `state.RotateSnapshotBackups(snapDir string, policy BackupConfig) (int, error)` globs `snapshots.*.bak/` dirs, same retention precedence, uses `os.RemoveAll`. `0` axes = unlimited.
+*   **Acceptance:** Table tests mirror Task 50 for directories. 100% coverage.
+*   **Verify:** `go test ./internal/state/` with race detector.
+*   **Files:** `internal/state/state.go`, `internal/state/state_test.go`
+*   **Status:** ✓ Completed
+
+**Task 52: Reconcile backup hooks (#177)**
+*   **Description:** In `reconcile.go`, non-dry-run: `CopyBackup(manifestPath)` before diff; after save `RotateBackups(manifestPath, cfg.Backup)`. Dry-run short-circuits (no backup/rotation/write). `Long` text documents rotation.
+*   **Acceptance:** Reconcile drift produces a manifest backup and prunes per policy; `--dry-run` produces no backup/rotation. Full path coverage (high-risk command).
+*   **Verify:** `task check`; manual reconcile smoke on a scratch `~/.config/stamp`.
+*   **Files:** `internal/cli/reconcile.go`, `internal/cli/reconcile_test.go`
+*   **Status:** ✓ Completed
+
+**Task 53: Init config gen + rotation (#177)**
+*   **Description:** Fresh init writes `DefaultConfigTOML()` to `config.toml` if absent (non-fatal, `0600`). Re-init confirmed: existing `manifest.Backup()` (rename) + `state.BackupSnapshots()` (rename), then `RotateBackups` + `RotateSnapshotBackups`. Dry-run short-circuits. `Long` text documents config generation + rotation.
+*   **Acceptance:** Fresh init creates `config.toml` with `[backup]`; existing config untouched; re-init rotates manifest + snapshot backups; dry-run writes nothing.
+*   **Verify:** `task check`; manual init/re-init on scratch dirs.
+*   **Files:** `internal/cli/init.go`, `internal/cli/init_test.go`
+*   **Status:** ✓ Completed
+
+**Task 54: Docs + ADR + AGENTS.md fix (#177)**
+*   **Description:** Spec updated (origin field, provenance subsection, Backup Retention Policy, init/reconcile bullets). ADR-017 records the 3 structural decisions (origin enum + absence=stamped; copy-vs-rename for reconcile; logrotate-aligned 3-axis retention + floor trade-off). `AGENTS.md` stale `docs/SPEC.md` → `docs/project/spec.md`. `docs/usage/configuration.md` gains `[backup]` + logrotate mapping + auto-create note. Run `task docs` to regenerate CLI reference.
+*   **Acceptance:** Docs consistent with spec; ADR-017 present; no stale `docs/SPEC.md` references remain.
+*   **Verify:** `grep -r "docs/SPEC.md" .` returns nothing; `task docs`.
+*   **Files:** `docs/project/spec.md`, `docs/IMPLEMENTATION_PLAN.md`, `AGENTS.md`, `docs/usage/configuration.md`, `docs/decisions/ADR-017-manifest-origin-and-backup-rotation.md`, `docs/usage/` (generated)
+*   **Status:** ✓ Completed
+
+**Task 55: Quality gates (#177)**
+*   **Description:** Run `task check` (lint, race tests ≥90% coverage, govulncheck); fix until green. Confirm no file exceeds 1,000 lines and errors are wrapped/logged-OR-returned.
+*   **Acceptance:** `task check` passes.
+*   **Verify:** `task check`
+*   **Files:** — (validation only)
+*   **Status:** ✓ Completed
+
+### Phase 11: `stamp list --type` Origin & Entity Filtering (#178)
+
+**Task 56: `--type` flag + validation + filters (#178)**
+*   **Description:** Add `--type, -t` flag to `stamp list`/`ls`. `validateListType` accepts `packages`, `repos`, `stamped`, `reconciled`, `stamped-packages`, `stamped-repos`, `reconciled-packages`, `reconciled-repos` (empty = default) and rejects anything else with the valid-types list. `filterPackages`/`filterRepositories` filter by manager and/or origin, using `OriginEffective()` so pre-origin manifests default to `stamped`.
+*   **Acceptance:** All 8 values + `""` accepted; invalid value returns `unknown type "<v>"; valid types: ...`; origin filter treats absent `origin` as `stamped`.
+*   **Verify:** `go test ./internal/cli/ -run 'TestValidateListType|TestFilterPackages|TestFilterRepositories'`
+*   **Files:** `internal/cli/list.go`, `internal/cli/list_test.go`
+*   **Status:** ✓ Completed
+
+**Task 57: Dispatch + rendering (#178)**
+*   **Description:** Switch dispatch per type: package-only, repo-only, and combined (`stamped`/`reconciled`) views. TTY renders `name (manager) — note` for packages (note rendering now matches docs) and `name (manager) url` for repos. JSON keeps capitalized keys; combined emits a flat array of package+repo objects; empty combined prints `nothing tracked`.
+*   **Acceptance:** `stamp list` default output unchanged except notes render; `-t repos` matches `stamp repo list` format; combined prints packages before repos; `-t` × `-m` compose; `-t` × `-j` compose.
+*   **Verify:** `go test ./internal/cli/ -run 'TestListCmd_Type|TestListCmd_NoteRendering|TestListCmd_TypePackagesEqualsDefault'`
+*   **Files:** `internal/cli/list.go`, `internal/cli/list_test.go`
+*   **Status:** ✓ Completed
+
+**Task 58: Shell completion + cobra race fix (#178)**
+*   **Description:** `RegisterFlagCompletionFunc("type", ...)` returns the 8 values. Registering the first completion func surfaces a cobra v1.9.1 global-registry race under parallel completion generation; the completion-generating tests are serialized (removed `t.Parallel()`).
+*   **Acceptance:** `completion` tests pass under `-race`; `-t` completes the 8 values.
+*   **Verify:** `go test -race ./internal/cli/`
+*   **Files:** `internal/cli/list.go`, `internal/cli/completion_test.go`
+*   **Status:** ✓ Completed
+
+**Task 59: Docs + regenerated CLI refs (#178)**
+*   **Description:** `docs/usage/listing-packages.md` gains "Understanding Origins" + `--type` examples + corrected capitalized JSON keys; `docs/getting-started/index.md` and `README.md` gain a stamped/reconciled explanation; `docs/project/spec.md` updates the `stamp list` row and adds a List Command section; `docs/project/features.md` gains the `--type` flag row. `task docs` regenerates `docs/usage/stamp_list.md` and man pages.
+*   **Acceptance:** Docs consistent with behavior; generated CLI reference shows `--type`.
+*   **Verify:** `task docs`; `grep --type docs/usage/stamp_list.md`
+*   **Files:** `docs/project/spec.md`, `docs/project/features.md`, `docs/usage/listing-packages.md`, `docs/getting-started/index.md`, `README.md`, `docs/usage/` + `docs/man/` (generated)
+*   **Status:** ✓ Completed
+
+**Task 60: Quality gates (#178)**
+*   **Description:** Run `task check` (lint, race tests ≥90% coverage, govulncheck); fix until green.
+*   **Acceptance:** `task check` passes.
+*   **Verify:** `task check`
+*   **Files:** — (validation only)
+*   **Status:** ✓ Completed
+
+### Phase 12: `stamp manifest history` + `stamp manifest diff` (#179)
+
+**Task 61: backup.List + Rotate refactor (#179)**
+*   **Description:** Export `backup.List(pattern) ([]Entry, error)` returning parsed timestamped backups (with collision index), newest first. Extend `tsPattern` to capture the collision suffix. Refactor `Rotate` to consume `List` (behavior unchanged).
+*   **Acceptance:** `List` parses timestamps + collision suffixes, sorts newest first, skips invalid names; existing `TestRotate_*` stay green.
+*   **Verify:** `go test ./internal/backup/ -race`
+*   **Files:** `internal/backup/backup.go`, `internal/backup/backup_test.go`
+*   **Status:** ✓ Completed
+
+**Task 62: manifest history subcommand (#179)**
+*   **Description:** `stamp manifest history` lists current + backups newest-first with package/repo counts, short SHA-256 hash, `*` = current, `(unchanged)` marker, TTY + JSON. Corrupted backups skipped with warning; missing manifest errors `manifest not found; run stamp init first`.
+*   **Acceptance:** TTY/JSON output shapes match spec; no-backups hint; unchanged marker; corrupted skip.
+*   **Verify:** `go test ./internal/cli/ -run 'TestManifestHistory'`
+*   **Files:** `internal/cli/manifest.go`, `internal/cli/manifest_test.go`
+*   **Status:** ✓ Completed
+
+**Task 63: manifest diff subcommand + filters (#179)**
+*   **Description:** `stamp manifest diff [ts|hash]` compares current vs a backup (default most recent) for packages AND repos (name+manager identity). Arg resolution: empty → newest; pure hex ≥6 → hash prefix (ambiguous → error); else timestamp (human or compact). `--manager, -m` + `--origin` filters both sets. TTY `+/-` + summary; JSON with `kind` field.
+*   **Acceptance:** all edge cases (no backup, invalid/unknown/ambiguous ref, corrupted baseline, empty diff, filters) covered by tests.
+*   **Verify:** `go test ./internal/cli/ -run 'TestManifestDiff'`
+*   **Files:** `internal/cli/manifest.go`, `internal/cli/manifest_test.go`
+*   **Status:** ✓ Completed
+
+**Task 64: completion + registration (#179)**
+*   **Description:** `--origin` flag completion (`stamped`/`reconciled`); register `newManifestCmd()` in `root.go` after `newListCmd()`. No positional-arg completion (path not available at completion time).
+*   **Acceptance:** `manifest` group registered; `--origin` completes; completion tests race-clean.
+*   **Verify:** `go test -race ./internal/cli/`
+*   **Files:** `internal/cli/manifest.go`, `internal/cli/root.go`, `internal/cli/manifest_test.go`
+*   **Status:** ✓ Completed
+
+**Task 65: Docs + regenerated CLI refs (#179)**
+*   **Description:** New `docs/usage/managing-manifests.md` (history/diff/restore/origins); linked from `docs/usage/index.md` under Recovery; `docs/project/spec.md` command row + Manifest Management subsection; `docs/project/features.md` rows. `task docs` regenerates `docs/usage/stamp_manifest*` and man pages.
+*   **Acceptance:** Docs consistent with behavior; generated CLI reference shows `manifest history`/`diff`.
+*   **Verify:** `task docs`; `grep manifest docs/usage/stamp.md`
+*   **Files:** `docs/usage/managing-manifests.md`, `docs/usage/index.md`, `docs/project/spec.md`, `docs/project/features.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/usage/` + `docs/man/` (generated)
+*   **Status:** ✓ Completed
+
+### Phase 13: sysexits Exit Codes (#177/#178/#179)
+
+**Task 66: exit.go + error mapping (#177/#178/#179)**
+*   **Description:** New `internal/cli/exit.go`: category sentinels (`ErrUsage`, `ErrData`, `ErrNoInput`, `ErrUnavailable`, `ErrCanTCreate`, `ErrConfig`), `categorizedError` (preserves message, matches via `Is`), `catErr`, `exitCodeFor`. `Execute()` maps via `exitCodeFor` (default 1, POSIX catchall); `SetFlagErrorFunc` → 64. Map sites: config parse 78, manifestErr 65, saveManifest 73, list `--type` 64, manifest history/diff (78/64/66/65), reconcile (69), init (73), repo validation (64).
+*   **Acceptance:** Every mapped error exits its sysexits code; message text unchanged; flag-parse errors → 64.
+*   **Verify:** `go test ./internal/cli/ -run 'TestExitCodeFor|TestCategorizedError|TestFlagParseErrorIsUsage'`
+*   **Files:** `internal/cli/exit.go`, `internal/cli/exit_test.go`, `root.go`, `list.go`, `manifest.go`, `reconcile.go`, `reconcile_report.go`, `init.go`, `repo.go`
+*   **Status:** ✓ Completed
+
+**Task 67: Docs (exit codes) (#177/#178/#179)**
+*   **Description:** `docs/project/spec.md` "Exit Codes" section — sysexits table + category mapping + default-1 note + non-fatal backup failures.
+*   **Acceptance:** Spec documents the public exit-code contract.
+*   **Verify:** `grep -n "Exit Codes" docs/project/spec.md`
+*   **Files:** `docs/project/spec.md`
+*   **Status:** ✓ Completed
+
+**Task 68: Quality gates (exit codes) (#177/#178/#179)**
+*   **Description:** `task check` green; confirm error messages unchanged (existing string assertions pass) and no dead sentinels.
+*   **Acceptance:** `task check` passes.
+*   **Verify:** `task check`
+*   **Files:** — (validation only)
+*   **Status:** ✓ Completed
