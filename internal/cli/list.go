@@ -226,6 +226,12 @@ Use --type to filter by entity type (packages/repos) and origin
 Origin meanings:
   "stamped"    = installed explicitly via stamp install/reinstall
   "reconciled" = installed outside stamp, auto-discovered by reconcile`)
+	// Registering a flag-completion func populates cobra's process-global
+	// registry, and cobra (through v1.10.2) writes flag annotations under a read
+	// lock during completion generation — a data race with any concurrent
+	// Execute(). This is only a hazard in-process; tests that trigger completion
+	// generation (completion/setup/hello) are therefore kept non-parallel (see
+	// the notes in completion_test.go and hello_test.go).
 	//nolint:errcheck // the --type flag is registered above, so this cannot fail
 	_ = cmd.RegisterFlagCompletionFunc("type", listTypeCompletion)
 	return cmd

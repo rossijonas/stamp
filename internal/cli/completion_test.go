@@ -12,11 +12,15 @@ import (
 	"github.com/rossijonas/stamp/internal/manager"
 )
 
-// TestCompletion_AllShells_Stdout is not parallel: cobra v1.9.1 keeps a
-// global flag-completion registry that GenBashCompletion/GenZshCompletion
-// mutate under a read lock, so concurrent generation races (see the -t flag
-// completion func). Serializing these keeps the race detector clean.
-// Revisit when cobra is upgraded past v1.9.1.
+// NOT parallel: these tests trigger completion generation
+// (GenBashCompletion/GenZshCompletion/GenFishCompletion), which writes to
+// cobra's process-global flag-completion registry. Cobra (through v1.10.2)
+// does that under a read lock, so concurrent completion generation races with
+// any parallel test running a command (Execute reads flag annotations). The
+// Go test scheduler runs non-parallel tests first, before the parallel batch,
+// so keeping completion-generating tests non-parallel prevents the overlap.
+// Any test that runs `stamp completion`, `stamp setup`, or `stamp hello` must
+// follow this rule (see also hello_test.go).
 func TestCompletion_AllShells_Stdout(t *testing.T) {
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
 		t.Run(shell, func(t *testing.T) {
@@ -51,8 +55,7 @@ func TestCompletion_Help(t *testing.T) {
 	assert.Contains(t, output, "powershell")
 }
 
-// Not parallel: see TestCompletion_AllShells_Stdout for the cobra global
-// flag-completion registry race.
+// Not parallel: generates bash completions (see TestCompletion_AllShells_Stdout).
 func TestCompletion_StdoutFlag(t *testing.T) {
 	buf, err := execCmd(t, []string{"completion", "bash", "--stdout"}, []manager.Adapter{})
 	require.NoError(t, err)
@@ -110,8 +113,7 @@ func TestCompletion_ZshInstructions(t *testing.T) {
 	assert.Contains(t, output, "autoload -U compinit; compinit")
 }
 
-// Not parallel: see TestCompletion_AllShells_Stdout for the cobra global
-// flag-completion registry race.
+// Not parallel: generates bash completions (see TestCompletion_AllShells_Stdout).
 func TestCompletion_BashNoInstructions(t *testing.T) {
 	buf, err := execCmd(t, []string{"completion", "bash"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.NoError(t, err)

@@ -517,11 +517,11 @@ backup rotation adopts a logrotate-aligned 3-axis retention policy
 *   **Files:** `internal/cli/list.go`, `internal/cli/list_test.go`
 *   **Status:** ✓ Completed
 
-**Task 58: Shell completion + cobra race fix (#178)**
-*   **Description:** `RegisterFlagCompletionFunc("type", ...)` returns the 8 values. Registering the first completion func surfaces a cobra v1.9.1 global-registry race under parallel completion generation; the completion-generating tests are serialized (removed `t.Parallel()`).
-*   **Acceptance:** `completion` tests pass under `-race`; `-t` completes the 8 values.
+**Task 58: Shell completion + cobra race mitigation (#178)**
+*   **Description:** `RegisterFlagCompletionFunc("type", ...)` returns the 8 values. Cobra's completion registry is process-global and `prepareCustomAnnotationsForFlags` writes flag annotations under a read lock (upstream bug, unfixed through v1.10.2) — a data race between concurrent completion generation and command execution. Production is unaffected (single-process CLI); the test suite mitigates it by keeping all completion-generating tests (`stamp completion`/`setup`/`hello`) non-parallel so they run in the sequential phase before the parallel batch. Cobra upgraded to v1.10.2 alongside (pflag 1.0.9, yaml migration).
+*   **Acceptance:** `completion` tests race-clean under `-race`; `-t` completes the 8 values; completion-generating tests are non-parallel with the constraint documented.
 *   **Verify:** `go test -race ./internal/cli/`
-*   **Files:** `internal/cli/list.go`, `internal/cli/completion_test.go`
+*   **Files:** `internal/cli/list.go`, `internal/cli/completion_test.go`, `internal/cli/hello_test.go`, `go.mod`, `go.sum`
 *   **Status:** ✓ Completed
 
 **Task 59: Docs + regenerated CLI refs (#178)**
@@ -561,8 +561,8 @@ backup rotation adopts a logrotate-aligned 3-axis retention policy
 *   **Files:** `internal/cli/manifest.go`, `internal/cli/manifest_test.go`
 *   **Status:** ✓ Completed
 
-**Task 64: completion + registration (#179)**
-*   **Description:** `--origin` flag completion (`stamped`/`reconciled`); register `newManifestCmd()` in `root.go` after `newListCmd()`. No positional-arg completion (path not available at completion time).
+**Task 64: manifest group registration + `--origin` completion (#179)**
+*   **Description:** Register `newManifestCmd()` in `root.go` after `newListCmd()`; `--origin` flag completion (`stamped`/`reconciled`) registered like `--type` (see Task 58 for the cobra race mitigation).
 *   **Acceptance:** `manifest` group registered; `--origin` completes; completion tests race-clean.
 *   **Verify:** `go test -race ./internal/cli/`
 *   **Files:** `internal/cli/manifest.go`, `internal/cli/root.go`, `internal/cli/manifest_test.go`
