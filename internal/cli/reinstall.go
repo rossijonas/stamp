@@ -53,7 +53,7 @@ tracked in the manifest, resolve the manager and track it.`,
 					}
 				}
 				if adapter == nil {
-					return fmt.Errorf("manager %q is not available on this system", recordedManager)
+					return catErr(ErrUnavailable, "manager %q is not available on this system", recordedManager)
 				}
 			} else {
 				// Pre-existing: resolve via 3-tier engine
@@ -95,6 +95,7 @@ tracked in the manifest, resolve the manager and track it.`,
 				app.manifest.AddPackage(manifest.Package{
 					Name:    pkgName,
 					Manager: adapter.Name(),
+					Origin:  manifest.OriginStamped,
 				})
 			}
 

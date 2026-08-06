@@ -8,12 +8,13 @@ Initialize manifest.toml and take baseline snapshot
 ### Synopsis
 
 Create the stamp configuration directory, an empty manifest.toml,
-and take a baseline snapshot of currently installed packages
-for each available package manager.
+a default config.toml (only when absent), and take a baseline snapshot
+of currently installed packages for each available package manager.
 
 If stamp is already initialized, the existing manifest and snapshots
-are always backed up before creating a fresh state. Use -y to skip
-the confirmation prompt.
+are always backed up before creating a fresh state, and old backups are
+pruned per the [backup] policy in config.toml. Use -y to skip the
+confirmation prompt.
 
 ```
 stamp init [flags]

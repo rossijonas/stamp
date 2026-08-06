@@ -2,11 +2,13 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -343,4 +345,113 @@ func TestInitCmd_FirstInit_NoPrompt(t *testing.T) {
 	assert.Contains(t, output, "manifest initialized and system baseline snapshot taken")
 	assert.NotContains(t, output, "Continue?")
 	assert.NotContains(t, output, "backed up")
+}
+
+func TestInitCmd_CreatesConfigTemplate(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{}}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	root.SetArgs([]string{"init"})
+	require.NoError(t, root.Execute())
+
+	//nolint:gosec // path is a controlled temp file
+	data, err := os.ReadFile(cPath)
+	require.NoError(t, err, "config.toml must be created on fresh init")
+	content := string(data)
+	assert.Contains(t, content, "[backup]")
+	assert.Contains(t, content, "max_manifest_backups = 10")
+	assert.Contains(t, content, "precedence")
+}
+
+func TestInitCmd_DoesNotOverwriteExistingConfig(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{}}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	require.NoError(t, os.WriteFile(cPath, []byte("precedence = [\"brew\"]\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	root.SetArgs([]string{"init"})
+	require.NoError(t, root.Execute())
+
+	//nolint:gosec // path is a controlled temp file
+	data, err := os.ReadFile(cPath)
+	require.NoError(t, err)
+	assert.Equal(t, "precedence = [\"brew\"]\n", string(data), "existing config must not be overwritten")
+}
+
+func TestInitCmd_Reinit_RotatesManifestBackups(t *testing.T) {
+	saveRestoreTerminal(t)
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{}}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+	createExistingManifest(t, mPath, "")
+
+	// Pre-seed 4 backups + a config capping manifest backups at 2. Age floors
+	// are disabled so the count cap alone drives rotation.
+	for _, age := range []int{1, 2, 3, 4} {
+		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
+		require.NoError(t, os.WriteFile(fmt.Sprintf("%s.%s.bak", mPath, ts), []byte("old"), 0600))
+	}
+	require.NoError(t, os.WriteFile(cPath, []byte("[backup]\nmax_manifest_backups = 2\nmin_manifest_backups = 0\nmin_manifest_backup_age_days = 0\nmax_manifest_backup_age_days = 0\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetIn(strings.NewReader("y\n"))
+	root.SetArgs([]string{"init"})
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "rotated 3 manifest backup(s)")
+
+	backups, _ := filepath.Glob(filepath.Join(tmpDir, "manifest.toml.*.bak"))
+	assert.Len(t, backups, 2, "re-init rotation must cap manifest backups at the configured max")
+}
+
+func TestInitCmd_Reinit_RotatesSnapshotBackups(t *testing.T) {
+	saveRestoreTerminal(t)
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{}}}
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+	createExistingManifest(t, mPath, "")
+
+	snapBase := filepath.Join(tmpDir, "stamp", "snapshots")
+	require.NoError(t, os.MkdirAll(snapBase, 0700))
+	require.NoError(t, os.WriteFile(filepath.Join(snapBase, "brew.json"), []byte(`{"manager":"brew","packages":["htop"]}`), 0600))
+
+	// Pre-seed 3 snapshot backup dirs. Disable age floors/ceilings in config so
+	// the count cap alone drives rotation.
+	for _, age := range []int{1, 2, 3} {
+		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
+		dir := fmt.Sprintf("%s.%s.bak", snapBase, ts)
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "sub"), 0700))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "sub", "brew.json"), []byte("{}"), 0600))
+	}
+	require.NoError(t, os.WriteFile(cPath, []byte("[backup]\nmax_snapshot_backups = 2\nmin_snapshot_backups = 0\nmin_snapshot_backup_age_days = 0\nmax_snapshot_backup_age_days = 0\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetIn(strings.NewReader("y\n"))
+	root.SetArgs([]string{"init"})
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "existing snapshots backed up")
+	assert.Contains(t, output, "rotated 2 snapshot backup(s)")
+
+	// 1 (fresh re-init) + 3 (pre-seeded) backups, minus 2 rotated = 2 remain.
+	backups, _ := filepath.Glob(filepath.Join(tmpDir, "stamp", "snapshots.*.bak"))
+	assert.Len(t, backups, 2, "re-init rotation must cap snapshot backups at the configured max")
 }

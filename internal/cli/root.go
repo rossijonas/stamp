@@ -39,6 +39,7 @@ type AppContext struct {
 	manifestPath string
 	manifestErr  error
 	config       *Config
+	configPath   string
 	yes          bool
 	verbose      bool
 	json         bool
@@ -130,15 +131,12 @@ func detectAdapters() []manager.Adapter {
 }
 
 func newAppContext(yes, verbose, json bool, adapters []manager.Adapter, cfgPath, mfPath string) (*AppContext, error) {
-	ctx := &AppContext{yes: yes, verbose: verbose, json: json, adapters: adapters, manifestPath: mfPath}
+	ctx := &AppContext{yes: yes, verbose: verbose, json: json, adapters: adapters, manifestPath: mfPath, configPath: cfgPath}
 
-	// Load config
+	// Load config. LoadConfig returns defaults when the file does not exist.
 	cfg, err := LoadConfig(cfgPath)
 	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("invalid configuration: %w", err)
-		}
-		cfg = &Config{Precedence: []string{"dnf", "flatpak", "brew"}}
+		return nil, catErr(ErrConfig, "invalid configuration: %w", err)
 	}
 	ctx.config = cfg
 
@@ -146,7 +144,7 @@ func newAppContext(yes, verbose, json bool, adapters []manager.Adapter, cfgPath,
 	m, err := manifest.Load(mfPath)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			ctx.manifestErr = fmt.Errorf("failed to load manifest: %w", err)
+			ctx.manifestErr = catErr(ErrData, "failed to load manifest: %w", err)
 			m = &manifest.Manifest{
 				Version:   1,
 				System:    runtime.GOOS,
@@ -170,7 +168,10 @@ func newAppContext(yes, verbose, json bool, adapters []manager.Adapter, cfgPath,
 }
 
 func (a *AppContext) saveManifest() error {
-	return a.manifest.Save(a.manifestPath)
+	if err := a.manifest.Save(a.manifestPath); err != nil {
+		return catErr(ErrCanTCreate, "failed to save manifest: %w", err)
+	}
+	return nil
 }
 
 func appFromCtx(cmd *cobra.Command) *AppContext {
@@ -253,6 +254,11 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.PersistentFlags().BoolP("json", "j", false, "output results in JSON format")
 	root.PersistentFlags().BoolP("yes", "y", false, "auto-accept all prompts")
 
+	// Flag-parse errors (unknown flags, invalid values) are usage errors.
+	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return catErr(ErrUsage, "%w", err)
+	})
+
 	root.AddCommand(newInstallCmd())
 	root.AddCommand(newRemoveCmd())
 	root.AddCommand(newReinstallCmd())
@@ -266,6 +272,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newListCmd())
+	root.AddCommand(newManifestCmd())
 	root.AddCommand(newProvidesCmd())
 	root.AddCommand(newAutoremoveCmd())
 	root.AddCommand(newCleanCmd())
@@ -289,18 +296,12 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 var rootCmd = NewRootCmd()
 
 // Execute is the entry point for the CLI, called from cmd/stamp/main.go.
+// It is the single place that maps errors to exit codes. os.Exit skips
+// deferred functions, so all cleanup (temp files, signal handlers) happens
+// inside command RunE before the error reaches Execute.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		os.Exit(exitCodeFor(err))
 	}
 }
-
-// Exit codes following sysexits.h conventions.
-const (
-	ExitUsage       = 64 // EX_USAGE
-	ExitDataErr     = 65 // EX_DATAERR
-	ExitUnavailable = 69 // EX_UNAVAILABLE
-	ExitSoftware    = 70 // EX_SOFTWARE
-	ExitConfig      = 78 // EX_CONFIG
-)

@@ -3,14 +3,17 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/rossijonas/stamp/internal/manager"
+	"github.com/rossijonas/stamp/internal/manifest"
 	"github.com/rossijonas/stamp/internal/state"
 )
 
@@ -53,6 +56,215 @@ func TestReconcile_DriftAndAutoTrack(t *testing.T) {
 	assert.Contains(t, output, "Discovered 1 new package(s)")
 	assert.Contains(t, output, "ripgrep (brew)")
 	assert.Contains(t, output, "Tracked 1 package(s)")
+}
+
+func TestReconcile_AutoTrackedEntriesHaveReconciledOrigin(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+
+	require.NoError(t, os.MkdirAll(tmpDir, 0700))
+	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+
+	loaded, err := manifest.Load(manifestPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 1)
+	assert.Equal(t, "ripgrep", loaded.Packages[0].Name)
+	assert.Equal(t, manifest.OriginReconciled, loaded.Packages[0].Origin)
+}
+
+func TestReconcile_DriftCreatesManifestBackup(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+
+	backups, err := filepath.Glob(manifestPath + ".*.bak")
+	require.NoError(t, err)
+	assert.Len(t, backups, 1, "reconcile drift must create a manifest backup")
+}
+
+func TestReconcile_DryRunNoBackup(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile", "--dry-run"})
+
+	require.NoError(t, root.Execute())
+
+	backups, err := filepath.Glob(manifestPath + ".*.bak")
+	require.NoError(t, err)
+	assert.Empty(t, backups, "reconcile --dry-run must not create backups")
+}
+
+func TestReconcile_NoDriftNoBackup(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+	assert.Contains(t, buf.String(), "No drift detected")
+
+	backups, err := filepath.Glob(manifestPath + ".*.bak")
+	require.NoError(t, err)
+	assert.Empty(t, backups, "reconcile with no drift must not create backups")
+}
+
+func TestReconcile_DriftRotatesBackups(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	// Pre-seed 4 backups, then a config capping manifest backups at 2. The
+	// max-age ceiling is disabled so the count cap alone drives rotation.
+	for _, age := range []int{20, 40, 60, 80} {
+		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
+		require.NoError(t, os.WriteFile(fmt.Sprintf("%s.%s.bak", manifestPath, ts), []byte("old"), 0600))
+	}
+	configContent := "[backup]\nmax_manifest_backups = 2\nmin_manifest_backups = 0\nmax_manifest_backup_age_days = 0\n"
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.toml"), []byte(configContent), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "rotated 2 manifest backup(s)")
+
+	backups, err := filepath.Glob(manifestPath + ".*.bak")
+	require.NoError(t, err)
+	assert.Len(t, backups, 3, "rotation must cap manifest backups at the configured max plus the min-age-protected fresh backup")
+}
+
+func TestReconcile_DriftDefaultMinKeepSurvives(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	// All backups older than the default 30-day ceiling — the min-count floor
+	// (default 3) must stop the ceiling from wiping everything.
+	for _, age := range []int{40, 50, 60, 70} {
+		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
+		require.NoError(t, os.WriteFile(fmt.Sprintf("%s.%s.bak", manifestPath, ts), []byte("old"), 0600))
+	}
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+
+	backups, err := filepath.Glob(manifestPath + ".*.bak")
+	require.NoError(t, err)
+	assert.Len(t, backups, 3, "default min_manifest_backups=3 must survive the max-age ceiling")
 }
 
 func TestReconcile_MultipleManagers(t *testing.T) {
@@ -121,6 +333,7 @@ func TestReconcile_NoAdapters(t *testing.T) {
 	_, err := execCmd(t, []string{"reconcile"}, []manager.Adapter{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no package managers available")
+	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
 }
 
 func TestReconcile_CorruptSnapshot(t *testing.T) {
@@ -260,6 +473,7 @@ func TestReconcile_ManagerFlag_NotFound(t *testing.T) {
 	_, err := execCmd(t, []string{"reconcile", "-m", "nonexistent"}, adapters)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not available on this system")
+	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
 }
 
 func TestReconcile_RepoDrift(t *testing.T) {

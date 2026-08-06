@@ -50,8 +50,11 @@ func TestSetupCmd_AutoAccept(t *testing.T) {
 	assert.NotContains(t, output, "[Y/n]:")
 }
 
+// Not parallel: the setup wizard runs `stamp completion` (Step 1), which
+// writes to cobra's process-global flag-completion registry — a race with any
+// concurrent command execution (see TestCompletion_AllShells_Stdout). All
+// tests that run `stamp setup`/`stamp hello` must stay non-parallel.
 func TestHelloCmd_StillWorks(t *testing.T) {
-	t.Parallel()
 	buf, err := execCmd(t, []string{"hello"}, []manager.Adapter{})
 	require.NoError(t, err)
 	output := buf.String()

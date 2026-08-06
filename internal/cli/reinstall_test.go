@@ -157,6 +157,7 @@ manager = "dnf"
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not available on this system")
+	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
 }
 
 func TestReinstallCmd_Failures(t *testing.T) {

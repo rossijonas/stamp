@@ -97,6 +97,7 @@ func TestResolver_Tier3Fallback(t *testing.T) {
 	_, err := r.Resolve("htop", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "specify --manager")
+	assert.Equal(t, ExitUsage, exitCodeFor(err))
 }
 
 func TestResolver_NoAdapters(t *testing.T) {
@@ -106,6 +107,7 @@ func TestResolver_NoAdapters(t *testing.T) {
 	_, err := r.Resolve("htop", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no package managers available")
+	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
 }
 
 func TestResolver_SkipsInvalidRegex(t *testing.T) {

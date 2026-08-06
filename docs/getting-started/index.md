@@ -14,6 +14,19 @@ Stamp is a lightweight yet powerful CLI tool that wraps **many package managers 
 
 Stamp doesn't replace your package managers — it unifies them into a single workflow.
 
+### Origins: stamped vs reconciled
+
+Every entry in your manifest records how stamp learned about it:
+
+- **stamped** — you installed it via `stamp install` (or `stamp reinstall`). Stamp recorded your intent at install time.
+- **reconciled** — you installed it directly via your package manager (e.g. `dnf install`) and `stamp reconcile` discovered it afterwards.
+
+Both are user-installed packages — the difference is how stamp learned about them.
+
+- `stamp list -t stamped` shows everything you explicitly tracked through stamp.
+- `stamp list -t reconciled` shows everything reconcile auto-discovered.
+- `stamp list -t stamped-packages` narrows to packages only, excluding repos.
+
 ### Vision
 
 Stamp is built for developers who want reproducible environments without the overhead of Nix or Ansible. Read the full [About / Vision](/project/about.html) to understand the project's goals.

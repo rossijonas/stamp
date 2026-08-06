@@ -305,6 +305,7 @@ func TestDoctor_ManagerFlag_NotFound(t *testing.T) {
 	_, err := execCmd(t, []string{"doctor", "-m", "nonexistent"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not available on this system")
+	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
 }
 
 func TestDoctor_ManagerFlag_NativeOutput(t *testing.T) {

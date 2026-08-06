@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/rossijonas/stamp/internal/backup"
 	"github.com/rossijonas/stamp/internal/manager"
 )
 
@@ -426,6 +428,34 @@ func TestSave_WriteFileError(t *testing.T) {
 		Packages: []string{"lazygit"},
 	}
 	err := Save("/nonexistent-directory/snapshots", snap)
+	require.Error(t, err)
+}
+
+func TestRotateSnapshotBackups(t *testing.T) {
+	tmpDir := t.TempDir()
+	base := filepath.Join(tmpDir, "snapshots")
+	for _, age := range []int{1, 2, 3, 4} {
+		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
+		dir := fmt.Sprintf("%s.%s.bak", base, ts)
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "sub"), 0700))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "sub", "brew.json"), []byte("{}"), 0600))
+	}
+
+	n, err := RotateSnapshotBackups(base, backup.Policy{MaxKeep: 2})
+	require.NoError(t, err)
+	assert.Equal(t, 2, n)
+}
+
+func TestRotateSnapshotBackups_NoBackups(t *testing.T) {
+	tmpDir := t.TempDir()
+	base := filepath.Join(tmpDir, "snapshots")
+	n, err := RotateSnapshotBackups(base, backup.Policy{MaxKeep: 2})
+	require.NoError(t, err)
+	assert.Zero(t, n)
+}
+
+func TestRotateSnapshotBackups_InvalidGlob(t *testing.T) {
+	_, err := RotateSnapshotBackups("[", backup.Policy{MaxKeep: 1})
 	require.Error(t, err)
 }
 

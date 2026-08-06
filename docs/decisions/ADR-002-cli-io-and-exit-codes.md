@@ -6,6 +6,13 @@
 ## Status
 Accepted
 
+**Partially superseded:** the exit-code clause (exit status `2` for usage
+errors) is superseded by [ADR-018](ADR-018-sysexits-exit-codes.md), which maps
+error categories to BSD sysexits codes. The `--yes` auto-accept behavior in
+non-interactive shells is superseded by
+[ADR-015](ADR-015-fail-closed-consent.md) (fail-closed: non-TTY without `-y`
+aborts). The I/O-separation and flag-constraint decisions remain in force.
+
 ## Date
 2026-07-03
 
@@ -46,7 +53,9 @@ When a package or repository command is executed without the `--manager` flag, t
     And automatically installs it using the manager with the highest priority.
 *   **Tier 3: Interactive Fallback:** If there is a tie or no precedence is configured:
     *   In a TTY (interactive terminal): Prompt the user with a select menu.
-    *   In a non-TTY (scripting pipeline): Fail immediately with exit status `2` (usage error) prompting the user to supply `--manager`.
+    *   In a non-TTY (scripting pipeline): Fail immediately with a usage error
+        (exit code `64`, EX_USAGE — see [ADR-018](ADR-018-sysexits-exit-codes.md))
+        prompting the user to supply `--manager`.
 
 ### 5. Repository Aliases & Operations
 To ensure interface consistency, the exact same aliases will apply to both packages and repositories:

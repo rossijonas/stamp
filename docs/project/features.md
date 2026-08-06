@@ -50,7 +50,10 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp setup` | `hello` | ✓ | ✓ | ✓ Interactive wizard for completions, man, init, doctor | ✓ Complete |
 | `stamp init` | | ✓ | ✓ | ✓ Creates dirs + manifest + snapshots | ✓ Complete |
 | `stamp update` | `upgrade` | ✓ | ✓ | ✓ Two-phase check + confirm, --check flag, -y skips check, parallel execution, --serial flag | ✓ Complete |
-| `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
+| `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest, filter by type/origin | ✓ Complete |
+| `stamp manifest` | | ✓ | ✓ | ✓ Backup history + diff against backups | ✓ Complete |
+| `stamp manifest history` | `backups` | ✓ | ✓ | ✓ List backups with counts + hashes | ✓ Complete |
+| `stamp manifest diff` | | ✓ | ✓ | ✓ Compare current vs backup, ts/hash refs, filters | ✓ Complete |
 | `stamp self-update` | `self-upgrade` | ✓ | ✓ | ✓ Atomic binary replacement + SHA-256 verification + post-update hooks | ✓ Complete |
 | `stamp auto-reconcile on\|off` | | ✓ | ✓ | ✓ systemd/launchd timer, --period flag | ✓ Complete |
 | `stamp autoremove` | | ✓ | ✓ | ✓ Iterates adapters, handles ErrNotSupported | ✓ Complete |
@@ -116,6 +119,11 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp update` | `--serial` | `-s` | ✓ | ✓ | ✓ Complete |
 | `stamp auto-reconcile` | `--period <interval>` | `-p` | ✓ | ✓ | ✓ Complete |
 | `stamp list` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp list` | `--type <type>` | `-t` | ✓ | ✓ | ✓ Complete |
+| `stamp manifest history` | `--json` | `-j` | ✓ | ✓ | ✓ Complete |
+| `stamp manifest diff` | `--json` | `-j` | ✓ | ✓ | ✓ Complete |
+| `stamp manifest diff` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
+| `stamp manifest diff` | `--origin` | | ✓ | ✓ | ✓ Complete |
 | `stamp autoremove` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |
 | `stamp autoremove` | `--dry-run` | `-d` | ✓ | ✓ | ✓ Complete |
 | `stamp clean` | `--manager <name>` | `-m` | ✓ | ✓ | ✓ Complete |

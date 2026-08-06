@@ -11,6 +11,10 @@ Compare the current system package state against the last snapshot.
 Any new packages found are auto-tracked to the manifest.
 Use --dry-run to preview drift without tracking.
 
+Before tracking, the current manifest is timestamp-backed up, and old
+manifest backups are pruned per the [backup] policy in config.toml.
+Dry-run performs no writes, no backups, and no rotation.
+
 ```
 stamp reconcile [flags]
 ```

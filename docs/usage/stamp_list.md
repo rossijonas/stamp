@@ -11,6 +11,8 @@ Read the manifest and display all tracked packages.
 By default prints a table of package names and their managers.
 Use --json for machine-readable output.
 Use -m to filter by a specific package manager.
+Use --type to filter by entity type (packages/repos) and origin
+(stamped/reconciled).
 
 ```
 stamp list [flags]
@@ -22,6 +24,7 @@ stamp list [flags]
   stamp list
   stamp list --json
   stamp list -m brew
+  stamp list -t stamped-packages
 ```
 
 ### Options
@@ -29,6 +32,19 @@ stamp list [flags]
 ```
   -h, --help             help for list
   -m, --manager string   package manager to list
+  -t, --type string      Filter by entity type and origin. Valid types:
+                           packages           All packages (default)
+                           repos              All repositories
+                           stamped            Everything installed via stamp (packages + repos)
+                           reconciled         Everything discovered by reconcile (packages + repos)
+                           stamped-packages   Packages installed via stamp
+                           stamped-repos      Repos added via stamp
+                           reconciled-packages Packages discovered by reconcile
+                           reconciled-repos    Repos discovered by reconcile
+                         
+                         Origin meanings:
+                           "stamped"    = installed explicitly via stamp install/reinstall
+                           "reconciled" = installed outside stamp, auto-discovered by reconcile
 ```
 
 ### Options inherited from parent commands

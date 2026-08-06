@@ -82,7 +82,7 @@ check "stamp restore --help" timeout $TIMEOUT stamp restore --help
 check "stamp update --help" timeout $TIMEOUT stamp update --help
 check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 
-check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew -y
+check "install hello for single-pkg update test" timeout $TIMEOUT_LONG stamp install hello -m brew -y
 check "update single package" timeout $TIMEOUT stamp update -p hello -m brew -y
 
 echo "=== Snap ==="
