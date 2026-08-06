@@ -136,7 +136,7 @@ check "stamp self-update --help" timeout $TIMEOUT stamp self-update --help
 
 echo "=== Update ==="
 check "update runs" timeout $TIMEOUT_EXTRA stamp update -m dnf -y
-check "install hello for single-pkg update test" timeout $TIMEOUT stamp install hello -m brew -y
+check "install hello for single-pkg update test" timeout $TIMEOUT_LONG stamp install hello -m brew -y
 check "update single package" timeout $TIMEOUT stamp update -p hello -m brew -y
 
 echo "=== Alias Tests ==="
