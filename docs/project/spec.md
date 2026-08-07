@@ -58,12 +58,12 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 | `stamp reinstall <pkg>` | | | Reinstalls natively and records intent. Works for both manifest-tracked and pre-existing packages. |
 | `stamp search <query>` | | `--manager, -m <name>` | Searches across managers. |
 | `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. |
-| `stamp reconcile` | | `--dry-run, -d`, `--manager, -m <name>` | Detects drift since last snapshot and auto-tracks discovered packages and repositories. |
+| `stamp reconcile` | | `--dry-run, -d`, `--manager, -m <name>` | Detects drift since last snapshot and auto-tracks discovered packages and repositories. Warns when tracked packages are no longer installed. |
 | `stamp restore` | | `--dry-run, -d`, `--manager, -m <name>` | Reinstalls repos and packages on a new machine. |
 | `stamp update` | `upgrade` | `--manager, -m <name>`, `--package, -p <pkg>`, `--serial, -s` | Runs system upgrades across all managers. Parallel by default. Use `-s` for serial, `-p` for single-package. |
-| `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>`, `--type, -t <type>` | Lists tracked packages and repos. Filter by entity type and origin (stamped/reconciled). |
+| `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>`, `--type, -t <type>` | Lists tracked packages and repos. Filter by entity type and origin (stamped/reconciled); `--type missing` lists manifest packages not installed. |
 | `stamp manifest` | | `--json, -j` | Manifest management. Subcommands: `history` (list backups), `diff [ts\|hash]` (compare current with a backup). |
-| `stamp doctor` | | `--json, -j`, `--manager, -m <name>` | Checks manager availability, manifest integrity, and UNIX compliance. |
+| `stamp doctor` | | `--json, -j`, `--manager, -m <name>` | Checks manager availability, manifest integrity, manifest-vs-system drift, and UNIX compliance. |
 | `stamp self-update` | `self-upgrade` | `--check, -c` | Checks for and installs the latest version of `stamp`. |
 | `stamp completion [shell]` | | `--stdout, -s` | Generates and installs shell completion scripts. Auto-detects shell if not specified. |
 | `stamp man` | | | Command group for system reference page management. |
@@ -290,6 +290,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
   - If no drift: exits with "No drift detected".
   - If drift found AND `--dry-run`: shows all discovered packages/repos and exits without tracking.
   - If drift found (not `--dry-run`): backs up the current manifest (copy-based, original kept), adds all discovered packages to manifest with `origin = "reconciled"`, saves new snapshots, then rotates manifest backups per the `[backup]` policy. Snapshot rotation is NOT triggered by reconcile — it lives in `stamp init` re-init.
+  - Missing-package warning (issue #182): manifest entries that disappeared from the system since the last snapshot (e.g. removed via `dnf remove`) are reported to stderr as a warning — `N manifest package(s) not installed: ... — run 'stamp ls --type missing' for the full list, or 'stamp restore' to reinstall`. The warning fires on both the no-drift and drift paths, is warning-only (no manifest mutation, no reinstall), and the removal is still recorded in the new snapshot (the snapshot reflects reality; the manifest holds intent). Group and cask entries are excluded.
   - No interactive prompt. Reconcile is fully deterministic:
     - `stamp reconcile` — auto-tracks, no questions.
     - `stamp reconcile --dry-run` — preview only, no tracking, no backups, no rotation.
@@ -307,6 +308,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Usage:** Checks manager availability, manifest health, UNIX compliance, and shell completion installation status.
 - **Flags:** `--json`, `-j`, `--manager`, `-m` (Proposed)
 - **Behavior:** Audits managers, parses manifest, checks `NO_COLOR`, `stamp man check` statuses, and shell completion installation status.
+- **Manifest vs system check (issue #182):** when the manifest is valid, doctor queries each active manager's installed packages (concurrently, best-effort — a manager whose query fails is skipped) and reports manifest entries absent from the system under a `Missing:` section in "Manifest Integrity" (TTY) and as `manifest.missing` (`--json`). This does not flip the manifest status — `✓ Healthy` refers to manifest integrity, and a missing package is drift, not corruption. Group and cask entries are excluded.
 - **UNIX Compliance TTY section:**
   ```text
   UNIX Compliance:
@@ -439,14 +441,24 @@ Valid `--type` values:
 | `stamped-repos` | Repos with `origin = "stamped"` |
 | `reconciled-packages` | Packages with `origin = "reconciled"` |
 | `reconciled-repos` | Repos with `origin = "reconciled"` |
+| `missing` | Manifest packages not installed on this system |
 
 `--type packages` and `--type repos` ignore origin and show all entries of that
 entity type. An unknown value returns `unknown type "<value>"; valid types:
 packages, repos, stamped, reconciled, stamped-packages, stamped-repos,
-reconciled-packages, reconciled-repos`. On a pre-origin manifest (entries
+reconciled-packages, reconciled-repos, missing`. On a pre-origin manifest (entries
 without an `origin` field) the origin defaults to `stamped`, so
 `--type stamped-packages` shows everything and `--type reconciled-packages`
 shows nothing.
+
+`--type missing` (issue #182) is the only system-aware view: it queries each
+active manager's installed packages and lists manifest entries absent from the
+system, i.e. packages removed via the native manager. It composes with
+`--manager, -m` and `--json`, but not with an origin filter. Group and cask
+entries are excluded (they never appear in the installed list). A manager whose
+installed list cannot be queried is skipped. No matches prints
+`no missing packages`. It never mutates the manifest — `stamp restore` is the
+convergence tool.
 
 ### Manifest Management (`stamp manifest`)
 

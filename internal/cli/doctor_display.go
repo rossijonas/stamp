@@ -28,6 +28,13 @@ func renderDoctorTTY(w io.Writer, d *doctorReport, noColor bool) {
 	_, _ = fmt.Fprintf(w, "  Path:   %s\n", d.Manifest.Path)
 	if d.Manifest.Valid {
 		_, _ = fmt.Fprintf(w, "  Status: ✓ Healthy (%d package(s))\n", d.Manifest.PackagesCount)
+		if len(d.Manifest.Missing) > 0 {
+			_, _ = fmt.Fprintln(w, "  Missing:")
+			for _, p := range d.Manifest.Missing {
+				_, _ = fmt.Fprintf(w, "    - %s (%s)\n", p.Name, p.Manager)
+			}
+			_, _ = fmt.Fprintln(w, "    run 'stamp restore' to reinstall, or 'stamp ls --type missing' for details")
+		}
 	} else {
 		_, _ = fmt.Fprintf(w, "  Status: ✗ %s\n", d.Manifest.Error)
 	}

@@ -20,6 +20,7 @@ var validListTypes = []string{
 	"stamped-repos",
 	"reconciled-packages",
 	"reconciled-repos",
+	"missing",
 }
 
 // listTypeCompletion completes the --type flag. Declared as a variable so it
@@ -169,13 +170,27 @@ func newListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List all intentionally installed packages",
-		Example: "  stamp list\n  stamp list --json\n  stamp list -m brew\n  stamp list -t stamped-packages",
+		Example: `  # list all tracked packages
+  stamp list
+
+  # machine-readable output
+  stamp list --json
+
+  # filter by package manager
+  stamp list -m brew
+
+  # filter by entity type and origin (stamped/reconciled)
+  stamp list -t stamped-packages
+
+  # packages in the manifest not installed on this system
+  stamp list -t missing`,
 		Long: `Read the manifest and display all tracked packages.
 By default prints a table of package names and their managers.
 Use --json for machine-readable output.
 Use -m to filter by a specific package manager.
 Use --type to filter by entity type (packages/repos) and origin
-(stamped/reconciled).`,
+(stamped/reconciled). --type missing lists manifest packages not
+currently installed (removed via the native manager).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
@@ -207,6 +222,14 @@ Use --type to filter by entity type (packages/repos) and origin
 				return renderPackages(cmd, app, filterPackages(app.manifest.Packages, managerFlag, manifest.OriginReconciled))
 			case "reconciled-repos":
 				return renderRepositories(cmd, app, filterRepositories(app.manifest.Repositories, managerFlag, manifest.OriginReconciled))
+			case "missing":
+				pkgs := missingFromSystem(cmd.Context(), app.adapters, app.manifest)
+				pkgs = filterPackages(pkgs, managerFlag, "")
+				if !app.json && len(pkgs) == 0 {
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no missing packages")
+					return nil
+				}
+				return renderPackages(cmd, app, pkgs)
 			}
 			return nil
 		},
@@ -222,6 +245,7 @@ Use --type to filter by entity type (packages/repos) and origin
   stamped-repos      Repos added via stamp
   reconciled-packages Packages discovered by reconcile
   reconciled-repos    Repos discovered by reconcile
+  missing            Manifest packages not installed on this system
 
 Origin meanings:
   "stamped"    = installed explicitly via stamp install/reinstall

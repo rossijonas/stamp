@@ -34,6 +34,10 @@ Package Managers:
 Manifest Integrity:
   Path:   /home/user/.config/stamp/manifest.toml
   Status: ✓ Healthy (42 package(s))
+  Missing:
+    - htop (dnf)
+    - spotify (flatpak)
+    run 'stamp restore' to reinstall, or 'stamp ls --type missing' for details
 
 UNIX Compliance:
   NO_COLOR: ✗ Not set
@@ -60,8 +64,12 @@ stamp doctor --json
   ],
   "manifest": {
     "path": "/home/user/.config/stamp/manifest.toml",
-    "healthy": true,
-    "packages_count": 42
+    "valid": true,
+    "packages_count": 42,
+    "missing": [
+      {"Name": "htop", "Manager": "dnf"},
+      {"Name": "spotify", "Manager": "flatpak"}
+    ]
   },
   "version": "0.24.0",
   "man_page": {"installed": true, "version": "0.24.0"},
@@ -83,4 +91,15 @@ Checks if a specific manager binary is installed and operational.
 |---------|--------|
 | Package Managers | Binary existence on PATH for all 14 supported managers |
 | Manifest Integrity | Manifest file exists, parses correctly, lists package count |
+| Missing Packages | Manifest entries not installed on the system (per active manager; best-effort) |
 | UNIX Compliance | XDG Base Directory, NO_COLOR, version, man page, shell completions |
+
+### Missing packages
+
+Doctor compares the manifest against what is actually installed. If you
+removed a tracked package with your native manager (`sudo dnf remove htop`),
+it shows up under `Missing:` in "Manifest Integrity" (and as `manifest.missing`
+in `--json`). This does **not** change the manifest status — a missing package
+is drift, not corruption. `stamp ls --type missing` lists the same set;
+`stamp restore` reinstalls them. Managers whose installed state cannot be
+queried are skipped.

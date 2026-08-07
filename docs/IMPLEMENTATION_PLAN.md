@@ -597,3 +597,54 @@ backup rotation adopts a logrotate-aligned 3-axis retention policy
 *   **Verify:** `task check`
 *   **Files:** — (validation only)
 *   **Status:** ✓ Completed
+
+### Phase 14: Missing-package drift visibility (#182)
+
+Manifest packages removed via the native manager (e.g. `dnf remove`) become
+visible: `stamp reconcile` warns on stderr, `stamp doctor` reports them under
+"Manifest Integrity", and `stamp ls --type missing` lists them. Warning-only —
+no mutation, no auto-reinstall; `stamp restore` remains the convergence tool.
+Full spec: `docs/project/spec.md` (List Command / §`stamp reconcile` /
+§`stamp doctor`). ADR: `docs/decisions/ADR-018-missing-package-drift-warning.md`.
+
+**Task 69: Shared missing helpers (#182)**
+*   **Description:** New `internal/cli/missing.go`: `missingFromSystem(ctx, adapters, m)` (concurrent, error-tolerant per-manager `ListInstalled`), `missingFromDeltas(deltas, m)` (intersect `Delta.Removed` with manifest), `dedupeAndSortMissing`. Both exclude `Group`/`Cask` entries and return `[]manifest.Package` for reuse of list rendering/filtering.
+*   **Acceptance:** Table tests: found / none / list-error-skipped / inactive-skipped / group-cask excluded / nil manifest / dedupe / sort / multi-manager. 100% coverage.
+*   **Verify:** `go test ./internal/cli/ -run 'TestMissing|TestDedupeAndSort'` with race detector.
+*   **Files:** `internal/cli/missing.go`, `internal/cli/missing_test.go`
+*   **Status:** ✓ Completed
+
+**Task 70: `stamp ls --type missing` (#182)**
+*   **Description:** Add `missing` to `validListTypes` in `list.go`; RunE branch queries `missingFromSystem`, applies `-m` filter, renders via `renderPackages` (`--json` supported); empty → `no missing packages`. Completion includes `missing`.
+*   **Acceptance:** TTY + JSON + `-m` filter + empty-manifest + list-error-skipped paths covered.
+*   **Verify:** `go test ./internal/cli/ -run 'TestListCmd_TypeMissing|TestListTypeCompletion'`
+*   **Files:** `internal/cli/list.go`, `internal/cli/list_test.go`
+*   **Status:** ✓ Completed
+
+**Task 71: Reconcile missing warning (#182)**
+*   **Description:** `reconcile.go` computes `missingFromDeltas` after `DiffAll`; `renderMissing` (new, `reconcile_display.go`) prints `N manifest package(s) not installed: name (mgr), ...` with `stamp ls --type missing` / `stamp restore` hint (names inline ≤ 5). Fires on no-drift and drift paths, including `--dry-run`; snapshot still saved; tracking unchanged.
+*   **Acceptance:** Full path coverage (high-risk command): no-drift+missing, drift+missing, dry-run, none-missing unchanged, group skip, render branches.
+*   **Verify:** `go test ./internal/cli/ -run 'TestReconcile|TestRenderMissing'` with race detector.
+*   **Files:** `internal/cli/reconcile.go`, `internal/cli/reconcile_display.go`, `internal/cli/reconcile_test.go`
+*   **Status:** ✓ Completed
+
+**Task 72: Doctor missing section (#182)**
+*   **Description:** `manifestStatus` gains `Missing []manifest.Package json:"missing,omitempty"`; full `doctor` run populates it via `missingFromSystem` when the manifest is valid; TTY renders a `Missing:` block under "Manifest Integrity"; `--json` emits `manifest.missing`. Manifest `✓ Healthy` status unchanged (missing ≠ invalid).
+*   **Acceptance:** TTY + JSON + list-error-skipped + none-missing paths covered; existing `TestDoctor_Manifest_Healthy` regression green.
+*   **Verify:** `go test ./internal/cli/ -run 'TestDoctor'` with race detector.
+*   **Files:** `internal/cli/doctor.go`, `internal/cli/doctor_display.go`, `internal/cli/doctor_test.go`
+*   **Status:** ✓ Completed
+
+**Task 73: Docs + ADR (#182)**
+*   **Description:** Spec updates (§list `missing` row + system-aware note, §`stamp reconcile` warning bullet, §`stamp doctor` manifest-vs-system bullet); `docs/usage/listing-packages.md`, `docs/usage/reconcile.md`, `docs/usage/doctor.md` examples; new ADR-018. No cobra help-text change → generated refs unaffected.
+*   **Acceptance:** Docs consistent with behavior; `grep missing docs/usage/listing-packages.md` hits.
+*   **Verify:** `task docs`; review rendered pages.
+*   **Files:** `docs/project/spec.md`, `docs/usage/listing-packages.md`, `docs/usage/reconcile.md`, `docs/usage/doctor.md`, `docs/decisions/ADR-018-missing-package-drift-warning.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Status:** ✓ Completed
+
+**Task 74: Quality gates (#182)**
+*   **Description:** `task check` green (lint + vet + tests + race + coverage ≥90%).
+*   **Acceptance:** `task check` passes.
+*   **Verify:** `task check`
+*   **Files:** — (validation only)
+*   **Status:** ☐ Pending

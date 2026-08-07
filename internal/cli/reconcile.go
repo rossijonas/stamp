@@ -16,9 +16,18 @@ func newReconcileCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "reconcile",
-		Short:   "Detect packages installed outside stamp and add them to the manifest",
-		Example: "  stamp reconcile\n  stamp reconcile --dry-run\n  stamp reconcile -m dnf",
+		Use:   "reconcile",
+		Short: "Detect packages installed outside stamp and add them to the manifest",
+		Example: `  # track packages installed outside stamp
+  stamp reconcile
+
+  # preview drift without tracking
+  stamp reconcile --dry-run
+
+  # reconcile a single package manager
+  stamp reconcile -m dnf
+
+  # missing manifest packages are reported as a warning`,
 		Long: `Compare the current system package state against the last snapshot.
 Any new packages found are auto-tracked to the manifest.
 Use --dry-run to preview drift without tracking.
@@ -69,9 +78,17 @@ Dry-run performs no writes, no backups, and no rotation.`,
 
 			deltas := state.DiffAll(oldSnaps, currentSnaps)
 			discovered, discoveredRepos := collectDiscovered(deltas)
+			missing := missingFromDeltas(deltas, app.manifest)
 
 			if len(discovered) == 0 && len(discoveredRepos) == 0 {
-				renderNoDrift(cmd.ErrOrStderr())
+				// Nothing new to track. Missing manifest packages still get a
+				// warning, but the new snapshot is recorded either way — it
+				// reflects reality, and the manifest remains the intent.
+				if len(missing) > 0 {
+					renderMissing(cmd.ErrOrStderr(), missing)
+				} else {
+					renderNoDrift(cmd.ErrOrStderr())
+				}
 				if !dryRun {
 					saveCurrentSnaps(cmd.ErrOrStderr(), snapDir, currentSnaps)
 				}
@@ -79,6 +96,9 @@ Dry-run performs no writes, no backups, and no rotation.`,
 			}
 
 			renderDiscovered(cmd.ErrOrStderr(), discovered, discoveredRepos)
+			if len(missing) > 0 {
+				renderMissing(cmd.ErrOrStderr(), missing)
+			}
 
 			if dryRun {
 				renderDryRunHint(cmd.ErrOrStderr())

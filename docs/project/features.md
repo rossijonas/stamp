@@ -41,16 +41,16 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
 | `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
-| `stamp reconcile` | | ✓ | ✓ | ✓ Auto-track + `--dry-run` + no prompt + repo drift detection | ✓ Complete |
+| `stamp reconcile` | | ✓ | ✓ | ✓ Auto-track + `--dry-run` + no prompt + repo drift detection + missing-package warning | ✓ Complete |
 | `stamp restore` | | ✓ | ✓ | ✓ Sequentially adds repos then concurrently installs packages | ✓ Complete |
-| `stamp doctor` | | ✓ | ✓ | ✓ Adapter check + manifest check + compliance report | ✓ Complete |
+| `stamp doctor` | | ✓ | ✓ | ✓ Adapter check + manifest check + manifest-vs-system check + compliance report | ✓ Complete |
 | `stamp completion [shell]` | | ✓ | ✓ | ✓ Auto-detect, install to path, --stdout flag | ✓ Complete |
 | `stamp man` | | ✓ | ✓ | ✓ Shows help for man command group | ✓ Complete |
 | `stamp hello` | | ✓ | ✓ | ✓ Prints ASCII logo + suggested next steps | ✓ Complete |
 | `stamp setup` | `hello` | ✓ | ✓ | ✓ Interactive wizard for completions, man, init, doctor | ✓ Complete |
 | `stamp init` | | ✓ | ✓ | ✓ Creates dirs + manifest + snapshots | ✓ Complete |
 | `stamp update` | `upgrade` | ✓ | ✓ | ✓ Two-phase check + confirm, --check flag, -y skips check, parallel execution, --serial flag | ✓ Complete |
-| `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest, filter by type/origin | ✓ Complete |
+| `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest, filter by type/origin/missing | ✓ Complete |
 | `stamp manifest` | | ✓ | ✓ | ✓ Backup history + diff against backups | ✓ Complete |
 | `stamp manifest history` | `backups` | ✓ | ✓ | ✓ List backups with counts + hashes | ✓ Complete |
 | `stamp manifest diff` | | ✓ | ✓ | ✓ Compare current vs backup, ts/hash refs, filters | ✓ Complete |
