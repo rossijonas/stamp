@@ -23,7 +23,10 @@ stamp init [flags]
 ### Examples
 
 ```
+  # initialize stamp: config dirs, manifest, and baseline snapshot
   stamp init
+
+  # non-interactive initialization for scripting
   stamp init -y
 ```
 

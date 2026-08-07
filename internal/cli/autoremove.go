@@ -14,9 +14,16 @@ func newAutoremoveCmd() *cobra.Command {
 	var dryRun bool
 
 	cmd := &cobra.Command{
-		Use:     "autoremove",
-		Short:   "Remove orphaned packages and unused dependencies",
-		Example: "  stamp autoremove\n  stamp autoremove -m brew\n  stamp autoremove --dry-run",
+		Use:   "autoremove",
+		Short: "Remove orphaned packages and unused dependencies",
+		Example: `  # remove orphaned dependencies
+  stamp autoremove
+
+  # preview what would be removed
+  stamp autoremove --dry-run
+
+  # scope to a single package manager
+  stamp autoremove -m brew`,
 		Long: `Remove orphaned packages and unused dependencies across all
 package managers. Use --dry-run to preview what would be removed.
 

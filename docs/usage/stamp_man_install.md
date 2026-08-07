@@ -9,6 +9,16 @@ Install the stamp man page to system or user path
 stamp man install [flags]
 ```
 
+### Examples
+
+```
+  # install to the default user path (~/.local/share/man)
+  stamp man install
+
+  # install under a custom prefix
+  stamp man install --prefix /usr/local
+```
+
 ### Options
 
 ```

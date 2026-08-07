@@ -79,8 +79,13 @@ func newManCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "man",
 		Short: "Manage stamp troff man pages",
-		Long:  `Command group to generate, install, and check stamp man pages.`,
-		Args:  cobra.NoArgs,
+		Example: `  # install the man page to the default (user) location
+  stamp man install
+
+  # check whether the installed man page matches this version
+  stamp man check`,
+		Long: `Command group to generate, install, and check stamp man pages.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
@@ -97,7 +102,12 @@ func newManInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install the stamp man page to system or user path",
-		Args:  cobra.NoArgs,
+		Example: `  # install to the default user path (~/.local/share/man)
+  stamp man install
+
+  # install under a custom prefix
+  stamp man install --prefix /usr/local`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			header := &doc.GenManHeader{
 				Title:   "STAMP",
@@ -165,7 +175,12 @@ func newManCheckCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check",
 		Short: "Verify installed man page version matches current stamp version",
-		Args:  cobra.NoArgs,
+		Example: `  # check the installed man page version
+  stamp man check
+
+  # machine-readable check result
+  stamp man check --json`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 

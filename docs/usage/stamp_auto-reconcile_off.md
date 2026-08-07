@@ -17,6 +17,7 @@ stamp auto-reconcile off [flags]
 ### Examples
 
 ```
+  # remove the automated reconcile timer
   stamp auto-reconcile off
 ```
 

@@ -19,9 +19,12 @@ stamp auto-reconcile on [flags]
 ### Examples
 
 ```
+  # install the automated reconcile timer (daily by default)
   stamp auto-reconcile on
+
+  # run on a different schedule
   stamp auto-reconcile on --period hourly
-  stamp auto-reconcile on -p weekly
+  stamp auto-reconcile on --period weekly
 ```
 
 ### Options

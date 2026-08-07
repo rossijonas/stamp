@@ -191,8 +191,17 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	}
 
 	root := &cobra.Command{
-		Use:           "stamp",
-		Short:         "A lightweight yet powerful tool that wraps many package managers into one",
+		Use:   "stamp",
+		Short: "A lightweight yet powerful tool that wraps many package managers into one",
+		Example: `  # show help and the full command list
+  stamp --help
+
+  # install a package and record intent
+  stamp install htop
+
+  # manage repositories and manifest backups
+  stamp repo --help
+  stamp manifest --help`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {

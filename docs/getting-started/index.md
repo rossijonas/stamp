@@ -33,5 +33,7 @@ Stamp is built for developers who want reproducible environments without the ove
 
 ### See Also
 
+- [Usage guides](/usage/index.html) — all command references and workflows
+- [Manifest Management](/usage/managing-manifests.html) — backups, history, diff, restore from a backup
 - [OS × Manager Compatibility Matrix](/history/os-manager-matrix.html) — which managers work on which OS
 - [Feature Reference](/project/features.html) — feature implementation status and per-manager support

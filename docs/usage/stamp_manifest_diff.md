@@ -19,9 +19,14 @@ stamp manifest diff [timestamp|hash] [flags]
 ### Examples
 
 ```
+  # diff the current manifest against the most recent backup
   stamp manifest diff
+
+  # diff against a specific backup by timestamp or hash prefix
   stamp manifest diff 2026-08-02T09:15:00Z
   stamp manifest diff a1b2c3d4e5f6
+
+  # filter by manager and origin
   stamp manifest diff -m brew --origin stamped
 ```
 

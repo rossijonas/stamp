@@ -13,6 +13,16 @@ Command group to generate, install, and check stamp man pages.
 stamp man [flags]
 ```
 
+### Examples
+
+```
+  # install the man page to the default (user) location
+  stamp man install
+
+  # check whether the installed man page matches this version
+  stamp man check
+```
+
 ### Options
 
 ```

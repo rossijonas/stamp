@@ -134,9 +134,13 @@ func newHeldCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:     "held",
-		Short:   "List all held/pinned packages",
-		Example: "  stamp held\n  stamp held -m apt",
+		Use:   "held",
+		Short: "List all held/pinned packages",
+		Example: `  # list held/pinned packages across all managers
+  stamp held
+
+  # scope to a single package manager
+  stamp held -m apt`,
 		Long: `List all packages currently held/pinned across all managers.
 Use --manager to scope to a single package manager.`,
 		Args: cobra.NoArgs,

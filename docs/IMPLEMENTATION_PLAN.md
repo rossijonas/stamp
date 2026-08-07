@@ -605,7 +605,7 @@ visible: `stamp reconcile` warns on stderr, `stamp doctor` reports them under
 "Manifest Integrity", and `stamp ls --type missing` lists them. Warning-only —
 no mutation, no auto-reinstall; `stamp restore` remains the convergence tool.
 Full spec: `docs/project/spec.md` (List Command / §`stamp reconcile` /
-§`stamp doctor`). ADR: `docs/decisions/ADR-018-missing-package-drift-warning.md`.
+§`stamp doctor`). ADR: `docs/decisions/ADR-019-missing-package-drift-warning.md`.
 
 **Task 69: Shared missing helpers (#182)**
 *   **Description:** New `internal/cli/missing.go`: `missingFromSystem(ctx, adapters, m)` (concurrent, error-tolerant per-manager `ListInstalled`), `missingFromDeltas(deltas, m)` (intersect `Delta.Removed` with manifest), `dedupeAndSortMissing`. Both exclude `Group`/`Cask` entries and return `[]manifest.Package` for reuse of list rendering/filtering.
@@ -636,14 +636,62 @@ Full spec: `docs/project/spec.md` (List Command / §`stamp reconcile` /
 *   **Status:** ✓ Completed
 
 **Task 73: Docs + ADR (#182)**
-*   **Description:** Spec updates (§list `missing` row + system-aware note, §`stamp reconcile` warning bullet, §`stamp doctor` manifest-vs-system bullet); `docs/usage/listing-packages.md`, `docs/usage/reconcile.md`, `docs/usage/doctor.md` examples; new ADR-018. No cobra help-text change → generated refs unaffected.
+*   **Description:** Spec updates (§list `missing` row + system-aware note, §`stamp reconcile` warning bullet, §`stamp doctor` manifest-vs-system bullet); `docs/usage/listing-packages.md`, `docs/usage/reconcile.md`, `docs/usage/doctor.md` examples; new ADR-019. No cobra help-text change → generated refs unaffected.
 *   **Acceptance:** Docs consistent with behavior; `grep missing docs/usage/listing-packages.md` hits.
 *   **Verify:** `task docs`; review rendered pages.
-*   **Files:** `docs/project/spec.md`, `docs/usage/listing-packages.md`, `docs/usage/reconcile.md`, `docs/usage/doctor.md`, `docs/decisions/ADR-018-missing-package-drift-warning.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Files:** `docs/project/spec.md`, `docs/usage/listing-packages.md`, `docs/usage/reconcile.md`, `docs/usage/doctor.md`, `docs/decisions/ADR-019-missing-package-drift-warning.md`, `docs/IMPLEMENTATION_PLAN.md`
 *   **Status:** ✓ Completed
 
 **Task 74: Quality gates (#182)**
 *   **Description:** `task check` green (lint + vet + tests + race + coverage ≥90%).
+*   **Acceptance:** `task check` passes.
+*   **Verify:** `task check`
+*   **Files:** — (validation only)
+*   **Status:** ☐ Pending
+
+### Phase 15: Documentation sweep — man examples + stale outputs (#184)
+
+Every cobra command (groups + subcommands) ships a comment-style `Example`
+(reference: `stamp install`), so all man pages render a commented `EXAMPLES`
+section, and editorial usage pages show current command output.
+
+**Task 75: Example guard test (#184)**
+*   **Description:** New `internal/cli/docgen_test.go`: `TestCommandsHaveExamples` walks the root cobra tree and fails on any command with an empty `Example`. Written test-first (red baseline: root, auto-reconcile, man, man check, man install, manifest, repo).
+*   **Acceptance:** Test passes once all commands have examples; guards against future regressions.
+*   **Verify:** `go test ./internal/cli/ -run TestCommandsHaveExamples`
+*   **Files:** `internal/cli/docgen_test.go`
+*   **Status:** ✓ Completed
+
+**Task 76: Examples for groups + missing subcommands (#184)**
+*   **Description:** Add comment-style `Example` to root `stamp`, `auto-reconcile`, `manifest`, `repo`, `man` groups and `man install`/`man check`.
+*   **Acceptance:** `stamp.1`, `stamp-manifest.1`, `stamp-repo.1`, `stamp-man.1`, `stamp-man-install.1`, `stamp-man-check.1`, `stamp-auto-reconcile.1` render `EXAMPLES` after `task docs`.
+*   **Verify:** `task docs`; grep `EXAMPLES` in `docs/man/`
+*   **Files:** `internal/cli/root.go`, `manifest.go`, `repo.go`, `man.go`, `autoreconcile.go`
+*   **Status:** ✓ Completed
+
+**Task 77: Upgrade bare examples to commented (#184)**
+*   **Description:** Rewrite 12 bare `Example` strings (auto-reconcile on/off, autoremove, clean, completion, setup, held, init, manifest history/diff, reinstall, self-update) in the install-reference style, covering flags + subcommand variations.
+*   **Acceptance:** All tracked `docs/usage/stamp_*.md` for these commands show comment-style examples; guard test green.
+*   **Verify:** `task docs`; `go test ./internal/cli/ -run TestCommandsHaveExamples`
+*   **Files:** `internal/cli/autoreconcile.go`, `autoremove.go`, `clean.go`, `completion.go`, `hello.go`, `hold.go`, `init.go`, `manifest.go`, `reinstall.go`, `selfupdate.go`
+*   **Status:** ✓ Completed
+
+**Task 78: Stale man artifacts (#184)**
+*   **Description:** Remove stale `docs/man/stamp-hello.1` (leftover from the `setup` rename; docgen does not clean orphaned man files).
+*   **Acceptance:** No `stamp-hello.1` in `docs/man/`.
+*   **Verify:** `ls docs/man | grep hello` empty
+*   **Files:** `docs/man/stamp-hello.1` (gitignored)
+*   **Status:** ✓ Completed
+
+**Task 79: Editorial stale-output sweep (#184)**
+*   **Description:** Verify all 22 editorial usage pages against real command output; fix drift. Found and fixed: `doctor.md` (v0.24.0 → v0.31.1 TTY+JSON, correct `active`/`matches` JSON keys, capture note), `self-update.md` (v0.20/v0.21 → v0.31.1), `restore.md` (stale phase/dry-run output → current `renderRestore*` messages). Remaining pages verified structurally consistent (update/clean/autoremove/info/search/managing-manifests/setup).
+*   **Acceptance:** `grep -rn '0\.24\.0\|v0\.2[0-9]' docs/usage/` empty (excl. generated + `.jekyll-cache`); restored/doctor/self-update examples match code.
+*   **Verify:** `task docs`; grep scan; per-page diff review
+*   **Files:** `docs/usage/doctor.md`, `docs/usage/self-update.md`, `docs/usage/restore.md`
+*   **Status:** ✓ Completed
+
+**Task 80: Quality gates (#184)**
+*   **Description:** `task check` green; regenerated tracked `docs/usage/stamp_*.md` committed with the code.
 *   **Acceptance:** `task check` passes.
 *   **Verify:** `task check`
 *   **Files:** — (validation only)

@@ -19,8 +19,13 @@ stamp completion [bash|zsh|fish|powershell]
 ### Examples
 
 ```
+  # install completions for the detected shell
   stamp completion
+
+  # print the completion script instead of installing it
   stamp completion --stdout bash
+
+  # generate completions for a specific shell
   stamp completion fish
 ```
 

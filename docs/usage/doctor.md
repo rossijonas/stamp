@@ -41,10 +41,12 @@ Manifest Integrity:
 
 UNIX Compliance:
   NO_COLOR: ✗ Not set
-  Version:  stamp 0.24.0
-  Man Page: ✓ Up to date (0.24.0)
+  Version:  stamp v0.31.1
+  Man Page: ✓ Up to date (v0.31.1)
   Completions: ✓ Installed (bash, zsh)
 ```
+
+> Output captured at v0.31.1; manager availability and paths vary by platform.
 
 ### JSON output
 
@@ -57,9 +59,10 @@ stamp doctor --json
 ```json
 {
   "system": "linux",
+  "version": "0.31.1",
   "package_managers": [
-    {"name": "apt", "status": "active", "path": "/usr/bin/apt"},
-    {"name": "brew", "status": "active", "path": "/home/user/.linuxbrew"},
+    {"name": "apt", "active": true, "path": "/usr/bin/apt", "details": "Default system manager (Debian/Ubuntu)"},
+    {"name": "brew", "active": true, "path": "/home/user/.linuxbrew/bin/brew", "details": "User-space manager"},
     ...
   ],
   "manifest": {
@@ -67,12 +70,12 @@ stamp doctor --json
     "valid": true,
     "packages_count": 42,
     "missing": [
-      {"Name": "htop", "Manager": "dnf"},
-      {"Name": "spotify", "Manager": "flatpak"}
+      {"Name": "htop", "Manager": "dnf", "Category": "", "Notes": "", "Cask": false, "Group": false, "Origin": ""},
+      {"Name": "spotify", "Manager": "flatpak", "Category": "", "Notes": "", "Cask": false, "Group": false, "Origin": ""}
     ]
   },
-  "version": "0.24.0",
-  "man_page": {"installed": true, "version": "0.24.0"},
+  "no_color": false,
+  "man_page": {"installed": true, "matches": true, "path": "/home/user/.local/share/man/man1/stamp.1", "version": "0.31.1"},
   "completions": {"installed": true, "shells": ["bash", "zsh"]}
 }
 ```
