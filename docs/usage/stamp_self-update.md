@@ -20,8 +20,13 @@ stamp self-update [flags]
 ### Examples
 
 ```
+  # update stamp to the latest release
   stamp self-update
+
+  # check for a newer release without downloading
   stamp self-update --check
+
+  # alias form
   stamp self-upgrade
 ```
 

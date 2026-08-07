@@ -5,6 +5,19 @@
 
 Manage third-party repositories
 
+### Examples
+
+```
+  # add a third-party repository or tap
+  stamp repo add my-tap
+
+  # remove a repository
+  stamp repo remove my-tap
+
+  # list tracked repositories
+  stamp repo list
+```
+
 ### Options
 
 ```

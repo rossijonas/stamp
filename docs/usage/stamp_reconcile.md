@@ -22,9 +22,16 @@ stamp reconcile [flags]
 ### Examples
 
 ```
+  # track packages installed outside stamp
   stamp reconcile
+
+  # preview drift without tracking
   stamp reconcile --dry-run
+
+  # reconcile a single package manager
   stamp reconcile -m dnf
+
+  # missing manifest packages are reported as a warning
 ```
 
 ### Options

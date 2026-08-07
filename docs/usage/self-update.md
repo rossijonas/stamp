@@ -11,9 +11,11 @@ stamp self-update
 
 ```text
 ▪ Checking for updates...
-▪ Downloading stamp v0.21.0...
-✓ Updated to v0.21.0
+▪ Downloading stamp v0.31.1...
+✓ Updated to v0.31.1
 ```
+
+> Version numbers shown for illustration; actual values reflect the current release.
 
 ### Check only
 
@@ -22,15 +24,15 @@ stamp self-update --check
 ```
 
 ```text
-▪ Current version: v0.20.0
-▪ Latest version:  v0.21.0
+▪ Current version: v0.31.1
+▪ Latest version:  v0.32.0
   A new version is available. Run stamp self-update to upgrade.
 ```
 
 When up to date:
 
 ```text
-▪ stamp is already up to date (v0.20.0)
+▪ stamp is already up to date (v0.31.1)
 ```
 
 ### Alias

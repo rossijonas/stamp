@@ -14,9 +14,16 @@ func newCleanCmd() *cobra.Command {
 	var dryRun bool
 
 	cmd := &cobra.Command{
-		Use:     "clean",
-		Short:   "Clean package caches and temporary files",
-		Example: "  stamp clean\n  stamp clean -m brew\n  stamp clean --dry-run",
+		Use:   "clean",
+		Short: "Clean package caches and temporary files",
+		Example: `  # clean package caches
+  stamp clean
+
+  # preview what would be cleaned
+  stamp clean --dry-run
+
+  # scope to a single package manager
+  stamp clean -m brew`,
 		Long: `Remove locally cached package files across all package managers.
 Use --dry-run to preview what would be cleaned without deleting.
 

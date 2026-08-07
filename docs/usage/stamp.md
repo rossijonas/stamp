@@ -9,6 +9,20 @@ A lightweight yet powerful tool that wraps many package managers into one
 stamp [flags]
 ```
 
+### Examples
+
+```
+  # show help and the full command list
+  stamp --help
+
+  # install a package and record intent
+  stamp install htop
+
+  # manage repositories and manifest backups
+  stamp repo --help
+  stamp manifest --help
+```
+
 ### Options
 
 ```

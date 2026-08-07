@@ -21,10 +21,11 @@ type managerStatus struct {
 }
 
 type manifestStatus struct {
-	Path          string `json:"path"`
-	Valid         bool   `json:"valid"`
-	PackagesCount int    `json:"packages_count"`
-	Error         string `json:"error,omitempty"`
+	Path          string             `json:"path"`
+	Valid         bool               `json:"valid"`
+	PackagesCount int                `json:"packages_count"`
+	Error         string             `json:"error,omitempty"`
+	Missing       []manifest.Package `json:"missing,omitempty"`
 }
 
 type completionStatus struct {
@@ -128,9 +129,16 @@ func newDoctorCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:     "doctor",
-		Short:   "Diagnose system configuration and manifest health",
-		Example: "  stamp doctor\n  stamp doctor --json\n  stamp doctor -m dnf",
+		Use:   "doctor",
+		Short: "Diagnose system configuration and manifest health",
+		Example: `  # check the whole system
+  stamp doctor
+
+  # machine-readable output for scripting
+  stamp doctor --json
+
+  # check a single manager's native diagnostics
+  stamp doctor -m dnf`,
 		Long: `Check package manager availability and manifest integrity.
 Reports which managers are installed and whether the manifest is valid.`,
 		Args: cobra.NoArgs,
@@ -161,6 +169,9 @@ Reports which managers are installed and whether the manifest is valid.`,
 
 			managers := buildManagersReport(app.adapters)
 			ms := buildManifestReport(app.manifestPath, app.manifestErr, app.manifest)
+			if ms.Valid {
+				ms.Missing = missingFromSystem(cmd.Context(), app.adapters, app.manifest)
+			}
 
 			var mpInstalled bool
 			var mpPath string

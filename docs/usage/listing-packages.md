@@ -56,7 +56,8 @@ stamp list -t stamped-repos -j             # stamp-added repos, as JSON
 ```
 
 Valid values: `packages` (default), `repos`, `stamped`, `reconciled`,
-`stamped-packages`, `stamped-repos`, `reconciled-packages`, `reconciled-repos`.
+`stamped-packages`, `stamped-repos`, `reconciled-packages`,
+`reconciled-repos`, `missing`.
 
 ```text
 # stamp list -t stamped
@@ -67,6 +68,32 @@ my-tap (brew)
 # stamp list -t reconciled
 NetworkManager (dnf)
 brave-browser (dnf) https://example.com/brave
+```
+
+### Missing packages
+
+`--type missing` lists manifest packages that are **not installed** on the
+current system — typically packages removed directly via your native package
+manager (e.g. `sudo dnf remove htop`). It queries the installed state of every
+active manager, so it always reflects the live system.
+
+```bash
+stamp list -t missing
+```
+
+```text
+htop (dnf)
+spotify (flatpak)
+```
+
+`stamp ls --type missing` is the same view under the `ls` alias. It composes
+with `--manager` and `--json`; when nothing is missing it prints
+`no missing packages`. This view never changes your manifest — use
+`stamp restore` to reinstall anything listed here.
+
+```bash
+stamp list -t missing -m dnf      # missing dnf packages only
+stamp list -t missing --json      # machine-readable
 ```
 
 ### Understanding Origins

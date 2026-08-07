@@ -18,9 +18,11 @@ stamp setup [flags]
 ### Examples
 
 ```
+  # run the interactive first-time setup wizard
   stamp setup
+
+  # non-interactive setup for scripting
   stamp setup -y
-  stamp hello
 ```
 
 ### Options

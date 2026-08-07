@@ -17,7 +17,10 @@ stamp held [flags]
 ### Examples
 
 ```
+  # list held/pinned packages across all managers
   stamp held
+
+  # scope to a single package manager
   stamp held -m apt
 ```
 

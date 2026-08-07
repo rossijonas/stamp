@@ -26,6 +26,22 @@ Preview what reconcile would track without committing:
 stamp reconcile --dry-run
 ```
 
+### Missing manifest packages
+
+Reconcile also warns when a tracked package is **no longer installed** —
+removed directly via your native package manager (e.g. `sudo dnf remove htop`):
+
+```text
+warning: 1 manifest package(s) not installed: htop (dnf)
+         run 'stamp ls --type missing' for the full list, or 'stamp restore' to reinstall
+```
+
+The warning fires on the no-drift and drift paths and is warning-only: nothing
+is reinstalled and the manifest is untouched. The removal is still recorded in
+the new snapshot (snapshots reflect reality; the manifest holds intent). Use
+`stamp ls --type missing` to list everything missing and `stamp restore` to
+reinstall.
+
 ```text
 ▪ Drift detected (dry run — no changes saved):
     Added: ripgrep (dnf)

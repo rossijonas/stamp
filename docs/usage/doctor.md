@@ -34,13 +34,19 @@ Package Managers:
 Manifest Integrity:
   Path:   /home/user/.config/stamp/manifest.toml
   Status: ✓ Healthy (42 package(s))
+  Missing:
+    - htop (dnf)
+    - spotify (flatpak)
+    run 'stamp restore' to reinstall, or 'stamp ls --type missing' for details
 
 UNIX Compliance:
   NO_COLOR: ✗ Not set
-  Version:  stamp 0.24.0
-  Man Page: ✓ Up to date (0.24.0)
+  Version:  stamp v0.31.1
+  Man Page: ✓ Up to date (v0.31.1)
   Completions: ✓ Installed (bash, zsh)
 ```
+
+> Output captured at v0.31.1; manager availability and paths vary by platform.
 
 ### JSON output
 
@@ -53,18 +59,23 @@ stamp doctor --json
 ```json
 {
   "system": "linux",
+  "version": "0.31.1",
   "package_managers": [
-    {"name": "apt", "status": "active", "path": "/usr/bin/apt"},
-    {"name": "brew", "status": "active", "path": "/home/user/.linuxbrew"},
+    {"name": "apt", "active": true, "path": "/usr/bin/apt", "details": "Default system manager (Debian/Ubuntu)"},
+    {"name": "brew", "active": true, "path": "/home/user/.linuxbrew/bin/brew", "details": "User-space manager"},
     ...
   ],
   "manifest": {
     "path": "/home/user/.config/stamp/manifest.toml",
-    "healthy": true,
-    "packages_count": 42
+    "valid": true,
+    "packages_count": 42,
+    "missing": [
+      {"Name": "htop", "Manager": "dnf", "Category": "", "Notes": "", "Cask": false, "Group": false, "Origin": ""},
+      {"Name": "spotify", "Manager": "flatpak", "Category": "", "Notes": "", "Cask": false, "Group": false, "Origin": ""}
+    ]
   },
-  "version": "0.24.0",
-  "man_page": {"installed": true, "version": "0.24.0"},
+  "no_color": false,
+  "man_page": {"installed": true, "matches": true, "path": "/home/user/.local/share/man/man1/stamp.1", "version": "0.31.1"},
   "completions": {"installed": true, "shells": ["bash", "zsh"]}
 }
 ```
@@ -83,4 +94,15 @@ Checks if a specific manager binary is installed and operational.
 |---------|--------|
 | Package Managers | Binary existence on PATH for all 14 supported managers |
 | Manifest Integrity | Manifest file exists, parses correctly, lists package count |
+| Missing Packages | Manifest entries not installed on the system (per active manager; best-effort) |
 | UNIX Compliance | XDG Base Directory, NO_COLOR, version, man page, shell completions |
+
+### Missing packages
+
+Doctor compares the manifest against what is actually installed. If you
+removed a tracked package with your native manager (`sudo dnf remove htop`),
+it shows up under `Missing:` in "Manifest Integrity" (and as `manifest.missing`
+in `--json`). This does **not** change the manifest status — a missing package
+is drift, not corruption. `stamp ls --type missing` lists the same set;
+`stamp restore` reinstalls them. Managers whose installed state cannot be
+queried are skipped.

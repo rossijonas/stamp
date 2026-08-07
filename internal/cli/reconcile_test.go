@@ -155,6 +155,231 @@ func TestReconcile_DryRunNoBackup(t *testing.T) {
 	assert.Empty(t, backups, "reconcile --dry-run must not create backups")
 }
 
+func TestReconcile_MissingPackageWarnsOnNoDrift(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "htop"}},
+	})
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "1 manifest package(s) not installed")
+	assert.Contains(t, output, "htop (brew)")
+	assert.Contains(t, output, "stamp ls --type missing")
+	assert.Contains(t, output, "stamp restore")
+	assert.NotContains(t, output, "No drift detected")
+}
+
+func TestReconcile_MissingAndDriftBothWarned(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "htop"}},
+	})
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "ripgrep (brew)")
+	assert.Contains(t, output, "1 manifest package(s) not installed")
+	assert.Contains(t, output, "htop (brew)")
+	assert.Contains(t, output, "Tracked 1 package(s)")
+}
+
+func TestReconcile_DryRun_MissingWarnsWithoutTracking(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "htop"}},
+	})
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile", "--dry-run"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "1 manifest package(s) not installed")
+	assert.Contains(t, output, "stamp restore")
+	assert.Contains(t, output, "Use `stamp reconcile` without --dry-run to track")
+	assert.NotContains(t, output, "Tracked")
+}
+
+func TestReconcile_NoMissingNoWarning(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "No drift detected")
+	assert.NotContains(t, output, "not installed")
+}
+
+func TestReconcile_MissingGroupsSkipped(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit", "devtools"}},
+	})
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "manifest.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "devtools"
+manager = "brew"
+group = true
+`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	require.NoError(t, root.Execute())
+	assert.NotContains(t, buf.String(), "not installed")
+}
+
+func TestRenderMissing(t *testing.T) {
+	t.Run("small list inlines names", func(t *testing.T) {
+		buf := new(bytes.Buffer)
+		renderMissing(buf, []manifest.Package{
+			{Name: "foo", Manager: "dnf"},
+			{Name: "bar", Manager: "brew"},
+		})
+		out := buf.String()
+		assert.Contains(t, out, "2 manifest package(s) not installed: foo (dnf), bar (brew)")
+		assert.Contains(t, out, "stamp ls --type missing")
+	})
+
+	t.Run("large list omits inline names", func(t *testing.T) {
+		buf := new(bytes.Buffer)
+		renderMissing(buf, []manifest.Package{
+			{Name: "p1", Manager: "dnf"},
+			{Name: "p2", Manager: "dnf"},
+			{Name: "p3", Manager: "dnf"},
+			{Name: "p4", Manager: "dnf"},
+			{Name: "p5", Manager: "dnf"},
+			{Name: "p6", Manager: "dnf"},
+		})
+		out := buf.String()
+		assert.Contains(t, out, "6 manifest package(s) not installed")
+		assert.NotContains(t, out, "p1 (dnf)")
+	})
+
+	t.Run("empty input writes nothing", func(t *testing.T) {
+		buf := new(bytes.Buffer)
+		renderMissing(buf, nil)
+		assert.Empty(t, buf.String())
+	})
+}
+
 func TestReconcile_NoDriftNoBackup(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{

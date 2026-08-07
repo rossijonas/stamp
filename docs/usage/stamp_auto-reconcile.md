@@ -11,6 +11,19 @@ Install or remove a system timer that runs stamp reconcile automatically.
 On Linux: uses systemd user timer.
 On macOS: uses launchd agent.
 
+### Examples
+
+```
+  # install the automated reconcile timer (hourly by default)
+  stamp auto-reconcile on
+
+  # run on a weekly schedule
+  stamp auto-reconcile on --period weekly
+
+  # remove the timer
+  stamp auto-reconcile off
+```
+
 ### Options
 
 ```

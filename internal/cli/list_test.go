@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/rossijonas/stamp/internal/manager"
 	"github.com/rossijonas/stamp/internal/manifest"
 )
 
@@ -70,6 +73,19 @@ func writeEmptyManifest(t *testing.T) (manifestPath, configPath string) {
 func runListCmd(t *testing.T, mPath, cPath string, args ...string) string {
 	t.Helper()
 	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs(append([]string{"list"}, args...))
+	require.NoError(t, root.Execute())
+	return buf.String()
+}
+
+// runListCmdWithAdapters is runListCmd with injected mock adapters, needed by
+// system-aware views like --type missing.
+func runListCmdWithAdapters(t *testing.T, mPath, cPath string, adapters []manager.Adapter, args ...string) string {
+	t.Helper()
+	root := NewRootCmd(WithManifestPath(mPath), WithConfigPath(cPath), WithAdapters(adapters))
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
@@ -344,4 +360,118 @@ func TestListTypeCompletion(t *testing.T) {
 	got, directive := listTypeCompletion(nil, nil, "")
 	assert.Equal(t, validListTypes, got)
 	assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+}
+
+// writeMissingManifest writes a manifest with packages spread across managers.
+func writeMissingManifest(t *testing.T) (manifestPath, configPath string) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+
+[[packages]]
+name = "jq"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+	return mPath, cPath
+}
+
+func TestListCmd_TypeMissing_TTY(t *testing.T) {
+	mPath, cPath := writeMissingManifest(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"htop"}},
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"jq"}},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing")
+	assert.Contains(t, out, "lazygit (brew)")
+	assert.NotContains(t, out, "htop")
+	assert.NotContains(t, out, "jq")
+}
+
+func TestListCmd_TypeMissing_JSON(t *testing.T) {
+	mPath, cPath := writeMissingManifest(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"htop"}},
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"jq"}},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing", "--json")
+
+	var pkgs []manifest.Package
+	require.NoError(t, json.Unmarshal([]byte(out), &pkgs))
+	require.Len(t, pkgs, 1)
+	assert.Equal(t, "lazygit", pkgs[0].Name)
+	assert.Equal(t, "brew", pkgs[0].Manager)
+}
+
+func TestListCmd_TypeMissing_NoneMissing(t *testing.T) {
+	mPath, cPath := writeMissingManifest(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"htop"}},
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"lazygit", "jq"}},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing")
+	assert.Contains(t, out, "no missing packages")
+}
+
+func TestListCmd_TypeMissing_NoneMissing_JSON(t *testing.T) {
+	mPath, cPath := writeMissingManifest(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"htop"}},
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"lazygit", "jq"}},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing", "--json")
+	assert.Contains(t, out, "[]")
+	assert.NotContains(t, out, "no missing packages")
+}
+
+func TestListCmd_TypeMissing_ManagerFilter(t *testing.T) {
+	mPath, cPath := writeMissingManifest(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "dnf", InstalledPkgs: nil},
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: nil},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing", "-m", "brew")
+	assert.Contains(t, out, "lazygit (brew)")
+	assert.Contains(t, out, "jq (brew)")
+	assert.NotContains(t, out, "htop")
+}
+
+func TestListCmd_TypeMissing_ListErrorSkipped(t *testing.T) {
+	mPath, cPath := writeMissingManifest(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "brew", ListErr: errors.New("boom")},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing")
+	assert.Contains(t, out, "no missing packages")
+}
+
+func TestListCmd_TypeMissing_GroupsAndCasksExcluded(t *testing.T) {
+	mPath, cPath := writeManifestWithOrigins(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "dnf", InstalledPkgs: nil},
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: nil},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing")
+	assert.Contains(t, out, "htop (dnf)")
+	assert.NotContains(t, out, "no missing packages")
+}
+
+func TestListCmd_TypeMissing_EmptyManifest(t *testing.T) {
+	mPath, cPath := writeEmptyManifest(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: nil},
+	}
+	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing")
+	assert.Contains(t, out, "no missing packages")
 }

@@ -19,9 +19,14 @@ stamp autoremove [flags]
 ### Examples
 
 ```
+  # remove orphaned dependencies
   stamp autoremove
-  stamp autoremove -m brew
+
+  # preview what would be removed
   stamp autoremove --dry-run
+
+  # scope to a single package manager
+  stamp autoremove -m brew
 ```
 
 ### Options

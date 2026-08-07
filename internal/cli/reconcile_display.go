@@ -3,7 +3,9 @@ package cli
 import (
 	"fmt"
 	"io"
+	"strings"
 
+	"github.com/rossijonas/stamp/internal/manifest"
 	"github.com/rossijonas/stamp/internal/state"
 )
 
@@ -49,4 +51,24 @@ func printSnapshotWarnings(w io.Writer, snaps []state.Snapshot) {
 			_, _ = fmt.Fprintf(w, "warning: %s: %s\n", s.Manager, warn)
 		}
 	}
+}
+
+// renderMissing warns that manifest-tracked packages are absent from the
+// system. Names are listed inline up to a small count, then the message points
+// at 'stamp ls --type missing' and 'stamp restore' to keep it terse.
+func renderMissing(w io.Writer, pkgs []manifest.Package) {
+	if len(pkgs) == 0 {
+		return
+	}
+	_, _ = fmt.Fprintf(w, "warning: %d manifest package(s) not installed", len(pkgs))
+	if len(pkgs) <= 5 {
+		names := make([]string, 0, len(pkgs))
+		for _, p := range pkgs {
+			names = append(names, fmt.Sprintf("%s (%s)", p.Name, p.Manager))
+		}
+		_, _ = fmt.Fprintf(w, ": %s\n", strings.Join(names, ", "))
+	} else {
+		_, _ = fmt.Fprintln(w)
+	}
+	_, _ = fmt.Fprintln(w, "         run 'stamp ls --type missing' for the full list, or 'stamp restore' to reinstall")
 }

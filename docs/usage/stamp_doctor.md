@@ -17,8 +17,13 @@ stamp doctor [flags]
 ### Examples
 
 ```
+  # check the whole system
   stamp doctor
+
+  # machine-readable output for scripting
   stamp doctor --json
+
+  # check a single manager's native diagnostics
   stamp doctor -m dnf
 ```
 

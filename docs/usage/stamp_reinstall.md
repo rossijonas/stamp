@@ -18,8 +18,11 @@ stamp reinstall <package> [flags]
 ### Examples
 
 ```
+  # reinstall a package using the manager recorded in the manifest
   stamp reinstall htop
-  stamp reinstall -m brew lazygit
+
+  # reinstall a pre-existing package from a specific manager
+  stamp reinstall lazygit -m brew
 ```
 
 ### Options

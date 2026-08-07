@@ -19,9 +19,14 @@ stamp clean [flags]
 ### Examples
 
 ```
+  # clean package caches
   stamp clean
-  stamp clean -m brew
+
+  # preview what would be cleaned
   stamp clean --dry-run
+
+  # scope to a single package manager
+  stamp clean -m brew
 ```
 
 ### Options

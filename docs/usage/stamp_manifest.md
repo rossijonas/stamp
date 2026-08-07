@@ -14,6 +14,16 @@ diff the current manifest against a backup.
 stamp manifest [flags]
 ```
 
+### Examples
+
+```
+  # list manifest backups (newest first, with content hashes)
+  stamp manifest history
+
+  # diff the current manifest against a backup
+  stamp manifest diff
+```
+
 ### Options
 
 ```

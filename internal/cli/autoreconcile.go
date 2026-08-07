@@ -64,6 +64,14 @@ func newAutoReconcileCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auto-reconcile",
 		Short: "Manage automated reconcile timer",
+		Example: `  # install the automated reconcile timer (hourly by default)
+  stamp auto-reconcile on
+
+  # run on a weekly schedule
+  stamp auto-reconcile on --period weekly
+
+  # remove the timer
+  stamp auto-reconcile off`,
 		Long: `Install or remove a system timer that runs stamp reconcile automatically.
 On Linux: uses systemd user timer.
 On macOS: uses launchd agent.`,
@@ -77,9 +85,14 @@ func newAutoReconcileOnCmd() *cobra.Command {
 	var period string
 
 	cmd := &cobra.Command{
-		Use:     "on",
-		Short:   "Install automated reconcile timer",
-		Example: "  stamp auto-reconcile on\n  stamp auto-reconcile on --period hourly\n  stamp auto-reconcile on -p weekly",
+		Use:   "on",
+		Short: "Install automated reconcile timer",
+		Example: `  # install the automated reconcile timer (daily by default)
+  stamp auto-reconcile on
+
+  # run on a different schedule
+  stamp auto-reconcile on --period hourly
+  stamp auto-reconcile on --period weekly`,
 		Long: `Install a system timer to run stamp reconcile automatically.
 Use --period to set the interval (daily, hourly, weekly).
 On Linux: creates systemd user service + timer.
@@ -119,9 +132,10 @@ On macOS: creates a launchd agent.`,
 
 func newAutoReconcileOffCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "off",
-		Short:   "Remove automated reconcile timer",
-		Example: "  stamp auto-reconcile off",
+		Use:   "off",
+		Short: "Remove automated reconcile timer",
+		Example: `  # remove the automated reconcile timer
+  stamp auto-reconcile off`,
 		Long: `Remove the timer installed by stamp auto-reconcile on.
 Stops the active timer and deletes the timer files.`,
 		Args: cobra.NoArgs,

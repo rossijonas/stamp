@@ -11,14 +11,13 @@ stamp restore -y
 ```
 
 ```text
-▪ Phase 1: Restoring repositories...
-  ✓ added flathub via flatpak
-  ✓ added homebrew/cask via brew
-▪ Phase 2: Restoring packages...
-  ✓ installed htop via apt
-  ✓ installed lazygit via brew
-  ✓ installed spotify via flatpak
-✓ Restore complete — 3 packages installed
+Phase 1: Restoring Repositories...
+  restored repository flathub via flatpak
+Phase 2: Restoring Packages...
+  installed htop via dnf
+  installed lazygit via brew
+  installed spotify via flatpak
+Restore completed successfully
 
 Restore respects package metadata: Homebrew casks are installed with `--cask`
 and DNF groups are installed with `--group` automatically.
@@ -31,10 +30,14 @@ stamp restore --dry-run
 ```
 
 ```text
-▪ Would restore:
-    Repositories: flathub, homebrew/cask
-    Packages: htop, lazygit, spotify
-  Run stamp restore to proceed.
+▪ Dry Run (Preview):
+Repositories:
+  - flathub (flatpak) https://dl.flathub.org/repo/flathub.flatpakrepo
+  - homebrew/cask (brew)
+Packages:
+  - htop (dnf)
+  - lazygit (brew)
+  - spotify (flatpak)
 ```
 
 ### Restoration order

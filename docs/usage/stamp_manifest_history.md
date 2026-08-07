@@ -19,7 +19,10 @@ stamp manifest history [flags]
 ### Examples
 
 ```
+  # list manifest backups, newest first
   stamp manifest history
+
+  # machine-readable history
   stamp manifest history -j
 ```
 

@@ -9,6 +9,16 @@ Verify installed man page version matches current stamp version
 stamp man check [flags]
 ```
 
+### Examples
+
+```
+  # check the installed man page version
+  stamp man check
+
+  # machine-readable check result
+  stamp man check --json
+```
+
 ### Options
 
 ```

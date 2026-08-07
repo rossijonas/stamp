@@ -97,6 +97,11 @@ func newManifestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "manifest",
 		Short: "Inspect manifest backups and changes",
+		Example: `  # list manifest backups (newest first, with content hashes)
+  stamp manifest history
+
+  # diff the current manifest against a backup
+  stamp manifest diff`,
 		Long: `Command group for manifest management: list backup history and
 diff the current manifest against a backup.`,
 		Args: cobra.NoArgs,
@@ -115,7 +120,11 @@ func newManifestHistoryCmd() *cobra.Command {
 		Use:     "history",
 		Aliases: []string{"backups"},
 		Short:   "List manifest backups",
-		Example: "  stamp manifest history\n  stamp manifest history -j",
+		Example: `  # list manifest backups, newest first
+  stamp manifest history
+
+  # machine-readable history
+  stamp manifest history -j`,
 		Long: `List the current manifest and all timestamped backups, newest first.
 Each row shows the backup timestamp, a short content hash, and package/repo
 counts. The current manifest is marked with '*'. Backups whose content is
@@ -211,8 +220,15 @@ func newManifestDiffCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "diff [timestamp|hash]",
 		Short: "Compare current manifest against a backup",
-		Example: "  stamp manifest diff\n  stamp manifest diff 2026-08-02T09:15:00Z\n" +
-			"  stamp manifest diff a1b2c3d4e5f6\n  stamp manifest diff -m brew --origin stamped",
+		Example: `  # diff the current manifest against the most recent backup
+  stamp manifest diff
+
+  # diff against a specific backup by timestamp or hash prefix
+  stamp manifest diff 2026-08-02T09:15:00Z
+  stamp manifest diff a1b2c3d4e5f6
+
+  # filter by manager and origin
+  stamp manifest diff -m brew --origin stamped`,
 		Long: `Show the difference between the current manifest and a specific backup.
 Defaults to the most recent backup. The argument may be a backup timestamp
 (2026-08-02T09:15:00Z or 20260802T091500Z) or a content-hash prefix shown by

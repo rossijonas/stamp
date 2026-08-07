@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -84,6 +85,154 @@ func TestDoctor_NOCOLOR_Set(t *testing.T) {
 	assert.True(t, report.NoColor)
 }
 
+func TestDoctor_SystemMissing_TTY(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"lazygit"}}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "✓ Healthy (2 package(s))")
+	assert.Contains(t, output, "Missing:")
+	assert.Contains(t, output, "- htop (brew)")
+	assert.Contains(t, output, "stamp restore")
+	assert.Contains(t, output, "stamp ls --type missing")
+	assert.NotContains(t, output, "lazygit (brew)")
+}
+
+func TestDoctor_SystemMissing_JSON(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"lazygit"}}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+
+	require.NoError(t, root.Execute())
+
+	var report doctorReport
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &report))
+	require.True(t, report.Manifest.Valid)
+	require.Len(t, report.Manifest.Missing, 1)
+	assert.Equal(t, "htop", report.Manifest.Missing[0].Name)
+	assert.Equal(t, "brew", report.Manifest.Missing[0].Manager)
+}
+
+func TestDoctor_SystemMissing_ListErrorSkipped(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", ListErr: errors.New("boom")}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+
+	require.NoError(t, root.Execute())
+
+	var report doctorReport
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &report))
+	require.True(t, report.Manifest.Valid)
+	assert.Empty(t, report.Manifest.Missing)
+}
+
+func TestDoctor_SystemMissing_NoneMissing(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"htop"}}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+
+	require.NoError(t, root.Execute())
+
+	var report doctorReport
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &report))
+	require.True(t, report.Manifest.Valid)
+	assert.Empty(t, report.Manifest.Missing)
+}
+
 func TestDoctor_Manifest_Healthy(t *testing.T) {
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
@@ -119,6 +268,10 @@ manager = "brew"
 
 	assert.True(t, report.Manifest.Valid)
 	assert.Equal(t, 1, report.Manifest.PackagesCount)
+	// Healthy refers to manifest integrity; a manifest entry absent from the
+	// (empty) mock installed list still surfaces as missing drift.
+	require.Len(t, report.Manifest.Missing, 1)
+	assert.Equal(t, "htop", report.Manifest.Missing[0].Name)
 }
 
 func TestDoctor_Manifest_Corrupt(t *testing.T) {

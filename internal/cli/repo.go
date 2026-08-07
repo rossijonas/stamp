@@ -43,7 +43,15 @@ func newRepoCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage third-party repositories",
-		Args:  cobra.NoArgs,
+		Example: `  # add a third-party repository or tap
+  stamp repo add my-tap
+
+  # remove a repository
+  stamp repo remove my-tap
+
+  # list tracked repositories
+  stamp repo list`,
+		Args: cobra.NoArgs,
 	}
 
 	cmd.AddCommand(newRepoAddCmd())
