@@ -81,8 +81,8 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 
 | Command | Aliases | Flags | Description |
 | :--- | :--- | :--- | :--- |
-| `stamp repo add <name> [url]` | `install` | `--manager, -m <name> (Required)` | Adds custom repository and records it. |
-| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name> (Required)` | Removes a repository and untracks it. |
+| `stamp repo add <name> [url]` | `install` | `--manager, -m <name> (Required)` | Adds custom repository and records it. DNF: URL ending in `.repo` is fetched and installed verbatim, preserving gpg settings. A single URL argument derives the name from the URL (basename with `.repo` stripped, or host). |
+| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes a repository and untracks it. `-m` is optional when the repo is tracked in the manifest. |
 | `stamp repo list` | `ls` | `--json, -j`, `--manager, -m <name>` | Lists all tracked repositories. |
 
 ---
@@ -710,7 +710,7 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 15. **Remove:** `stamp remove htop` removes the package natively and removes it from the manifest.
 16. **Search:** `stamp search ripgrep` returns matching packages from all available managers.
 17. **Repo Add:** `stamp repo add myrepo -m brew` adds the repository via the specified manager and records it.
-18. **Repo Remove:** `stamp repo remove myrepo -m brew` removes the repository and untracks it.
+18. **Repo Remove:** `stamp repo remove myrepo` removes the repository and untracks it. When tracked, the manager is looked up from the manifest; `-m` overrides it. For DNF, URL-added repos are removed by deleting their `.repo` file and COPR repos via `dnf copr disable`.
 19. **Repo List:** `stamp repo list` prints all tracked repositories; `--json` outputs machine-readable.
 20. **Setup:** `stamp setup` runs the setup wizard with completion, man pages, init, and doctor. `stamp hello` works as an alias.
 21. **Completion:** `stamp completion bash|zsh|fish|powershell` generates valid shell completion scripts for each shell.

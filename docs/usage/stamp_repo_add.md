@@ -6,7 +6,7 @@
 Add a third-party repository
 
 ```
-stamp repo add <name> [url] [flags]
+stamp repo add [name] [url] [flags]
 ```
 
 ### Examples
@@ -17,6 +17,12 @@ stamp repo add <name> [url] [flags]
 
   # add a COPR repository on Fedora/RHEL
   stamp repo add petersen/cava -m dnf
+
+  # add a .repo file URL (e.g. Brave or Enpass) on Fedora/RHEL
+  stamp repo add brave https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo -m dnf
+
+  # add a repo by URL, deriving the name from the URL
+  stamp repo add https://yum.enpass.io/enpass-yum.repo -m dnf
 
   # add a flatpak remote by URL
   stamp repo add flathub https://dl.flathub.org/repo/flathub.flatpakrepo -m flatpak

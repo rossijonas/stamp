@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
 
@@ -39,6 +40,35 @@ func validateRepoURL(rawURL string) error {
 	return nil
 }
 
+// isRepoURL reports whether rawURL parses as an http(s) URL, mirroring
+// validateRepoURL without surfacing an error. Used to detect a single-argument
+// `stamp repo add <url>` invocation so the name can be derived.
+func isRepoURL(rawURL string) bool {
+	parsed, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return false
+	}
+	return parsed.Scheme == "http" || parsed.Scheme == "https"
+}
+
+// deriveRepoName derives a repository name from a URL. The basename of the
+// URL path is used with a trailing .repo extension stripped; a pathless URL
+// falls back to the host. Example: https://yum.enpass.io/enpass-yum.repo → "enpass-yum".
+func deriveRepoName(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	base := path.Base(parsed.Path)
+	if base == "" || base == "." || base == "/" {
+		return parsed.Host
+	}
+	if strings.HasSuffix(strings.ToLower(base), ".repo") {
+		base = base[:len(base)-len(".repo")]
+	}
+	return base
+}
+
 func newRepoCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
@@ -65,7 +95,7 @@ func newRepoAddCmd() *cobra.Command {
 	var managerFlag string
 
 	cmd := &cobra.Command{
-		Use:     "add <name> [url]",
+		Use:     "add [name] [url]",
 		Aliases: []string{"install"},
 		Short:   "Add a third-party repository",
 		Example: `  # add a PPA on Debian/Ubuntu systems
@@ -73,6 +103,12 @@ func newRepoAddCmd() *cobra.Command {
 
   # add a COPR repository on Fedora/RHEL
   stamp repo add petersen/cava -m dnf
+
+  # add a .repo file URL (e.g. Brave or Enpass) on Fedora/RHEL
+  stamp repo add brave https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo -m dnf
+
+  # add a repo by URL, deriving the name from the URL
+  stamp repo add https://yum.enpass.io/enpass-yum.repo -m dnf
 
   # add a flatpak remote by URL
   stamp repo add flathub https://dl.flathub.org/repo/flathub.flatpakrepo -m flatpak
@@ -86,12 +122,21 @@ func newRepoAddCmd() *cobra.Command {
 				return app.manifestErr
 			}
 			name := args[0]
-			if err := validateRepoName(name); err != nil {
-				return err
-			}
 			url := ""
 			if len(args) > 1 {
 				url = args[1]
+			}
+			// A single URL argument is shorthand: derive the name from the URL
+			// (e.g. stamp repo add <repofile-url> -m dnf).
+			if len(args) == 1 && isRepoURL(name) {
+				url = name
+				name = deriveRepoName(url)
+			}
+			if err := validateRepoName(name); err != nil {
+				if url != "" && isRepoURL(url) {
+					return catErr(ErrUsage, "cannot derive repository name from URL %q", url)
+				}
+				return err
 			}
 			if err := validateRepoURL(url); err != nil {
 				return err
@@ -143,7 +188,10 @@ func newRepoRemoveCmd() *cobra.Command {
 		Use:     "remove <name>",
 		Aliases: []string{"uninstall", "rm", "delete", "del"},
 		Short:   "Remove a third-party repository",
-		Example: `  # remove a PPA or repository
+		Example: `  # remove a repository using the manager recorded in the manifest
+  stamp repo remove ppa:git-core/ppa
+
+  # specify a manager explicitly
   stamp repo remove ppa:git-core/ppa -m apt
 
   # aliases behave the same way
@@ -160,17 +208,41 @@ func newRepoRemoveCmd() *cobra.Command {
 			}
 
 			var adapter manager.Adapter
-			for _, a := range app.adapters {
-				if a.Name() == manager.ResolveManager(managerFlag) {
-					adapter = a
+
+			// Check the manifest first: if the repo is tracked, use its
+			// recorded manager so `-m` is optional.
+			if managerFlag == "" {
+				for _, r := range app.manifest.Repositories {
+					if r.Name != name {
+						continue
+					}
+					for _, a := range app.adapters {
+						if a.Name() == r.Manager {
+							adapter = a
+							break
+						}
+					}
 					break
 				}
-			}
-			if adapter == nil {
-				return fmt.Errorf("manager %q not found (required)", managerFlag)
+				if adapter == nil {
+					return catErr(ErrUsage, "repository %q is not tracked; specify its manager with --manager", name)
+				}
 			}
 
-			if err := requireConsent(cmd, fmt.Sprintf("Remove repo %s via %s", name, managerFlag)); err != nil {
+			// Fall back to the explicit flag.
+			if adapter == nil {
+				for _, a := range app.adapters {
+					if a.Name() == manager.ResolveManager(managerFlag) {
+						adapter = a
+						break
+					}
+				}
+				if adapter == nil {
+					return fmt.Errorf("manager %q not found", managerFlag)
+				}
+			}
+
+			if err := requireConsent(cmd, fmt.Sprintf("Remove repo %s via %s", name, adapter.Name())); err != nil {
 				return handleConsent(err)
 			}
 			if err := adapter.RemoveRepo(manager.WithYes(cmd.Context()), name); err != nil {
@@ -182,13 +254,12 @@ func newRepoRemoveCmd() *cobra.Command {
 				return fmt.Errorf("failed to save manifest: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "removed repo %s via %s\n", name, managerFlag)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "removed repo %s via %s\n", name, adapter.Name())
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager (required)")
-	_ = cmd.MarkFlagRequired("manager")
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use (optional if the repo is tracked in the manifest)")
 	return cmd
 }
 

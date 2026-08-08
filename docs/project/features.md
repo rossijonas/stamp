@@ -39,7 +39,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp search <query>` | | ✓ | ✓ | ✓ Queries adapters | ✓ Complete |
 | `stamp info <pkg>` | | ✓ | ✓ | ✓ Queries adapter Info() | ✓ Complete |
 | `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
-| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
+| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager optional when tracked) | ✓ Complete |
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 | `stamp reconcile` | | ✓ | ✓ | ✓ Auto-track + `--dry-run` + no prompt + repo drift detection + missing-package warning | ✓ Complete |
 | `stamp restore` | | ✓ | ✓ | ✓ Sequentially adds repos then concurrently installs packages | ✓ Complete |
@@ -74,7 +74,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
-| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
+| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager optional when tracked) | ✓ Complete |
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 
 ### Man Command (Subcommands)
@@ -172,7 +172,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 - **Doctor:** Only Brew has a native `doctor` command. Other managers print an informational message and continue.
 - **Cask:** Brew-specific feature for macOS GUI applications (`brew install --cask`). Flatpak and Snap support GUI apps natively on Linux through their standard install flow — no separate flag needed.
 - **Hold:** APT (apt-mark), DNF (dnf versionlock), Pacman/Paru (IgnorePkg in pacman.conf). Other managers do not support version pinning.
-- **Repo management:** DNF supports COPR repos, APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
+- **Repo management:** DNF supports COPR repos and `.repo` file URLs (fetched verbatim, gpg settings preserved; URL-added repos are removed by deleting the `.repo` file, COPR repos via `dnf copr disable`), APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
 - **CheckUpdate:** Toolchain managers (Go, Pipx, Uv) cannot preview updates. They print an informational notice during `stamp update --check` and continue.
 - **Backup retention:** The `[backup]` section of `config.toml` controls timestamped backup retention (logrotate-style: max/min count + min/max age axes, `0` = unlimited). `stamp reconcile` rotates manifest backups; `stamp init` re-init rotates manifest + snapshot backups. Misconfigurations are reported by `stamp doctor`.
 - **Batch package operations:** `stamp install`/`remove`/`reinstall` accept multiple packages in one command with `-m <manager>` (per-manager only; `go`, `pipx`, `uv` excluded; `snap` excluded from batch reinstall). Homebrew falls back to per-package operations when a batch mixes casks and formulae.

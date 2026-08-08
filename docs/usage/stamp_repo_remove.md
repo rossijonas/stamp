@@ -12,7 +12,10 @@ stamp repo remove <name> [flags]
 ### Examples
 
 ```
-  # remove a PPA or repository
+  # remove a repository using the manager recorded in the manifest
+  stamp repo remove ppa:git-core/ppa
+
+  # specify a manager explicitly
   stamp repo remove ppa:git-core/ppa -m apt
 
   # aliases behave the same way
@@ -23,7 +26,7 @@ stamp repo remove <name> [flags]
 
 ```
   -h, --help             help for remove
-  -m, --manager string   package manager (required)
+  -m, --manager string   package manager to use (optional if the repo is tracked in the manifest)
 ```
 
 ### Options inherited from parent commands
