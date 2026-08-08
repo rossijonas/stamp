@@ -86,6 +86,8 @@ Controls timestamped backup retention for the manifest and snapshots. Stamp writ
 
 **Precedence (highest to lowest):** (1) min-age floor — backups younger than the min age are protected and never deleted; (2) min-count floor — at least `min_*_backups` backups are always kept (the newest survive, so the max-age ceiling can never wipe the set to zero); (3) max-age ceiling — eligible backups older than the max age are deleted, except those needed to meet the min-count floor; (4) count cap — if the eligible set still exceeds the max count, the oldest surplus are deleted, except those needed to meet the min-count floor. Avoid `min_*_backup_age_days > max_*_backup_age_days` (the floor wins on the overlap; `stamp doctor` reports it as invalid). If `min_*_backups > max_*_backups`, the min-count floor wins.
 
+**Validation:** `stamp doctor` reports an invalid `[backup]` policy under `Configuration:` — a min floor above a non-zero max cap, or a negative value on any key. `0` means unlimited/disabled and is always valid. Validation is doctor-only: other commands keep working with an invalid config, and rotation degrades safely (the min floor wins, protective).
+
 `stamp reconcile` rotates manifest backups only; `stamp init` re-init rotates both manifest and snapshot backups. Backup files are named `manifest.toml.<YYYYMMDDTHHMMSSZ>.bak`; snapshot backup dirs `snapshots.<YYYYMMDDTHHMMSSZ>.bak/`.
 
 `config.toml` is auto-created by `stamp init` when absent (a commented template with the defaults above). An existing file is never overwritten.

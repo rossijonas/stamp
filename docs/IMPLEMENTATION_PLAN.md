@@ -695,4 +695,34 @@ section, and editorial usage pages show current command output.
 *   **Acceptance:** `task check` passes.
 *   **Verify:** `task check`
 *   **Files:** — (validation only)
-*   **Status:** ☐ Pending
+*   **Status:** ✓ Completed
+
+### Phase 16: Doctor backup-config validation (#181)
+
+`stamp doctor` validates the `[backup]` retention policy per
+`docs/project/spec.md` "Misconfiguration": min floor above a non-zero max cap
+(count and age axes), and negative values, are reported under a new
+`Configuration:` section (TTY) and `config` (`--json`). Validation is
+doctor-only — an invalid config never bricks the other commands, and rotation
+degrades safely (min floor wins).
+
+**Task 81: BackupConfig.Validate (#181)**
+*   **Description:** New `BackupConfig.Validate() error` in `internal/cli/config.go`: per-axis `backupAxisError` helper rejects negatives and `min > max` when both sides are non-zero (`0` = unlimited/disabled). Issues joined via `errors.Join`, lowercase messages. Doctor-only by design (`LoadConfig` unchanged).
+*   **Acceptance:** Table tests: valid defaults, all-zero valid, zero-max/min combos, min>max keep + age (both manifest + snapshot), negatives ×8, multi-issue joined. 100% coverage.
+*   **Verify:** `go test ./internal/cli/ -run 'TestBackupConfig_Validate|TestBackupAxisError'` with race detector.
+*   **Files:** `internal/cli/config.go`, `internal/cli/config_test.go`
+*   **Status:** ✓ Completed
+
+**Task 82: Doctor Configuration section (#181)**
+*   **Description:** `doctorReport` gains `Config configStatus{Path,Valid,Error}` (`json:"config"`); full doctor run validates `app.config.Backup.Validate()`. TTY renders `Configuration:` section after Manifest Integrity (`✓ Valid` / `✗ invalid [backup] config:` + one line per issue). Missing config.toml → defaults → valid. `-m` mode + exit code unchanged.
+*   **Acceptance:** TTY valid/invalid, JSON valid/invalid (error text), missing-config→valid, existing doctor tests green.
+*   **Verify:** `go test ./internal/cli/ -run 'TestDoctor'` with race detector.
+*   **Files:** `internal/cli/doctor.go`, `internal/cli/doctor_display.go`, `internal/cli/doctor_test.go`
+*   **Status:** ✓ Completed
+
+**Task 83: Docs + gate (#181)**
+*   **Description:** `docs/usage/doctor.md` (Configuration section in TTY + JSON examples, "Config validation" subsection), `docs/usage/configuration.md` (validation note). `task check` green.
+*   **Acceptance:** `task check` passes; docs consistent.
+*   **Verify:** `task check`, `task docs`
+*   **Files:** `docs/usage/doctor.md`, `docs/usage/configuration.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Status:** ✓ Completed

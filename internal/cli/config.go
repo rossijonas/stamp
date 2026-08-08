@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,6 +45,37 @@ func DefaultBackupConfig() BackupConfig {
 		MinSnapshotBackupAgeDays: 7,
 		MaxSnapshotBackupAgeDays: 30,
 	}
+}
+
+// Validate returns nil when the [backup] retention policy is well-formed, or
+// an errors.Join of every misconfigured axis. A value of 0 means unlimited on
+// the count axes and disabled on the age axes, so a min-vs-max comparison only
+// applies when both sides are non-zero. Misconfiguration is reported by
+// `stamp doctor`, never by LoadConfig — an invalid file must not brick the
+// other commands (see docs/project/spec.md "Misconfiguration").
+func (c BackupConfig) Validate() error {
+	return errors.Join(
+		backupAxisError(c.MinManifestBackups, c.MaxManifestBackups, "min_manifest_backups", "max_manifest_backups"),
+		backupAxisError(c.MinSnapshotBackups, c.MaxSnapshotBackups, "min_snapshot_backups", "max_snapshot_backups"),
+		backupAxisError(c.MinManifestBackupAgeDays, c.MaxManifestBackupAgeDays, "min_manifest_backup_age_days", "max_manifest_backup_age_days"),
+		backupAxisError(c.MinSnapshotBackupAgeDays, c.MaxSnapshotBackupAgeDays, "min_snapshot_backup_age_days", "max_snapshot_backup_age_days"),
+	)
+}
+
+// backupAxisError validates one (min, max) axis pair: negatives are rejected,
+// and a min floor above a non-zero max cap is a contradiction. Zero disables
+// the check on that axis, mirroring the unlimited/disabled semantics.
+func backupAxisError(minVal, maxVal int, minKey, maxKey string) error {
+	if minVal < 0 {
+		return fmt.Errorf("negative value for %s", minKey)
+	}
+	if maxVal < 0 {
+		return fmt.Errorf("negative value for %s", maxKey)
+	}
+	if minVal > 0 && maxVal > 0 && minVal > maxVal {
+		return fmt.Errorf("%s (%d) exceeds %s (%d)", minKey, minVal, maxKey, maxVal)
+	}
+	return nil
 }
 
 // Config represents the user's stamp configuration.

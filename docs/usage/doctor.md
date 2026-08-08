@@ -39,6 +39,10 @@ Manifest Integrity:
     - spotify (flatpak)
     run 'stamp restore' to reinstall, or 'stamp ls --type missing' for details
 
+Configuration:
+  Path:   /home/user/.config/stamp/config.toml
+  Status: ✓ Valid
+
 UNIX Compliance:
   NO_COLOR: ✗ Not set
   Version:  stamp v0.31.1
@@ -74,6 +78,10 @@ stamp doctor --json
       {"Name": "spotify", "Manager": "flatpak", "Category": "", "Notes": "", "Cask": false, "Group": false, "Origin": ""}
     ]
   },
+  "config": {
+    "path": "/home/user/.config/stamp/config.toml",
+    "valid": true
+  },
   "no_color": false,
   "man_page": {"installed": true, "matches": true, "path": "/home/user/.local/share/man/man1/stamp.1", "version": "0.31.1"},
   "completions": {"installed": true, "shells": ["bash", "zsh"]}
@@ -106,3 +114,21 @@ in `--json`). This does **not** change the manifest status — a missing package
 is drift, not corruption. `stamp ls --type missing` lists the same set;
 `stamp restore` reinstalls them. Managers whose installed state cannot be
 queried are skipped.
+
+### Config validation
+
+Doctor validates the `[backup]` retention policy in `config.toml`. A
+misconfiguration (e.g. a min floor above the max cap, or a negative value) is
+reported under `Configuration:` — `✓ Valid` or a list of issues:
+
+```text
+Configuration:
+  Path:   /home/user/.config/stamp/config.toml
+  Status: ✗ invalid [backup] config:
+    min_manifest_backups (30) exceeds max_manifest_backups (10)
+    run 'stamp doctor' after fixing config.toml
+```
+
+`0` on any axis means unlimited/disabled and is valid. Validation is
+doctor-only: other commands keep working even when the config is invalid, and
+the rotation itself degrades safely (the min floor wins, protective).
