@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -25,16 +26,23 @@ func newInstallCmd() *cobra.Command {
   # install from a specific manager
   stamp install spotify -m flatpak
 
+  # install multiple packages in one command (per-manager batch, -m required)
+  stamp install htop atop btop -m dnf
+
   # install a DNF package group (name may contain spaces)
   stamp install "Development Tools" -m dnf --group
 
   # add a note so you remember why later
   stamp add lazygit -m brew --note "better git TUI"`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			if app.manifestErr != nil {
 				return app.manifestErr
+			}
+
+			if len(args) > 1 {
+				return installMany(cmd, app, args, managerFlag, note, groupInstall)
 			}
 			pkgName := args[0]
 
@@ -105,6 +113,116 @@ func newInstallCmd() *cobra.Command {
 	return cmd
 }
 
+// installMany installs multiple packages in a single native invocation.
+// Requires -m so every package goes to the same manager; only managers with
+// native multi-package support participate (see manager.BatchInstaller).
+func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag, note string, groupInstall bool) error {
+	if managerFlag == "" {
+		return catErr(ErrUsage, "multiple packages require --manager")
+	}
+	if groupInstall {
+		return catErr(ErrUsage, "--group supports a single package")
+	}
+
+	adapter, err := resolveAdapterByFlag(app.adapters, managerFlag)
+	if err != nil {
+		return err
+	}
+	for _, p := range pkgs {
+		if err := manager.ValidatePackageForManager(adapter.Name(), p); err != nil {
+			return fmt.Errorf("invalid package name %q: %w", p, err)
+		}
+	}
+
+	bi, ok := adapter.(manager.BatchInstaller)
+	if !ok {
+		return catErr(ErrUnavailable, "manager %s does not support installing multiple packages at once", adapter.Name())
+	}
+
+	// Brew: --cask is batch-wide, so a mixed cask/formula batch falls back to
+	// per-package single installs. A uniform batch uses one command.
+	casks := brewCasks(cmd.Context(), adapter, pkgs)
+	caskCount := 0
+	for _, isCask := range casks {
+		if isCask {
+			caskCount++
+		}
+	}
+	mixed := caskCount > 0 && caskCount < len(pkgs)
+
+	installCtx := cmd.Context()
+	if caskCount == len(pkgs) {
+		installCtx = manager.WithCask(cmd.Context())
+	}
+
+	if err := confirmDestructiveMany(installCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+		adapter, previewInstall, "Install", pkgs); err != nil {
+		return handleConsent(err)
+	}
+
+	if mixed {
+		for _, p := range pkgs {
+			ctx := manager.WithYes(cmd.Context())
+			if casks[p] {
+				ctx = manager.WithYes(manager.WithCask(cmd.Context()))
+			}
+			if err := adapter.Install(ctx, p); err != nil {
+				return fmt.Errorf("install failed: %w", err)
+			}
+			app.manifest.AddPackage(manifest.Package{Name: p, Manager: adapter.Name(), Notes: note, Origin: manifest.OriginStamped})
+		}
+	} else {
+		if err := bi.InstallMany(manager.WithYes(installCtx), pkgs...); err != nil {
+			return fmt.Errorf("install failed: %w", err)
+		}
+		for _, p := range pkgs {
+			app.manifest.AddPackage(manifest.Package{Name: p, Manager: adapter.Name(), Notes: note, Origin: manifest.OriginStamped})
+		}
+	}
+
+	if err := app.saveManifest(); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "installed %d package(s) via %s\n", len(pkgs), adapter.Name())
+	return nil
+}
+
+// resolveAdapterByFlag returns the adapter whose name matches -m, or an
+// ErrUnavailable error. Used by the multi-package paths where a single manager
+// must own the whole batch.
+func resolveAdapterByFlag(adapters []manager.Adapter, managerFlag string) (manager.Adapter, error) {
+	for _, a := range adapters {
+		if a.Name() == manager.ResolveManager(managerFlag) {
+			return a, nil
+		}
+	}
+	return nil, catErr(ErrUnavailable, "manager %q is not available on this system", managerFlag)
+}
+
+// caskDetector reports whether a brew package is a cask. Only *manager.Brew
+// implements it today; abstracting keeps brewCasks testable without the real
+// adapter's unexported executor.
+type caskDetector interface {
+	IsCask(ctx context.Context, pkg string) (bool, error)
+}
+
+// brewCasks reports per-package cask status for cask-aware adapters. IsCask
+// lookup failures are treated as non-cask (best-effort), matching the
+// single-package install path.
+func brewCasks(ctx context.Context, adapter manager.Adapter, pkgs []string) map[string]bool {
+	detector, ok := adapter.(caskDetector)
+	if !ok {
+		return nil
+	}
+	m := make(map[string]bool, len(pkgs))
+	for _, p := range pkgs {
+		if isCask, err := detector.IsCask(ctx, p); err == nil {
+			m[p] = isCask
+		}
+	}
+	return m
+}
+
 func newRemoveCmd() *cobra.Command {
 	var managerFlag string
 	var groupRemove bool
@@ -126,12 +244,19 @@ func newRemoveCmd() *cobra.Command {
   stamp uninstall htop
   stamp rm htop
   stamp delete htop
-  stamp del htop`,
-		Args: cobra.ExactArgs(1),
+  stamp del htop
+
+  # remove multiple packages in one command (per-manager batch, -m required)
+  stamp remove htop atop btop -m dnf`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
 			if app.manifestErr != nil {
 				return app.manifestErr
+			}
+
+			if len(args) > 1 {
+				return removeMany(cmd, app, args, managerFlag, groupRemove)
 			}
 			pkgName := args[0]
 
@@ -209,6 +334,80 @@ func newRemoveCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use")
 	cmd.Flags().BoolVarP(&groupRemove, "group", "g", false, "remove a DNF package group")
 	return cmd
+}
+
+// removeMany removes multiple packages in a single native invocation. Requires
+// -m so every package is removed from the same manager; only managers with
+// native multi-package support participate (see manager.BatchRemover).
+func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag string, groupRemove bool) error {
+	if managerFlag == "" {
+		return catErr(ErrUsage, "multiple packages require --manager")
+	}
+	if groupRemove {
+		return catErr(ErrUsage, "--group supports a single package")
+	}
+
+	adapter, err := resolveAdapterByFlag(app.adapters, managerFlag)
+	if err != nil {
+		return err
+	}
+	for _, p := range pkgs {
+		if err := manager.ValidatePackageForManager(adapter.Name(), p); err != nil {
+			return fmt.Errorf("invalid package name %q: %w", p, err)
+		}
+	}
+
+	br, ok := adapter.(manager.BatchRemover)
+	if !ok {
+		return catErr(ErrUnavailable, "manager %s does not support removing multiple packages at once", adapter.Name())
+	}
+
+	// Brew: --cask is batch-wide; a mixed cask/formula batch falls back to
+	// per-package single removals.
+	casks := brewCasks(cmd.Context(), adapter, pkgs)
+	caskCount := 0
+	for _, isCask := range casks {
+		if isCask {
+			caskCount++
+		}
+	}
+	mixed := caskCount > 0 && caskCount < len(pkgs)
+
+	removeCtx := cmd.Context()
+	if caskCount == len(pkgs) {
+		removeCtx = manager.WithCask(cmd.Context())
+	}
+
+	if err := confirmDestructiveMany(removeCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+		adapter, previewRemove, "Remove", pkgs); err != nil {
+		return handleConsent(err)
+	}
+
+	if mixed {
+		for _, p := range pkgs {
+			ctx := manager.WithYes(cmd.Context())
+			if casks[p] {
+				ctx = manager.WithYes(manager.WithCask(cmd.Context()))
+			}
+			if err := adapter.Remove(ctx, p); err != nil {
+				return fmt.Errorf("remove failed: %w", err)
+			}
+			app.manifest.RemovePackage(p, adapter.Name())
+		}
+	} else {
+		if err := br.RemoveMany(manager.WithYes(removeCtx), pkgs...); err != nil {
+			return fmt.Errorf("remove failed: %w", err)
+		}
+		for _, p := range pkgs {
+			app.manifest.RemovePackage(p, adapter.Name())
+		}
+	}
+
+	if err := app.saveManifest(); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "removed %d package(s) via %s\n", len(pkgs), adapter.Name())
+	return nil
 }
 
 func newSearchCmd() *cobra.Command {

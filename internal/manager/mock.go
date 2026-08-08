@@ -142,6 +142,36 @@ func (m *Mock) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple packages via the mock.
+func (m *Mock) InstallMany(ctx context.Context, pkgs ...string) error {
+	for _, p := range pkgs {
+		if err := m.Install(ctx, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple packages via the mock.
+func (m *Mock) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	for _, p := range pkgs {
+		if err := m.Reinstall(ctx, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RemoveMany removes multiple packages via the mock.
+func (m *Mock) RemoveMany(ctx context.Context, pkgs ...string) error {
+	for _, p := range pkgs {
+		if err := m.Remove(ctx, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Search queries the native package manager for the given package name.
 func (m *Mock) Search(_ context.Context, query string) ([]string, error) {
 	if err := ValidatePackageName(query); err != nil {

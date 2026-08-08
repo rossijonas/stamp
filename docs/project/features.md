@@ -33,9 +33,9 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `stamp install <pkg>` | `add` | ✓ | ✓ | ✓ Resolver → adapter → manifest | ✓ Complete |
-| `stamp remove <pkg>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Manifest lookup + adapter | ✓ Complete |
-| `stamp reinstall <pkg>` | | ✓ | ✓ | ✓ Manifest-tracked + pre-existing via resolver + `Reinstall` adapter method | ✓ Complete |
+| `stamp install <pkg>...` | `add` | ✓ | ✓ | ✓ Resolver → adapter → manifest; multi-package batch with `-m` (per-manager only) | ✓ Complete |
+| `stamp remove <pkg>...` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Manifest lookup + adapter; multi-package batch with `-m` (per-manager only) | ✓ Complete |
+| `stamp reinstall <pkg>...` | | ✓ | ✓ | ✓ Manifest-tracked + pre-existing via resolver + `Reinstall` adapter method; multi-package batch with `-m` (per-manager only, snap excluded) | ✓ Complete |
 | `stamp search <query>` | | ✓ | ✓ | ✓ Queries adapters | ✓ Complete |
 | `stamp info <pkg>` | | ✓ | ✓ | ✓ Queries adapter Info() | ✓ Complete |
 | `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
@@ -43,7 +43,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
 | `stamp reconcile` | | ✓ | ✓ | ✓ Auto-track + `--dry-run` + no prompt + repo drift detection + missing-package warning | ✓ Complete |
 | `stamp restore` | | ✓ | ✓ | ✓ Sequentially adds repos then concurrently installs packages | ✓ Complete |
-| `stamp doctor` | | ✓ | ✓ | ✓ Adapter check + manifest check + manifest-vs-system check + compliance report | ✓ Complete |
+| `stamp doctor` | | ✓ | ✓ | ✓ Adapter check + manifest check + manifest-vs-system check + `[backup]` config validation + compliance report | ✓ Complete |
 | `stamp completion [shell]` | | ✓ | ✓ | ✓ Auto-detect, install to path, --stdout flag | ✓ Complete |
 | `stamp man` | | ✓ | ✓ | ✓ Shows help for man command group | ✓ Complete |
 | `stamp hello` | | ✓ | ✓ | ✓ Prints ASCII logo + suggested next steps | ✓ Complete |
@@ -174,6 +174,8 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 - **Hold:** APT (apt-mark), DNF (dnf versionlock), Pacman/Paru (IgnorePkg in pacman.conf). Other managers do not support version pinning.
 - **Repo management:** DNF supports COPR repos, APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
 - **CheckUpdate:** Toolchain managers (Go, Pipx, Uv) cannot preview updates. They print an informational notice during `stamp update --check` and continue.
+- **Backup retention:** The `[backup]` section of `config.toml` controls timestamped backup retention (logrotate-style: max/min count + min/max age axes, `0` = unlimited). `stamp reconcile` rotates manifest backups; `stamp init` re-init rotates manifest + snapshot backups. Misconfigurations are reported by `stamp doctor`.
+- **Batch package operations:** `stamp install`/`remove`/`reinstall` accept multiple packages in one command with `-m <manager>` (per-manager only; `go`, `pipx`, `uv` excluded; `snap` excluded from batch reinstall). Homebrew falls back to per-package operations when a batch mixes casks and formulae.
 
 ---
 

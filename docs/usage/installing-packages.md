@@ -23,6 +23,25 @@ stamp install spotify --manager flatpak
 stamp install lazygit -m brew
 ```
 
+### Install multiple packages
+
+Install several packages in one command. **Batches are per-manager only** —
+`-m <manager>` is mandatory, and a single batch never spans managers; to
+install packages from different managers, run one command per manager:
+
+```bash
+stamp install htop atop btop -m dnf
+```
+
+```text
+▪ Install 3 package(s) via dnf? [y/N]: y
+installed 3 package(s) via dnf
+```
+
+Only managers with native multi-package support participate (`go`, `pipx`, and
+`uv` reject multi-install; Homebrew falls back to per-package installs when a
+batch mixes casks and formulae). All names are validated before anything runs.
+
 ### Add a note
 
 ```bash
@@ -35,6 +54,23 @@ stamp install lazygit -m brew --note "better git TUI than default"
 ```
 
 Notes are saved to your manifest so you remember why you installed something.
+
+### Reinstall multiple packages
+
+Reinstall several packages in one command. **Batches are per-manager only** —
+`-m <manager>` is mandatory, and a single batch never spans managers:
+
+```bash
+stamp reinstall lazygit jq -m brew
+```
+
+Only managers with native multi-package reinstall support participate (`snap`
+is excluded — its reinstall is remove + install). Single combined confirmation
+prompt; snapshots and the manifest are updated once.
+
+If a package in the batch is already tracked under a different manager, the
+batch fails fast before anything runs — reinstall that package with its
+recorded manager (`-m <mgr>`).
 
 ### Using aliases
 

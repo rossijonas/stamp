@@ -11,6 +11,18 @@ stamp remove htop
 
 Stamp looks up the package in your manifest and uses the recorded manager.
 
+### Remove multiple packages
+
+Remove several packages in one command. **Batches are per-manager only** —
+`-m <manager>` is mandatory, and a single batch never spans managers:
+
+```bash
+stamp remove htop atop btop -m dnf
+```
+
+Only managers with native multi-package support participate. Single combined
+confirmation prompt; the manifest is updated once.
+
 ```text
 ▪ removing htop via apt...
 ✓ removed htop via apt

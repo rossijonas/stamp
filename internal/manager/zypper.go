@@ -107,6 +107,54 @@ func (m *Zypper) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple packages in one zypper invocation.
+func (m *Zypper) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd(m.cmd, "install", "-y"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple packages in one zypper invocation.
+func (m *Zypper) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd(m.cmd, "install", "--force", "-y"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple packages in one zypper invocation.
+func (m *Zypper) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd(m.cmd, "remove", "-y"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // PreviewInstall previews installing pkg.
 // zypper install --dry-run prints the transaction without applying it.
 func (m *Zypper) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {

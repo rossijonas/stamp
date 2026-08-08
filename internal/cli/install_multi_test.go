@@ -1,0 +1,85 @@
+package cli
+
+import (
+	"bytes"
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/rossijonas/stamp/internal/manager"
+)
+
+func TestInstallMany_RequiresManager(t *testing.T) {
+	_, err := execCmd(t, []string{"install", "htop", "atop", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "multiple packages require --manager")
+}
+
+func TestInstallMany_HappyPath(t *testing.T) {
+	buf, err := execCmd(t, []string{"install", "-m", "brew", "htop", "atop", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "installed 2 package(s) via brew")
+}
+
+func TestInstallMany_UnknownManager(t *testing.T) {
+	_, err := execCmd(t, []string{"install", "-m", "nonexistent", "htop", "atop", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not available on this system")
+}
+
+func TestInstallMany_CapabilityError(t *testing.T) {
+	// mockAdapter implements manager.Adapter but not manager.BatchInstaller.
+	_, err := execCmd(t, []string{"install", "-m", "dnf", "htop", "atop", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not support installing multiple packages at once")
+}
+
+func TestInstallMany_GroupRejected(t *testing.T) {
+	_, err := execCmd(t, []string{"install", "-m", "dnf", "htop", "atop", "--group", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--group supports a single package")
+}
+
+func TestInstallMany_InvalidNameAborts(t *testing.T) {
+	_, err := execCmd(t, []string{"install", "-m", "brew", "htop", "bad name", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+// caskMock embeds manager.Mock (full Adapter + BatchInstaller) and reports
+// cask status purely by name so the brew mixed-cask fallback path is testable
+// without the real brew executor.
+type caskMock struct {
+	*manager.Mock
+	installs []string
+}
+
+func (c *caskMock) IsCask(_ context.Context, pkg string) (bool, error) {
+	return pkg == "cask-app", nil
+}
+
+func (c *caskMock) Install(ctx context.Context, pkg string) error {
+	c.installs = append(c.installs, pkg)
+	return c.Mock.Install(ctx, pkg)
+}
+
+func TestInstallMany_BrewMixedCaskFallsBackToSingle(t *testing.T) {
+	adapters := &caskMock{Mock: &manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	root := NewRootCmd(
+		WithAdapters([]manager.Adapter{adapters}),
+		WithManifestPath(tmpDir+"/manifest.toml"),
+		WithConfigPath(tmpDir+"/config.toml"),
+	)
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"install", "-m", "brew", "cask-app", "formula", "-y"})
+	require.NoError(t, root.Execute())
+	assert.Contains(t, buf.String(), "installed 2 package(s) via brew")
+	require.Len(t, adapters.installs, 2, "mixed cask/formula batch must fall back to per-package installs")
+	assert.Equal(t, []string{"cask-app", "formula"}, adapters.installs)
+}

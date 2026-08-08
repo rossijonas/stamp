@@ -214,8 +214,8 @@ func TestInstallCmd_Aliases(t *testing.T) {
 	require.NotNil(t, cmd)
 	assert.Contains(t, cmd.Aliases, "add")
 	require.NoError(t, cmd.ValidateArgs([]string{"pkg"}))
+	require.NoError(t, cmd.ValidateArgs([]string{"a", "b"})) // multi-package install
 	require.Error(t, cmd.ValidateArgs([]string{}))
-	require.Error(t, cmd.ValidateArgs([]string{"a", "b"}))
 }
 
 func TestRemoveCmd_Aliases(t *testing.T) {
