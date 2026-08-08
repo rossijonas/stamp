@@ -726,3 +726,39 @@ degrades safely (min floor wins).
 *   **Verify:** `task check`, `task docs`
 *   **Files:** `docs/usage/doctor.md`, `docs/usage/configuration.md`, `docs/IMPLEMENTATION_PLAN.md`
 *   **Status:** ✓ Completed
+
+### Phase 17: Multi-package install/remove/reinstall (#185)
+
+`stamp install|remove|reinstall` accept multiple packages in one command with
+`-m <manager>` only, using each manager's native multi-package invocation.
+**Batch constraint:** batches are per-manager only — `-m` is mandatory and a
+single batch never spans managers; packages across managers require one command
+per manager. Single-package behavior is unchanged.
+
+**Task 84: Batch capability interfaces + adapter impls (#185)**
+*   **Description:** `manager.BatchInstaller`/`BatchRemover`/`BatchReinstaller` (`InstallMany`/`RemoveMany`/`ReinstallMany(ctx, pkgs ...string)`) + shared `validatePackages`/`batchArgs` helpers. Implemented on 11 adapters per the native-multi matrix; snap omits `BatchReinstaller` (reinstall = remove+install); go/pipx/uv implement none. Mock gains all three for CLI tests.
+*   **Acceptance:** Per-adapter batch arg assertions (tail args == pkgs), consent + validation preserved, capability matrix (snap reinstall absent, go/pipx/uv absent). 100% coverage on new methods.
+*   **Verify:** `go test ./internal/manager/ -run TestBatch -race`
+*   **Files:** `internal/manager/{manager,apt,dnf,pacman,paru,zypper,snap,flatpak,brew,macports,npm,cargo,mock}.go`, `internal/manager/batch_test.go`
+*   **Status:** ✓ Completed
+
+**Task 85: Batch confirmation gate (#185)**
+*   **Description:** `confirmDestructiveMany(ctx, w, in, yes, adapter, mode, verb, pkgs)` — refresh once, best-effort preview per package, single combined prompt (`Verb N package(s) via <mgr>? [y/N]`); all-noop → clean stop; non-terminal without `-y` → `errNonInteractive`.
+*   **Acceptance:** yes-skip, non-terminal refuse, terminal accept/decline, all-noop, refresh-error warn, no-previewer degrade. 100% coverage.
+*   **Verify:** `go test ./internal/cli/ -run TestConfirmDestructiveMany -race`
+*   **Files:** `internal/cli/confirm.go`, `internal/cli/confirm_test.go`
+*   **Status:** ✓ Completed
+
+**Task 86: CLI multi install/remove/reinstall (#185)**
+*   **Description:** `cobra.MinimumNArgs(1)` on all three; `len(args)>1` → require `-m`, resolve once, validate all, capability-gate, brew mixed-cask fallback to per-package single ops (via `caskDetector` interface), `confirmDestructiveMany`, batch exec, manifest updates + one save, `N package(s) via <mgr>` summary.
+*   **Acceptance:** happy paths, missing-`-m` errors, capability errors, `--group` rejection, invalid-name abort, brew mixed-cask fallback, `TestInstallCmd_Aliases` updated for the new multi contract.
+*   **Verify:** `go test ./internal/cli/ -run 'TestInstallMany|TestRemoveMany|TestReinstallMany' -race`
+*   **Files:** `internal/cli/install.go`, `internal/cli/reinstall.go`, `internal/cli/install_multi_test.go`, `internal/cli/remove_reinstall_multi_test.go`, `internal/cli/cmd_test.go`
+*   **Status:** ✓ Completed
+
+**Task 87: Docs + gate (#185)**
+*   **Description:** Spec (§install/§remove/§reinstall + command table), `docs/usage/installing-packages.md` + `removing-packages.md` (multi sections), command `Example` strings (multi variations), IMPLEMENTATION_PLAN. `task check` green.
+*   **Acceptance:** `task check` passes; docs + man consistent.
+*   **Verify:** `task check`, `task docs`
+*   **Files:** `docs/project/spec.md`, `docs/usage/installing-packages.md`, `docs/usage/removing-packages.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Status:** ✓ Completed

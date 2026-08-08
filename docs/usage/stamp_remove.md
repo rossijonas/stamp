@@ -26,6 +26,9 @@ stamp remove <package> [flags]
   stamp rm htop
   stamp delete htop
   stamp del htop
+
+  # remove multiple packages in one command (per-manager batch, -m required)
+  stamp remove htop atop btop -m dnf
 ```
 
 ### Options

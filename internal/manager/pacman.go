@@ -104,6 +104,54 @@ func (m *Pacman) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple packages in one pacman invocation.
+func (m *Pacman) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("pacman", "-S", "--noconfirm"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple packages in one pacman invocation.
+func (m *Pacman) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("pacman", "-S", "--noconfirm"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple packages in one pacman invocation.
+func (m *Pacman) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("pacman", "-Rs", "--noconfirm"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // PreviewInstall previews installing pkg.
 // -S --print prints the resolved targets without modifying the system and
 // without requiring root.

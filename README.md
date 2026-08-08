@@ -48,6 +48,10 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 **`[^]` Origin-Aware Listing** — Every manifest entry records how stamp learned about it: `stamped` (installed via stamp) or `reconciled` (discovered by reconcile). `stamp list -t stamped` shows what you explicitly tracked; `stamp list -t reconciled` shows what reconcile discovered.
 
+**`[&]` Batch Operations** — Install, remove, or reinstall several packages in one native command: `stamp install htop atop btop -m dnf`. Batches are per-manager only, so `-m` is required.
+
+**`[?]` Manifest Tooling** — `stamp manifest history` / `stamp manifest diff` track every manifest backup, and `stamp doctor` / `stamp ls --type missing` surface packages removed behind your back.
+
 **`[#]` Unified Repository Management** — Add, remove, and list third-party repositories &mdash; PPAs, taps, remotes &mdash; across all managers with the same interface.
 
 **`[@]` Familiar Features** — Homebrew casks, file-to-package resolution, orphan cleanup, cache management, version pinning &mdash; stamp brings your native package manager's best features into one CLI. [See the full list &rarr;](docs/project/features.md)

@@ -23,6 +23,9 @@ stamp reinstall <package> [flags]
 
   # reinstall a pre-existing package from a specific manager
   stamp reinstall lazygit -m brew
+
+  # reinstall multiple packages in one command (per-manager batch, -m required)
+  stamp reinstall lazygit jq -m brew
 ```
 
 ### Options

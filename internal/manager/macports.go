@@ -126,6 +126,54 @@ func (m *MacPorts) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple ports in one macports invocation.
+func (m *MacPorts) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("port", "install"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple ports in one macports invocation.
+func (m *MacPorts) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("port", "install", "--force"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple ports in one macports invocation.
+func (m *MacPorts) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("port", "uninstall"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // Search searches for ports via MacPorts.
 func (m *MacPorts) Search(ctx context.Context, query string) ([]string, error) {
 	if err := ValidatePackageName(query); err != nil {

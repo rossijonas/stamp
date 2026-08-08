@@ -189,6 +189,58 @@ func (m *DNF) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple packages in one dnf invocation. Groups are
+// single-package only (the CLI rejects --group with multiple packages).
+func (m *DNF) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if isGroup(ctx) {
+		return fmt.Errorf("batch install is not supported for groups")
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd(m.cmd, "install", "-y"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple packages in one dnf invocation.
+func (m *DNF) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd(m.cmd, "reinstall", "-y"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple packages in one dnf invocation.
+func (m *DNF) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd(m.cmd, "remove", "-y"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // PreviewInstall previews installing pkg.
 // dnf resolves the transaction only when run with privileges, so this runs
 // under sudo; --assumeno answers "no" to the confirmation prompt, so no

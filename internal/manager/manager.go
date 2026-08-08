@@ -26,6 +26,45 @@ func ValidatePackageName(pkg string) error {
 
 var validModulePathRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_\-\.\+/]*$`)
 
+// BatchInstaller is implemented by adapters whose native install command
+// accepts multiple packages in one invocation (e.g. `dnf install a b`). The
+// CLI type-asserts this interface for `stamp install <a> <b> -m <manager>`;
+// adapters without it reject multi-package installs. See issue #185.
+type BatchInstaller interface {
+	InstallMany(ctx context.Context, pkgs ...string) error
+}
+
+// BatchRemover is the remove-side counterpart of BatchInstaller.
+type BatchRemover interface {
+	RemoveMany(ctx context.Context, pkgs ...string) error
+}
+
+// BatchReinstaller is the reinstall-side counterpart of BatchInstaller. Some
+// adapters omit it even when they batch install/remove: snap has no native
+// batch reinstall (reinstall = remove + install), so multi-package reinstall
+// stays single-only there.
+type BatchReinstaller interface {
+	ReinstallMany(ctx context.Context, pkgs ...string) error
+}
+
+// validatePackages validates every package name in a batch before any native
+// command runs, so a bad name aborts the whole operation upfront.
+func validatePackages(pkgs []string) error {
+	for _, p := range pkgs {
+		if err := ValidatePackageName(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// batchArgs appends pkgs to a fixed arg prefix, preserving the caller's slice.
+func batchArgs(args []string, pkgs []string) []string {
+	out := make([]string, 0, len(args)+len(pkgs))
+	out = append(out, args...)
+	return append(out, pkgs...)
+}
+
 // ValidateModulePath ensures the module path is safe for go install.
 // Allows full module paths (e.g., github.com/example/tool) but blocks
 // shell metacharacters via the regex character class.

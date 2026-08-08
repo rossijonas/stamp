@@ -53,9 +53,9 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 | `stamp` | | | Prints welcome message suggesting `stamp hello` or `stamp --help`. |
 | `stamp setup` | `hello` | | Runs first-time setup wizard: completions, man pages, init, doctor. |
 | `stamp init` | | | Initializes `manifest.toml` and takes baseline snapshot. |
-| `stamp install <pkg>` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. |
-| `stamp remove <pkg>` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes natively and untracks. |
-| `stamp reinstall <pkg>` | | | Reinstalls natively and records intent. Works for both manifest-tracked and pre-existing packages. |
+| `stamp install <pkg>...` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. Multiple packages require `-m` (native batch support). |
+| `stamp remove <pkg>...` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes natively and untracks. Multiple packages require `-m` (native batch support). |
+| `stamp reinstall <pkg>...` | | | Reinstalls natively and records intent. Works for both manifest-tracked and pre-existing packages. Multiple packages require `-m` (native batch support). |
 | `stamp search <query>` | | `--manager, -m <name>` | Searches across managers. |
 | `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. |
 | `stamp reconcile` | | `--dry-run, -d`, `--manager, -m <name>` | Detects drift since last snapshot and auto-tracks discovered packages and repositories. Warns when tracked packages are no longer installed. |
@@ -231,12 +231,14 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Usage:** Installs a package natively and records it in the manifest.
 - **Flags:** `--manager`, `-m`, `--note`, `-n`
 - **Behavior:** Validates name, resolves manager, refreshes metadata and shows a native dry-run preview, prompts for confirmation (`Install <pkg> via <mgr>? [y/N]`, default No, `-y` to skip), then runs native install, appends package to manifest, saves manifest. For managers requiring root (e.g., DNF), write operations automatically wrap with `sudo` — TTY-aware, prompts for password when needed. On systems where `dnf` is unavailable, the adapter falls back to `yum` automatically.
+- **Multiple packages (issue #185):** `stamp install <pkg1> <pkg2> ... -m <mgr>` installs a whole batch in one native invocation. **Batch constraint:** multi-package batches are **per-manager only** — `-m <manager>` is mandatory and a single batch never spans managers; to operate on packages across managers, run one command per manager. Only managers with native multi-package support participate (`go`, `pipx`, `uv` reject with a capability error; brew falls back to per-package installs when a batch mixes casks and formulae). Confirmation is a single combined prompt (`Install N package(s) via <mgr>? [y/N]`); the manifest is saved once; output is `installed N package(s) via <mgr>`.
 
 ### `stamp remove <pkg>` (aliases `uninstall`, `rm`, `delete`, `del`)
 
 - **Usage:** Removes a package natively and untracks it.
 - **Flags:** `--manager`, `-m`
 - **Behavior:** Looks up recorded manager from manifest if not overridden by `-m`. Prompts for confirmation (`Remove <pkg> via <mgr>? [y/N]`, `-y` to skip). Runs native remove, deletes package from manifest, saves manifest.
+- **Multiple packages (issue #185):** `stamp remove <pkg1> <pkg2> ... -m <mgr>` removes a whole batch in one native invocation. **Batch constraint:** multi-package batches are **per-manager only** — `-m <manager>` is mandatory and a single batch never spans managers; to operate on packages across managers, run one command per manager. Only managers with native multi-package support participate. Single combined prompt; one manifest save; output `removed N package(s) via <mgr>`.
 
 ### `stamp reinstall <pkg>` (C4)
 
@@ -249,6 +251,7 @@ Detailed specifications, execution behaviors, and business rules for every subco
   4. Before executing, prompts for confirmation (`Reinstall <pkg> via <mgr>? [y/N]`, default No, `-y` to skip).
   5. Saves new system snapshots and saves manifest (updates `updated_at`).
 - **Output:** `reinstalled htop via brew` to stderr.
+- **Multiple packages (issue #185):** `stamp reinstall <pkg1> <pkg2> ... -m <mgr>` reinstalls a whole batch in one native invocation. **Batch constraint:** multi-package batches are **per-manager only** — `-m <manager>` is mandatory and a single batch never spans managers; to operate on packages across managers, run one command per manager. A package already tracked under a different manager fails fast (`package X is tracked under <mgr>, not <other>; reinstall it with -m <mgr>`) before anything runs. Only managers with native multi-package reinstall support participate (`snap` is excluded — reinstall is remove + install there). Single combined prompt; snapshot + manifest saved once; output `reinstalled N package(s) via <mgr>`.
 
 ### `stamp search <query>`
 

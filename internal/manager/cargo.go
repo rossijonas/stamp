@@ -110,6 +110,54 @@ func (m *Cargo) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple crates in one cargo invocation.
+func (m *Cargo) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := append([]string{"install"}, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "cargo", args...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple crates in one cargo invocation.
+func (m *Cargo) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := append([]string{"install", "--force"}, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "cargo", args...)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple crates in one cargo invocation.
+func (m *Cargo) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := append([]string{"uninstall"}, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "cargo", args...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // Search searches crates.io for packages via cargo search.
 func (m *Cargo) Search(ctx context.Context, query string) ([]string, error) {
 	if err := ValidatePackageName(query); err != nil {

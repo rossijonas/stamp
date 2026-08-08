@@ -18,6 +18,9 @@ stamp install <package> [flags]
   # install from a specific manager
   stamp install spotify -m flatpak
 
+  # install multiple packages in one command (per-manager batch, -m required)
+  stamp install htop atop btop -m dnf
+
   # install a DNF package group (name may contain spaces)
   stamp install "Development Tools" -m dnf --group
 

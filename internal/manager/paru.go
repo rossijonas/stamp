@@ -81,6 +81,54 @@ func (m *Paru) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple packages in one paru invocation.
+func (m *Paru) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple packages in one paru invocation.
+func (m *Paru) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple packages in one paru invocation.
+func (m *Paru) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("paru", "-Rs", "--noconfirm"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // Search searches for packages via paru (official repos + AUR).
 func (m *Paru) Search(ctx context.Context, query string) ([]string, error) {
 	if err := ValidatePackageName(query); err != nil {

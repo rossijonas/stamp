@@ -112,6 +112,39 @@ func (m *Snap) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple snaps in one snap invocation.
+func (m *Snap) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("snap", "install"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple snaps in one snap invocation. Note: snap has no
+// BatchReinstaller — reinstall is remove + install, with no native batch form.
+func (m *Snap) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := batchArgs(sudoCmd("snap", "remove"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // Search searches for snap packages matching the query.
 func (m *Snap) Search(ctx context.Context, query string) ([]string, error) {
 	if err := ValidatePackageName(query); err != nil {

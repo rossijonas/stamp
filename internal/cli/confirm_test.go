@@ -176,3 +176,73 @@ func TestHandleConsent(t *testing.T) {
 	require.NoError(t, handleConsent(errStopClean))                         // noop/decline/cancel → exit 0
 	require.ErrorIs(t, handleConsent(errNonInteractive), errNonInteractive) // non-interactive → exit 1
 }
+
+func TestConfirmDestructiveMany_YesFlagSkipsEverything(t *testing.T) {
+	var buf bytes.Buffer
+	a := &manager.Mock{ManagerName: "dnf", RefreshErr: errors.New("offline")}
+	err := confirmDestructiveMany(context.Background(), &buf, strings.NewReader("y\n"), true, a, previewInstall, "Install", []string{"htop", "atop"})
+	require.NoError(t, err)
+	assert.Empty(t, buf.String())
+}
+
+func TestConfirmDestructiveMany_NonTerminalRefuses(t *testing.T) {
+	var buf bytes.Buffer
+	a := &manager.Mock{ManagerName: "dnf"}
+	err := confirmDestructiveMany(context.Background(), &buf, strings.NewReader("y\n"), false, a, previewInstall, "Install", []string{"htop", "atop"})
+	require.ErrorIs(t, err, errNonInteractive)
+	output := buf.String()
+	assert.Contains(t, output, "Install: htop@1.0.0")
+	assert.Contains(t, output, "Install: atop@1.0.0")
+	assert.NotContains(t, output, "aborted")
+	assert.NotContains(t, output, "[y/N]: ")
+}
+
+func TestConfirmDestructiveMany_TerminalAccept(t *testing.T) {
+	saveRestoreTerminal(t)
+	var buf bytes.Buffer
+	a := &manager.Mock{ManagerName: "dnf"}
+	err := confirmDestructiveMany(context.Background(), &buf, newLineReader("y"), false, a, previewInstall, "Install", []string{"htop", "atop"})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Install 2 package(s) via dnf? [y/N]: ")
+	assert.Contains(t, output, "Install: htop@1.0.0")
+	assert.NotContains(t, output, "aborted")
+}
+
+func TestConfirmDestructiveMany_TerminalDecline(t *testing.T) {
+	saveRestoreTerminal(t)
+	var buf bytes.Buffer
+	a := &manager.Mock{ManagerName: "dnf"}
+	err := confirmDestructiveMany(context.Background(), &buf, newLineReader("n"), false, a, previewInstall, "Install", []string{"htop", "atop"})
+	require.ErrorIs(t, err, errStopClean)
+	assert.Contains(t, buf.String(), "aborted")
+}
+
+func TestConfirmDestructiveMany_AllNoopStops(t *testing.T) {
+	var buf bytes.Buffer
+	a := &manager.Mock{ManagerName: "dnf", PreviewNoop: true}
+	err := confirmDestructiveMany(context.Background(), &buf, strings.NewReader("y\n"), false, a, previewInstall, "Install", []string{"htop", "atop"})
+	require.ErrorIs(t, err, errStopClean)
+	assert.Contains(t, buf.String(), "nothing to do: 2 package(s) via dnf")
+	assert.NotContains(t, buf.String(), "[y/N]: ")
+}
+
+func TestConfirmDestructiveMany_RefreshErrorWarns(t *testing.T) {
+	saveRestoreTerminal(t)
+	var buf bytes.Buffer
+	a := &manager.Mock{ManagerName: "dnf", RefreshErr: errors.New("offline")}
+	err := confirmDestructiveMany(context.Background(), &buf, newLineReader("y"), false, a, previewInstall, "Install", []string{"htop"})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "refresh failed")
+}
+
+func TestConfirmDestructiveMany_NoPreviewerDegradesToPrompt(t *testing.T) {
+	saveRestoreTerminal(t)
+	var buf bytes.Buffer
+	a := &mockAdapter{name: "dnf"} // does not implement manager.Previewer
+	err := confirmDestructiveMany(context.Background(), &buf, newLineReader("y"), false, a, previewInstall, "Install", []string{"htop", "atop"})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "could not render preview for htop")
+	assert.Contains(t, output, "Install 2 package(s) via dnf? [y/N]: ")
+}

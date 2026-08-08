@@ -142,6 +142,68 @@ func (m *Brew) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple formulae/casks in one brew invocation. The
+// cask flag is batch-wide; the CLI falls back to per-package installs when a
+// batch mixes casks and formulae.
+func (m *Brew) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := []string{"install"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany reinstalls multiple formulae/casks in one brew invocation.
+func (m *Brew) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := []string{"reinstall"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	if err != nil {
+		return fmt.Errorf("failed to reinstall packages: %w", err)
+	}
+	return nil
+}
+
+// RemoveMany removes multiple formulae/casks in one brew invocation.
+func (m *Brew) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := []string{"uninstall"}
+	if isCask(ctx) {
+		args = append(args, "--cask")
+	}
+	args = append(args, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // PreviewInstall previews installing pkg.
 // brew install --dry-run prints what would be installed without changing
 // anything and without requiring root.

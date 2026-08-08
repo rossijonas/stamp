@@ -115,6 +115,67 @@ func confirmDestructive(ctx context.Context, w io.Writer, in io.Reader, yes bool
 	return nil
 }
 
+// confirmDestructiveMany is the shared confirmation gate for multi-package
+// install/remove/reinstall. It refreshes metadata once (install/reinstall
+// only), previews each package best-effort (a preview failure or a missing
+// previewer degrades to warn-and-prompt for the batch), renders the preview
+// output, then asks a single combined prompt. If every package previews as a
+// no-op, the batch stops cleanly with errStopClean. A non-terminal input
+// without -y returns errNonInteractive (fail closed for pipelines/CI).
+func confirmDestructiveMany(ctx context.Context, w io.Writer, in io.Reader, yes bool,
+	adapter manager.Adapter, mode previewMode, verb string, pkgs []string) error {
+	if yes {
+		return nil
+	}
+
+	if mode != previewRemove {
+		if err := adapter.Refresh(ctx); err != nil {
+			_, _ = fmt.Fprintf(w, "  ⚠ %s: refresh failed: %v\n", adapter.Name(), err)
+		}
+	}
+
+	allNoop := true
+	for _, p := range pkgs {
+		pv, previewErr := previewOutput(ctx, adapter, mode, p)
+
+		// Interrupted (SIGINT) during refresh/preview: abort without prompting.
+		if ctx.Err() != nil {
+			_, _ = fmt.Fprintln(w, "aborted")
+			return errStopClean
+		}
+
+		switch {
+		case previewErr != nil:
+			allNoop = false
+			_, _ = fmt.Fprintf(w, "  ⚠ %s: could not render preview for %s: %v\n", adapter.Name(), p, previewErr)
+		case pv.Noop:
+			if strings.TrimSpace(pv.Output) != "" {
+				_, _ = fmt.Fprintln(w, pv.Output)
+			}
+		default:
+			allNoop = false
+			if strings.TrimSpace(pv.Output) != "" {
+				_, _ = fmt.Fprintln(w, pv.Output)
+			}
+		}
+	}
+
+	if allNoop {
+		_, _ = fmt.Fprintf(w, "  nothing to do: %d package(s) via %s\n", len(pkgs), adapter.Name())
+		return errStopClean
+	}
+
+	msg := fmt.Sprintf("%s %d package(s) via %s? [y/N]: ", verb, len(pkgs), adapter.Name())
+	if err := consentPrompt(ctx, w, in, msg); err != nil {
+		if errors.Is(err, errNonInteractive) {
+			return fmt.Errorf("%w (%s %d package(s) via %s)", errNonInteractive, verb, len(pkgs), adapter.Name())
+		}
+		_, _ = fmt.Fprintln(w, "aborted")
+		return errStopClean
+	}
+	return nil
+}
+
 // requireConsent prompts for confirmation unless the global -y/--yes flag is
 // set. Non-interactive input without -y returns errNonInteractive so callers
 // exit non-zero; an interactive decline returns errStopClean (exit 0). Callers

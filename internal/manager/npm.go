@@ -106,6 +106,43 @@ func (m *Npm) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple global packages in one npm invocation.
+func (m *Npm) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	cmdArgs := batchArgs(sudoCmd("npm", "install", "-g"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), cmdArgs[0], cmdArgs[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany is the same as InstallMany (npm install is idempotent).
+func (m *Npm) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	return m.InstallMany(ctx, pkgs...)
+}
+
+// RemoveMany removes multiple global packages in one npm invocation.
+func (m *Npm) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	cmdArgs := batchArgs(sudoCmd("npm", "uninstall", "-g"), pkgs)
+	_, err := m.exec(WithStreamIO(ctx), cmdArgs[0], cmdArgs[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // PreviewInstall previews installing pkg.
 // npm install --dry-run reports what would be installed without changes.
 func (m *Npm) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {

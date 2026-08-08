@@ -105,6 +105,43 @@ func (m *Flatpak) Remove(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// InstallMany installs multiple apps in one flatpak invocation.
+func (m *Flatpak) InstallMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := append([]string{"install", "-y"}, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", args...)
+	if err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
+// ReinstallMany is the same as InstallMany (flatpak reinstall ≡ install).
+func (m *Flatpak) ReinstallMany(ctx context.Context, pkgs ...string) error {
+	return m.InstallMany(ctx, pkgs...)
+}
+
+// RemoveMany removes multiple apps in one flatpak invocation.
+func (m *Flatpak) RemoveMany(ctx context.Context, pkgs ...string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validatePackages(pkgs); err != nil {
+		return err
+	}
+	args := append([]string{"uninstall", "-y"}, pkgs...)
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", args...)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
+}
+
 // PreviewInstall previews installing pkg.
 // flatpak install --dry-run simulates the installation without changes.
 func (m *Flatpak) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
