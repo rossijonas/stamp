@@ -3,7 +3,11 @@ package manager
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +16,44 @@ import (
 // dnfReposDir is the directory containing .repo files. Declared as a variable
 // so tests can override it with a temporary directory.
 var dnfReposDir = "/etc/yum.repos.d"
+
+// maxRepoFileBytes caps downloads of .repo files to prevent unbounded memory use.
+const maxRepoFileBytes = 1 << 20
+
+// dnfRepoFetcher fetches a .repo file over HTTP(S). Declared as a variable so
+// tests can inject a stub without network access.
+var dnfRepoFetcher = func(ctx context.Context, rawURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for %s: %w", rawURL, err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch %s: %w", rawURL, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch %s: unexpected status %d", rawURL, resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxRepoFileBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response from %s: %w", rawURL, err)
+	}
+	if len(body) > maxRepoFileBytes {
+		return nil, fmt.Errorf("repo file at %s exceeds %d bytes", rawURL, maxRepoFileBytes)
+	}
+	return body, nil
+}
+
+// isRepofileURL reports whether the URL points at a .repo configuration file
+// (case-insensitive suffix on the URL path).
+func isRepofileURL(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	return strings.HasSuffix(strings.ToLower(parsed.Path), ".repo")
+}
 
 // ListRepos returns a list of configured third-party repositories by parsing
 // .repo files directly. No shell exec, no cache, no sudo.
@@ -141,13 +183,60 @@ func parseDNFRepos(output []byte) []string {
 	return repos
 }
 
+// validateRepoFileContent rejects fetched content that is not a plausible
+// .repo file: it must contain at least one [section] and a baseurl, metalink,
+// or mirrorlist key.
+func validateRepoFileContent(content []byte) error {
+	lines := strings.Split(string(content), "\n")
+	hasSection := false
+	hasURL := false
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			hasSection = true
+			continue
+		}
+		eq := strings.IndexByte(line, '=')
+		if eq < 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:eq])
+		switch key {
+		case "baseurl", "metalink", "mirrorlist":
+			hasURL = true
+		}
+	}
+	if !hasSection {
+		return errors.New("no repo sections found in fetched repo file")
+	}
+	if !hasURL {
+		return errors.New("no baseurl, metalink, or mirrorlist found in fetched repo file")
+	}
+	return nil
+}
+
 // AddRepo enables a third-party repository.
 func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
 	if url != "" {
-		content := fmt.Sprintf("[%s]\nname=%s\nbaseurl=%s\nenabled=1\ngpgcheck=0\n", name, name, url)
+		var content string
+		if isRepofileURL(url) {
+			fetched, err := dnfRepoFetcher(ctx, url)
+			if err != nil {
+				return fmt.Errorf("failed to fetch repo file: %w", err)
+			}
+			if err := validateRepoFileContent(fetched); err != nil {
+				return fmt.Errorf("invalid repo file from %s: %w", url, err)
+			}
+			content = string(fetched)
+		} else {
+			content = fmt.Sprintf("[%s]\nname=%s\nbaseurl=%s\nenabled=1\ngpgcheck=0\n", name, name, url)
+		}
 		tmpFile, err := os.CreateTemp("", fmt.Sprintf("stamp-%s-*.repo", name))
 		if err != nil {
 			return fmt.Errorf("failed to create temp file: %w", err)
@@ -161,7 +250,7 @@ func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 		_ = tmpFile.Close()
 		defer func() { _ = os.Remove(tmpPath) }()
 
-		destPath := fmt.Sprintf("/etc/yum.repos.d/%s.repo", name)
+		destPath := filepath.Join(dnfReposDir, filepath.Base(name)+".repo")
 		args := sudoCmd("mv", tmpPath, destPath)
 		_, err = m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 		if err != nil {
@@ -177,10 +266,21 @@ func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 	return nil
 }
 
-// RemoveRepo disables a third-party repository.
+// RemoveRepo removes a third-party repository. Repos added by URL (bare
+// baseurl or .repo file) are removed by deleting their .repo file; name-only
+// COPR repos fall back to dnf copr disable.
 func (m *DNF) RemoveRepo(ctx context.Context, name string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
+	}
+	repoPath := filepath.Join(dnfReposDir, filepath.Base(name)+".repo")
+	if _, err := os.Stat(repoPath); err == nil {
+		args := sudoCmd("rm", "-f", repoPath)
+		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
+		if err != nil {
+			return fmt.Errorf("failed to remove repo file %s: %w", repoPath, err)
+		}
+		return nil
 	}
 	args := sudoCmd(m.cmd, "copr", "disable", "-y", name)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)

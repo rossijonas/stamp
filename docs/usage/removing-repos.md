@@ -12,6 +12,13 @@ stamp repo remove ppa:git-core/ppa -m apt
 ✓ removed ppa:git-core/ppa via apt
 ```
 
+The `--manager` / `-m` flag is optional: when the repository is tracked in the
+manifest, the recorded manager is used automatically.
+
+```bash
+stamp repo remove enpass
+```
+
 ### Using aliases
 
 ```bash
@@ -20,4 +27,15 @@ stamp repo delete copr:user/repo -m dnf
 stamp repo uninstall ppa:git-core/ppa -m apt
 ```
 
-The `--manager` / `-m` flag is required.
+### DNF removal by repo type
+
+For DNF, removal follows how the repository was added:
+
+| Added as | Removed by |
+|---------|-----------|
+| COPR (`stamp repo add user/repo -m dnf`) | `dnf copr disable` |
+| URL (baseurl or `.repo` file, e.g. Brave, Enpass) | deleting `/etc/yum.repos.d/<name>.repo` |
+
+Repos added by URL are removed by deleting their `.repo` file; name-only COPR
+repos are disabled via `dnf copr disable`.
+

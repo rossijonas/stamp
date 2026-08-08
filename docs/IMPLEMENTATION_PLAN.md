@@ -762,3 +762,58 @@ per manager. Single-package behavior is unchanged.
 *   **Verify:** `task check`, `task docs`
 *   **Files:** `docs/project/spec.md`, `docs/usage/installing-packages.md`, `docs/usage/removing-packages.md`, `docs/IMPLEMENTATION_PLAN.md`
 *   **Status:** ✓ Completed
+
+### Phase 18: DNF `.repo` file URL support (#190)
+
+`stamp repo add <name> <url> -m dnf` fetches `.repo`-suffixed URLs verbatim
+into `/etc/yum.repos.d/`, preserving `baseurl`, `gpgkey`, and `gpgcheck=1`.
+Non-`.repo` URLs keep the synthesized baseurl path; name-only keeps COPR.
+
+**Task 88: DNF repofile fetcher + detection (#190)**
+*   **Description:** `dnfRepoFetcher` package var (ctx-aware `http.Get`, 1 MiB `LimitReader`, non-200 → error) + `isRepofileURL` (case-insensitive `.repo` path suffix). `validateRepoFileContent` rejects content without a `[section]` or a `baseurl`/`metalink`/`mirrorlist` key.
+*   **Acceptance:** Table tests for detection (`.repo`, `.REPO`, query string, non-repo, bare host) and fetcher via httptest (200, 404, empty, oversized, cancelled ctx). 100% coverage on new helpers.
+*   **Verify:** `go test ./internal/manager/ -run 'TestIsRepofileURL|TestDNFRepoFetcher' -race`
+*   **Files:** `internal/manager/dnf_repo.go`, `internal/manager/dnf_repo_test.go`
+*   **Status:** ✓ Completed
+
+**Task 89: DNF AddRepo repofile branch (#190)**
+*   **Description:** `AddRepo` branches on `isRepofileURL`: fetch → validate → temp file → `sudo mv` to `dnfReposDir/<name>.repo`. Baseurl and COPR paths unchanged; baseurl destPath refactored to `dnfReposDir` + `filepath.Base` traversal guard.
+*   **Acceptance:** Repofile success (verbatim content, gpgcheck preserved), fetch error wrap, invalid content rejected with no write, mv error wrap, baseurl/COPR regression. 100% coverage on new branch.
+*   **Verify:** `go test ./internal/manager/ -run 'TestDNF_AddRepo' -race`
+*   **Files:** `internal/manager/dnf_repo.go`, `internal/manager/dnf_repo_test.go`
+*   **Status:** ✓ Completed
+
+**Task 90: Docs + gate (#190)**
+*   **Description:** Cobra `Example` for `repo add` (`.repo` URL), spec command row, `installing-repos.md` (repofile section + DNF table row), features.md repo note, IMPLEMENTATION_PLAN. `task check` green.
+*   **Acceptance:** `task check` passes; docs + man consistent (`task docs` regenerates `stamp-repo-add.1` and `stamp_repo_add.md`).
+*   **Verify:** `task check`, `task docs`
+*   **Files:** `internal/cli/repo.go`, `docs/usage/installing-repos.md`, `docs/project/features.md`, `docs/project/spec.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Status:** ✓ Completed
+
+**Task 91: Single-URL auto-name derivation (#190)**
+*   **Description:** `stamp repo add <url> -m dnf` with no `<name>` derives the name from the URL (path basename with `.repo` stripped, host fallback for pathless URLs) and promotes the URL into the `url` slot. `deriveRepoName` + `isRepoURL` helpers; `validateRepoName` still rejects underivable/illegal names with a usage error.
+*   **Acceptance:** `TestDeriveRepoName` table (repofile, uppercase ext, query string, bare host, trailing slash, nested); `TestRepoAddCmd_SingleURL_AutoName` (derived name + URL persisted to manifest), `_SingleBareURL_HostFallback`, `_SingleURL_Undervivable` (usage error, exit code), `_NameOnly_StillWorks` regression (tap/copr/ppa/tap names unchanged). 100% coverage on new helpers.
+*   **Verify:** `go test ./internal/cli/ -run 'TestRepoAddCmd|TestDeriveRepoName' -race`
+*   **Files:** `internal/cli/repo.go`, `internal/cli/repo_add_test.go`
+*   **Status:** ✓ Completed
+
+**Task 92: Single-URL docs + gate (#190)**
+*   **Description:** `installing-repos.md` (URL-without-name section), spec repo add row, cobra `Example` (single-URL line), `Use` string `add [name] [url]`. `task check` green.
+*   **Acceptance:** `task check` passes; docs + man consistent.
+*   **Verify:** `task check`, `task docs`
+*   **Files:** `internal/cli/repo.go`, `docs/usage/installing-repos.md`, `docs/project/spec.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Status:** ✓ Completed
+
+**Task 93: DNF repo remove by URL + optional -m (#191)**
+*   **Description:** `DNF.RemoveRepo` removes a URL-added repo by deleting its `.repo` file (file-first, `dnf copr disable` fallback for COPR). `stamp repo remove` no longer requires `-m`: the manager is looked up from the manifest when tracked, with `-m` overriding and a usage error when neither applies.
+*   **Acceptance:** `TestDNF_RemoveRepo_File` (rm -f path), `_FileMissing_CoprFallback`, `_File_ExecError`, `_Copr_ExecError`; `TestRepoRemoveCmd_ManagerFromManifest` (no `-m`, manifest manager), `_NoManagerNotTracked` (usage error), `_ExplicitManager`, `_ManagerFlagNotRequired`. 100% coverage on changed branches.
+*   **Verify:** `go test ./internal/manager/ -run TestDNF_RemoveRepo -race`, `go test ./internal/cli/ -run TestRepoRemoveCmd -race`
+*   **Files:** `internal/manager/dnf_repo.go`, `internal/manager/dnf_repo_test.go`, `internal/cli/repo.go`, `internal/cli/repo_remove_test.go`
+*   **Status:** ✓ Completed
+
+**Task 94: Repo remove docs + gate (#191)**
+*   **Description:** `removing-repos.md` (optional `-m` + DNF removal-by-type table), spec repo remove row + prose, features.md repo remove rows + repo management note, cobra `Example` (no-`-m` line), IMPLEMENTATION_PLAN. `task check` green.
+*   **Acceptance:** `task check` passes; docs + man consistent (`task docs` regenerates `stamp-repo-remove.1`).
+*   **Verify:** `task check`, `task docs`
+*   **Files:** `internal/cli/repo.go`, `docs/usage/removing-repos.md`, `docs/project/spec.md`, `docs/project/features.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Status:** ✓ Completed
