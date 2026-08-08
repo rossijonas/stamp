@@ -65,7 +65,8 @@ func TestDoctor_JSON(t *testing.T) {
 	assert.True(t, names["uv"])
 
 	assert.NotEmpty(t, report.Manifest.Path)
-	assert.False(t, report.NoColor) // NO_COLOR not set in tests
+	assert.True(t, report.Config.Valid) // no config.toml -> defaults
+	assert.False(t, report.NoColor)     // NO_COLOR not set in tests
 	assert.False(t, report.ManPage.Installed)
 }
 
@@ -83,6 +84,117 @@ func TestDoctor_NOCOLOR_Set(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, report.NoColor)
+}
+
+func TestDoctor_Config_Valid(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "Configuration:")
+	assert.Contains(t, output, "✓ Valid")
+	assert.NotContains(t, output, "invalid [backup]")
+}
+
+func TestDoctor_Config_MissingFileDefaultsValid(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml") // never written
+	require.NoError(t, os.WriteFile(mPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+
+	require.NoError(t, root.Execute())
+
+	var report doctorReport
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &report))
+	assert.True(t, report.Config.Valid)
+	assert.Empty(t, report.Config.Error)
+}
+
+func TestDoctor_Config_InvalidMinExceedsMax(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+	require.NoError(t, os.WriteFile(cPath, []byte(`[backup]
+max_manifest_backups = 10
+min_manifest_backups = 30
+`), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor"})
+
+	require.NoError(t, root.Execute())
+	output := buf.String()
+	assert.Contains(t, output, "Configuration:")
+	assert.Contains(t, output, "✗ invalid [backup] config:")
+	assert.Contains(t, output, "min_manifest_backups (30) exceeds max_manifest_backups (10)")
+	assert.Contains(t, output, "fixing config.toml")
+}
+
+func TestDoctor_Config_InvalidJSON(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
+	require.NoError(t, os.WriteFile(cPath, []byte(`[backup]
+min_manifest_backup_age_days = 90
+max_manifest_backup_age_days = 30
+`), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+
+	require.NoError(t, root.Execute())
+
+	var report doctorReport
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &report))
+	assert.False(t, report.Config.Valid)
+	assert.Contains(t, report.Config.Error, "min_manifest_backup_age_days (90) exceeds max_manifest_backup_age_days (30)")
 }
 
 func TestDoctor_SystemMissing_TTY(t *testing.T) {

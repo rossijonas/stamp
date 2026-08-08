@@ -283,3 +283,138 @@ func TestWriteConfigAtomic_RenameError(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, leftovers)
 }
+
+func TestBackupConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     BackupConfig
+		wantErr string
+	}{
+		{
+			name: "defaults are valid",
+			cfg:  DefaultBackupConfig(),
+		},
+		{
+			name: "zero value config is valid (all unlimited)",
+			cfg:  BackupConfig{},
+		},
+		{
+			name: "zero max with nonzero min is valid (unlimited cap)",
+			cfg: BackupConfig{
+				MinManifestBackups: 3,
+				MaxManifestBackups: 0,
+			},
+		},
+		{
+			name: "zero min age with nonzero max age is valid (no floor)",
+			cfg: BackupConfig{
+				MinManifestBackupAgeDays: 0,
+				MaxManifestBackupAgeDays: 30,
+			},
+		},
+		{
+			name: "manifest min keep exceeds max keep",
+			cfg: BackupConfig{
+				MaxManifestBackups: 10,
+				MinManifestBackups: 30,
+			},
+			wantErr: "min_manifest_backups (30) exceeds max_manifest_backups (10)",
+		},
+		{
+			name: "snapshot min keep exceeds max keep",
+			cfg: BackupConfig{
+				MaxSnapshotBackups: 5,
+				MinSnapshotBackups: 8,
+			},
+			wantErr: "min_snapshot_backups (8) exceeds max_snapshot_backups (5)",
+		},
+		{
+			name: "manifest min age exceeds max age",
+			cfg: BackupConfig{
+				MinManifestBackupAgeDays: 90,
+				MaxManifestBackupAgeDays: 30,
+			},
+			wantErr: "min_manifest_backup_age_days (90) exceeds max_manifest_backup_age_days (30)",
+		},
+		{
+			name: "snapshot min age exceeds max age",
+			cfg: BackupConfig{
+				MinSnapshotBackupAgeDays: 60,
+				MaxSnapshotBackupAgeDays: 7,
+			},
+			wantErr: "min_snapshot_backup_age_days (60) exceeds max_snapshot_backup_age_days (7)",
+		},
+		{
+			name: "negative max manifest keep",
+			cfg: BackupConfig{
+				MaxManifestBackups: -1,
+			},
+			wantErr: "negative value for max_manifest_backups",
+		},
+		{
+			name: "negative min manifest keep",
+			cfg: BackupConfig{
+				MinManifestBackups: -2,
+			},
+			wantErr: "negative value for min_manifest_backups",
+		},
+		{
+			name: "negative max snapshot age",
+			cfg: BackupConfig{
+				MaxSnapshotBackupAgeDays: -7,
+			},
+			wantErr: "negative value for max_snapshot_backup_age_days",
+		},
+		{
+			name: "multiple issues are joined",
+			cfg: BackupConfig{
+				MinManifestBackups:       30,
+				MaxManifestBackups:       10,
+				MinManifestBackupAgeDays: 90,
+				MaxManifestBackupAgeDays: 30,
+				MinSnapshotBackups:       -1,
+			},
+			wantErr: "min_manifest_backups (30) exceeds max_manifest_backups (10)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.Validate()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+func TestBackupAxisError(t *testing.T) {
+	tests := []struct {
+		name string
+		min  int
+		max  int
+		want string
+	}{
+		{"valid pair", 3, 10, ""},
+		{"min zero disables floor check", 0, 10, ""},
+		{"max zero disables cap check", 3, 0, ""},
+		{"both zero", 0, 0, ""},
+		{"negative min", -1, 10, "negative value for min_key"},
+		{"negative max", 3, -1, "negative value for max_key"},
+		{"min exceeds max", 30, 10, "min_key (30) exceeds max_key (10)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := backupAxisError(tt.min, tt.max, "min_key", "max_key")
+			if tt.want == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Equal(t, tt.want, err.Error())
+		})
+	}
+}

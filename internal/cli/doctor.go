@@ -28,6 +28,12 @@ type manifestStatus struct {
 	Missing       []manifest.Package `json:"missing,omitempty"`
 }
 
+type configStatus struct {
+	Path  string `json:"path"`
+	Valid bool   `json:"valid"`
+	Error string `json:"error,omitempty"`
+}
+
 type completionStatus struct {
 	Installed bool     `json:"installed"`
 	Shells    []string `json:"shells,omitempty"`
@@ -38,6 +44,7 @@ type doctorReport struct {
 	Version         string           `json:"version"`
 	PackageManagers []managerStatus  `json:"package_managers"`
 	Manifest        manifestStatus   `json:"manifest"`
+	Config          configStatus     `json:"config"`
 	NoColor         bool             `json:"no_color"`
 	ManPage         manPageStatus    `json:"man_page"`
 	Completions     completionStatus `json:"completions"`
@@ -172,6 +179,12 @@ Reports which managers are installed and whether the manifest is valid.`,
 			if ms.Valid {
 				ms.Missing = missingFromSystem(cmd.Context(), app.adapters, app.manifest)
 			}
+			cs := configStatus{Path: app.configPath}
+			if err := app.config.Backup.Validate(); err != nil {
+				cs.Error = err.Error()
+			} else {
+				cs.Valid = true
+			}
 
 			var mpInstalled bool
 			var mpPath string
@@ -192,6 +205,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 				Version:         Version,
 				PackageManagers: managers,
 				Manifest:        ms,
+				Config:          cs,
 				NoColor:         app.noColor,
 				ManPage: manPageStatus{
 					Installed: mpInstalled,

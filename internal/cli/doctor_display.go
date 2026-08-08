@@ -40,6 +40,19 @@ func renderDoctorTTY(w io.Writer, d *doctorReport, noColor bool) {
 	}
 
 	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, "Configuration:")
+	_, _ = fmt.Fprintf(w, "  Path:   %s\n", d.Config.Path)
+	if d.Config.Valid {
+		_, _ = fmt.Fprintln(w, "  Status: ✓ Valid")
+	} else {
+		_, _ = fmt.Fprintln(w, "  Status: ✗ invalid [backup] config:")
+		for _, line := range strings.Split(d.Config.Error, "\n") {
+			_, _ = fmt.Fprintf(w, "    %s\n", line)
+		}
+		_, _ = fmt.Fprintln(w, "    run 'stamp doctor' after fixing config.toml")
+	}
+
+	_, _ = fmt.Fprintln(w)
 	_, _ = fmt.Fprintln(w, "UNIX Compliance:")
 	if noColor {
 		_, _ = fmt.Fprintln(w, "  NO_COLOR: ✓ Set")
