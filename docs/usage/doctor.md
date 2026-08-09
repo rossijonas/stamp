@@ -18,18 +18,18 @@ Package Managers:
   Name       Status     Path                   Details
   apt        ✓ Active   /usr/bin/apt           Default system manager (Debian/Ubuntu)
   dnf        ✓ Active   /usr/bin/dnf           Default system manager (Fedora/RHEL, alias yum)
-  brew       ✓ Active   /home/user/.linuxbrew  User-space manager
-  flatpak    ✓ Active   /usr/bin/flatpak       Sandboxed application distribution
+  pacman     ✗ Not Found -                     Executable not found in $PATH
+  paru       ✗ Not Found -                     Executable not found in $PATH
+  zypper     ✗ Not Found -                     Executable not found in $PATH
   snap       ✓ Active   /usr/bin/snap          Universal Linux package manager
-  pacman     ✗ Not Found -                     Package manager for Arch Linux
-  paru       ✗ Not Found -                     AUR helper for Arch Linux
-  zypper     ✗ Not Found -                     Package manager for openSUSE/SLES
-  macports   ✗ Not Found -                     Package manager for macOS
+  flatpak    ✓ Active   /usr/bin/flatpak       Sandboxed application distribution
+  brew       ✓ Active   /home/user/.linuxbrew/bin/brew User-space manager
+  macports   ✗ Not Found -                     Executable not found in $PATH
   go         ✓ Active   /usr/local/go/bin/go   Language toolchain — go install
   npm        ✓ Active   /usr/bin/npm           Node.js package manager
-  cargo      ✗ Not Found -                     Rust package manager — cargo install
+  cargo      ✗ Not Found -                     Executable not found in $PATH
   pipx       ✓ Active   /usr/bin/pipx          Python tool installer
-  uv         ✗ Not Found -                     Python package manager
+  uv         ✗ Not Found -                     Executable not found in $PATH
 
 Manifest Integrity:
   Path:   /home/user/.config/stamp/manifest.toml
@@ -45,12 +45,12 @@ Configuration:
 
 UNIX Compliance:
   NO_COLOR: ✗ Not set
-  Version:  stamp v0.31.1
-  Man Page: ✓ Up to date (v0.31.1)
+  Version:  stamp v0.35.0
+  Man Page: ✓ Up to date (v0.35.0)
   Completions: ✓ Installed (bash, zsh)
 ```
 
-> Output captured at v0.31.1; manager availability and paths vary by platform.
+> Output captured at v0.35.0; manager availability and paths vary by platform.
 
 ### JSON output
 
@@ -63,7 +63,7 @@ stamp doctor --json
 ```json
 {
   "system": "linux",
-  "version": "0.31.1",
+  "version": "0.35.0",
   "package_managers": [
     {"name": "apt", "active": true, "path": "/usr/bin/apt", "details": "Default system manager (Debian/Ubuntu)"},
     {"name": "brew", "active": true, "path": "/home/user/.linuxbrew/bin/brew", "details": "User-space manager"},
@@ -83,7 +83,7 @@ stamp doctor --json
     "valid": true
   },
   "no_color": false,
-  "man_page": {"installed": true, "matches": true, "path": "/home/user/.local/share/man/man1/stamp.1", "version": "0.31.1"},
+  "man_page": {"installed": true, "matches": true, "path": "/home/user/.local/share/man/man1/stamp.1", "version": "0.35.0"},
   "completions": {"installed": true, "shells": ["bash", "zsh"]}
 }
 ```

@@ -167,28 +167,33 @@ Package Managers:
   Name       Status     Path                   Details
   apt        ✓ Active   /usr/bin/apt           Default system manager (Debian/Ubuntu)
   dnf        ✓ Active   /usr/bin/dnf           Default system manager (Fedora/RHEL, alias yum)
-  pacman     ✗ Not Found -                     Package manager for Arch Linux
-  paru       ✗ Not Found -                     AUR helper for Arch Linux (replaces pacman)
-  zypper     ✗ Not Found -                     Package manager for openSUSE/SLES
+  pacman     ✗ Not Found -                     Executable not found in $PATH
+  paru       ✗ Not Found -                     Executable not found in $PATH
+  zypper     ✗ Not Found -                     Executable not found in $PATH
   snap       ✓ Active   /usr/bin/snap          Universal Linux package manager
   flatpak    ✓ Active   /usr/bin/flatpak       Sandboxed application distribution
   brew       ✓ Active   /home/user/.linuxbrew/bin/brew User-space manager
-  macports   ✗ Not Found -                     Package manager for macOS
+  macports   ✗ Not Found -                     Executable not found in $PATH
   go         ✓ Active   /usr/local/go/bin/go   Language toolchain — go install
   npm        ✓ Active   /usr/bin/npm           Node.js package manager
-  cargo      ✗ Not Found -                     Rust package manager — cargo install
-  pipx       ✗ Not Found -                     Python tool installer
-  uv         ✗ Not Found -                     Python package manager
+  cargo      ✗ Not Found -                     Executable not found in $PATH
+  pipx       ✓ Active   /usr/bin/pipx          Python tool installer
+  uv         ✗ Not Found -                     Executable not found in $PATH
 
 Manifest Integrity:
   Path:   /home/user/.config/stamp/manifest.toml
   Status: ✓ Healthy (42 package(s))
 
+Configuration:
+  Path:   /home/user/.config/stamp/config.toml
+  Status: ✓ Valid
+
 UNIX Compliance:
   NO_COLOR: ✗ Not set
-  Version:  stamp v0.24.0
-  Man Page: ✓ Up to date (v0.24.0)
+  Version:  stamp v0.35.0
+  Man Page: ✓ Up to date (v0.35.0)
   Completions: ✓ Installed (bash, zsh)</pre>
+    <p><em>Output captured at v0.35.0; manager availability and paths vary by platform.</em></p>
   </div>
 
   <p style="text-align: center; margin-top: 2.5rem;">
