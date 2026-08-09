@@ -41,7 +41,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
 | `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager optional when tracked) | ✓ Complete |
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
-| `stamp reconcile` | | ✓ | ✓ | ✓ Auto-track + `--dry-run` + no prompt + repo drift detection + missing-package warning | ✓ Complete |
+| `stamp reconcile` | | ✓ | ✓ | ✓ Auto-track + `--dry-run` + no prompt + repo drift detection + missing-package warning + reliability notes | ✓ Complete |
 | `stamp restore` | | ✓ | ✓ | ✓ Sequentially adds repos then concurrently installs packages | ✓ Complete |
 | `stamp doctor` | | ✓ | ✓ | ✓ Adapter check + manifest check + manifest-vs-system check + `[backup]` config validation + compliance report | ✓ Complete |
 | `stamp completion [shell]` | | ✓ | ✓ | ✓ Auto-detect, install to path, --stdout flag | ✓ Complete |
@@ -175,6 +175,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 - **Repo management:** DNF supports COPR repos and `.repo` file URLs (fetched verbatim, gpg settings preserved; URL-added repos are removed by deleting the `.repo` file, COPR repos via `dnf copr disable`), APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
 - **CheckUpdate:** Toolchain managers (Go, Pipx, Uv) cannot preview updates. They print an informational notice during `stamp update --check` and continue.
 - **Backup retention:** The `[backup]` section of `config.toml` controls timestamped backup retention (logrotate-style: max/min count + min/max age axes, `0` = unlimited). `stamp reconcile` rotates manifest backups; `stamp init` re-init rotates manifest + snapshot backups. Misconfigurations are reported by `stamp doctor`.
+- **Reconcile reliability:** `stamp reconcile` always prints a reminder that it is a fallback (prefer `stamp install`) and a per-manager reliability note. `ListInstalled` reliability: Reliable (brew, flatpak, go, pipx, uv, npm, cargo, macports, snap — system snaps filtered); Over-inclusive (apt, dnf, zypper, pacman, paru). See `docs/usage/reconcile.md`.
 - **Batch package operations:** `stamp install`/`remove`/`reinstall` accept multiple packages in one command with `-m <manager>` (per-manager only; `go`, `pipx`, `uv` excluded; `snap` excluded from batch reinstall). Homebrew falls back to per-package operations when a batch mixes casks and formulae.
 
 ---

@@ -50,6 +50,11 @@ Dry-run performs no writes, no backups, and no rotation.`,
 				return catErr(ErrUnavailable, "no package managers available")
 			}
 
+			// Always frame reconcile as a fallback and surface reliability
+			// caveats before any drift is reported.
+			renderReconcileBanner(cmd.ErrOrStderr())
+			renderReliabilityNotes(cmd.ErrOrStderr(), adapters)
+
 			snapDir, err := state.SnapshotDir()
 			if err != nil {
 				return fmt.Errorf("failed to access snapshot directory: %w", err)

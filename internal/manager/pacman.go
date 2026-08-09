@@ -26,6 +26,12 @@ func (m *Pacman) Name() string {
 	return "pacman"
 }
 
+// ReconcileReliability reports OverInclusive: `pacman -Qq` returns all
+// installed packages including dependencies. Consistent run-to-run.
+func (m *Pacman) ReconcileReliability() ReconcileReliability {
+	return ReliabilityOverInclusive
+}
+
 func parsePacmanSearch(output []byte) []string {
 	lines := bytes.Split(output, []byte("\n"))
 	result := make([]string, 0, len(lines))

@@ -817,3 +817,58 @@ Non-`.repo` URLs keep the synthesized baseurl path; name-only keeps COPR.
 *   **Verify:** `task check`, `task docs`
 *   **Files:** `internal/cli/repo.go`, `docs/usage/removing-repos.md`, `docs/project/spec.md`, `docs/project/features.md`, `docs/IMPLEMENTATION_PLAN.md`
 *   **Status:** ✓ Completed
+
+### Phase 19: Reconcile reliability (#176, #194)
+
+Makes `stamp reconcile` trustworthy: tests can no longer corrupt real
+snapshots, dnf listing is dnf4/dnf5-aware, dnf repo filtering drops system-repo
+false positives, and per-manager reliability is surfaced with a fallback banner.
+
+**Task 95: Test isolation for snapshot-writing tests (#176)**
+*   **Description:** Global `TestMain` in `internal/cli` forces `XDG_DATA_HOME`/`XDG_CONFIG_HOME` to a temp dir for every test, so restore/init/reconcile tests can never write to the developer's real `~/.local/share/stamp/snapshots/`.
+*   **Acceptance:** Full `go test ./internal/cli/` leaves real snapshot dir untouched (mtime unchanged).
+*   **Verify:** `go test ./internal/cli/ -race`
+*   **Files:** `internal/cli/main_test.go`
+*   **Status:** ✓ Completed
+
+**Task 96: DNF ListInstalled dnf4/dnf5 (m.cmd + probe) (#176)**
+*   **Description:** `ListInstalled` probes `m.cmd history userinstalled` (dnf4/legacy, transaction-precise) then falls back to `m.cmd repoquery --userinstalled` (dnf5 documented). `m.cmd` used everywhere (never hardcoded `dnf`), fixing yum + dnf5.
+*   **Acceptance:** `TestDNF_ListInstalled_HistoryPrimary`, `_RepoqueryFallback`, `_RepoqueryFallbackUsesMCmd`, `_BothFail`, `_HistoryUsesMCmd`. 100% on changed branch.
+*   **Verify:** `go test ./internal/manager/ -run TestDNF_ListInstalled -race`
+*   **Files:** `internal/manager/dnf.go`, `internal/manager/dnf_test.go`
+*   **Status:** ✓ Completed
+
+**Task 97: DNF system-repo filter (Bug B) (#176)**
+*   **Description:** `isSystemRepo` replaces the incomplete exact-name map: exact base repos + `-debuginfo`/`-source`/`-debugsource`/`-testing` suffixes (system families only) + vendor prefixes (`docker-ce-`, `rpmfusion-`, `google-chrome`, `google-cloud-sdk`, `protonvpn-`). `copr:` repos stay (user-initiated). Used by `parseDNFSources` and `parseDNFRepos`.
+*   **Acceptance:** `TestIsSystemRepo` table (real Fedora repo IDs), `TestParseDNFSources_FiltersSystemRepos`. Genuine third-party repos (brave, enpass, enpass-testing, copr) survive.
+*   **Verify:** `go test ./internal/manager/ -run 'TestIsSystemRepo|TestParseDNFSources' -race`
+*   **Files:** `internal/manager/dnf_repo.go`, `internal/manager/dnf_repo_test.go`
+*   **Status:** ✓ Completed
+
+**Task 98: Reconcile reliability annotations + banner (#176, #194)**
+*   **Description:** `ReconcileReliability` type + `ReliabilityReporter` optional interface in manager; dnf=`KnownUnreliable`, snap/apt/zypper/pacman/paru=`OverInclusive`, rest default Reliable. Reconcile always prints a fallback banner + per-manager reliability notes.
+*   **Acceptance:** `TestReconcile_ReliabilityNotes_AlwaysShown`, `_OnlyForReporters`, banner present in `TestReconcile_NoDrift`. Brew `--installed-on-request` locked by test.
+*   **Verify:** `go test ./internal/cli/ -run TestReconcile -race`, `go test ./internal/manager/ -run TestBrew_ListInstalled -race`
+*   **Files:** `internal/manager/manager.go`, `dnf.go`, `apt.go`, `zypper.go`, `pacman.go`, `paru.go`, `snap.go`, `brew_test.go`, `internal/cli/reconcile.go`, `reconcile_display.go`, `reconcile_test.go`
+*   **Status:** ✓ Completed
+
+**Task 99: Reconcile reliability docs + snap issue (#176, #194)**
+*   **Description:** `reconcile.md` (fallback banner + reliability matrix + dnf4/dnf5 strategy), features.md (reliability note + reconcile row), spec.md reconcile behavior. GitHub issue #194 filed for snap system-snap filtering.
+*   **Acceptance:** docs consistent with implementation; issue #194 open.
+*   **Verify:** `task docs`, Jekyll render check
+*   **Files:** `docs/usage/reconcile.md`, `docs/project/features.md`, `docs/project/spec.md`, `docs/IMPLEMENTATION_PLAN.md`
+*   **Status:** ✓ Completed
+
+**Task 100: Snap system-snap filtering (#194)**
+*   **Description:** `isSystemSnap` helper (core\* prefix + gnome-\d\* prefix + exact list for snapd/gtk-common-themes/snap-store/firmware-updater/bare). Filter in `parseSnapTabular`. `ReconcileReliability()` removed from snap (defaults to Reliable — system snaps now excluded). Test table: 13 system snap IDs filtered; 5 user GNOME app names survive (gnome-calculator, gnome-terminal, etc.).
+*   **Acceptance:** `TestIsSystemSnap` table (13 system + 5 user cases); `TestParseSnapTabular` system snaps filtered; `TestReconcileReliabilityDefaults` includes snap; no OverInclusive note in reconcile for snap.
+*   **Verify:** `go test ./internal/manager/ -run 'TestIsSystemSnap|TestParseSnapTabular' -race`
+*   **Files:** `internal/manager/snap.go`, `internal/manager/snap_test.go`, `internal/manager/manager_test.go`
+*   **Status:** ✓ Completed
+
+**Task 101: DNF reliability reclassification (#176 Path A)**
+*   **Description:** `DNF.ReconcileReliability()` flipped `KnownUnreliable` → `OverInclusive`. dnf5 `repoquery --userinstalled` is the documented method — over-includes Anaconda base OS pkgs but consistent run-to-run → baseline-diff safe. The 583-package drift was test-pollution (empty baseline), now prevented by Task 95. `reconcile_display.go`: known-unreliable warning removed; only over-inclusive note shown.
+*   **Acceptance:** reporter table dnf → `OverInclusive`; no "false positive" text in reconcile output; `TestReconcile_ReliabilityNotes_AlwaysShown` updated (known-unreliable case removed).
+*   **Verify:** `go test ./internal/manager/ -run TestReconcileReliability -race`, `go test ./internal/cli/ -run TestReconcile_ReliabilityNotes -race`
+*   **Files:** `internal/manager/dnf.go`, `internal/manager/manager_test.go`, `internal/cli/reconcile_display.go`, `internal/cli/reconcile_test.go`
+*   **Status:** ✓ Completed

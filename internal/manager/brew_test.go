@@ -420,6 +420,28 @@ func TestBrew_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
+func TestBrew_ListInstalled_UsesLeavesInstalledOnRequest(t *testing.T) {
+	t.Parallel()
+	var firstCallArgs []string
+	call := 0
+	manager := NewBrew()
+	manager.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			firstCallArgs = append([]string{}, args...)
+			return []byte("htop\n"), nil
+		}
+		return nil, assert.AnError // cask list fails — fine
+	}
+
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop"}, pkgs)
+	// Reliability lock: brew leaves --installed-on-request returns only
+	// user-requested formulas (not dependencies), keeping reconcile precise.
+	assert.Equal(t, []string{"leaves", "--installed-on-request"}, firstCallArgs)
+}
+
 func TestBrew_ListInstalled_WithCasks(t *testing.T) {
 	t.Parallel()
 	call := 0

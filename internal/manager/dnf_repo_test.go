@@ -275,6 +275,117 @@ func TestDNF_AddRepo_Copr_StillWorks(t *testing.T) {
 	assert.Contains(t, args, "petersen/cava")
 }
 
+// TestIsSystemRepo verifies system-repo detection: exact names, suffix
+// variants (debuginfo/source/testing), and third-party system repo prefixes.
+func TestIsSystemRepo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		repo string
+		want bool
+	}{
+		// exact Fedora/RHEL core
+		{"fedora", true},
+		{"fedora-updates", true},
+		{"fedora-modular", true},
+		{"updates", true},
+		{"updates-modular", true},
+		{"baseos", true},
+		{"appstream", true},
+		{"extras", true},
+		{"epel", true},
+		{"epel-next", true},
+		{"fedora-cisco-openh264", true},
+		// debuginfo / source / testing variants
+		{"fedora-debuginfo", true},
+		{"fedora-source", true},
+		{"fedora-updates-debuginfo", true},
+		{"fedora-updates-source", true},
+		{"fedora-updates-testing", true},
+		{"fedora-updates-testing-debuginfo", true},
+		{"fedora-updates-testing-source", true},
+		{"updates-debuginfo", true},
+		{"updates-source", true},
+		{"updates-testing-debuginfo", true},
+		{"updates-testing-source", true},
+		{"fedora-cisco-openh264-debuginfo", true},
+		{"fedora-cisco-openh264-source", true},
+		{"epel-debuginfo", true},
+		{"epel-source", true},
+		{"epel-testing", true},
+		// third-party system repos (vendors shipping system-level configs)
+		{"docker-ce-stable", true},
+		{"docker-ce-stable-source", true},
+		{"docker-ce-test", true},
+		{"google-chrome", true},
+		{"google-cloud-sdk", true},
+		{"rpmfusion-nonfree-nvidia-driver", true},
+		{"rpmfusion-nonfree-steam", true},
+		{"protonvpn-stable", true},
+		// genuine third-party repos must NOT be filtered
+		{"copr:copr.fedorainfracloud.org:phracek:PyCharm", false},
+		{"brave-browser", false},
+		{"enpass", false},
+		{"enpass-testing", false},
+		{"custom-repo", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.repo, func(t *testing.T) {
+			assert.Equal(t, tt.want, isSystemRepo(tt.repo))
+		})
+	}
+}
+
+// TestParseDNFSources_FiltersSystemRepos guards the system-repo filter for the
+// real repo files observed on a Fedora workstation.
+func TestParseDNFSources_FiltersSystemRepos(t *testing.T) {
+	oldDir := dnfReposDir
+	dnfReposDir = t.TempDir()
+	defer func() { dnfReposDir = oldDir }()
+
+	files := map[string]string{
+		"fedora.repo": "[fedora]\nname=Fedora $releasever\nmetalink=https://mirrors.fedoraproject.org\n" +
+			"[fedora-debuginfo]\nname=Fedora debuginfo\nmetalink=https://mirrors.fedoraproject.org\n" +
+			"[fedora-source]\nname=Fedora source\nmetalink=https://mirrors.fedoraproject.org\n",
+		"fedora-updates.repo": "[fedora-updates]\nname=Updates\nmetalink=https://mirrors.fedoraproject.org\n" +
+			"[fedora-updates-debuginfo]\nname=Updates debuginfo\nmetalink=https://mirrors.fedoraproject.org\n" +
+			"[fedora-updates-testing]\nname=Updates testing\nmetalink=https://mirrors.fedoraproject.org\n",
+		"docker-ce.repo": "[docker-ce-stable]\nname=Docker CE Stable\nbaseurl=https://download.docker.com\n" +
+			"[docker-ce-stable-source]\nname=Docker CE Stable Source\nbaseurl=https://download.docker.com\n",
+		"google-chrome.repo":                                   "[google-chrome]\nname=Google Chrome\nbaseurl=https://dl.google.com\n",
+		"rpmfusion-nonfree-steam.repo":                         "[rpmfusion-nonfree-steam]\nname=RPM Fusion nonfree Steam\nbaseurl=https://mirrors.rpmfusion.org\n",
+		"_copr:copr.fedorainfracloud.org:phracek:PyCharm.repo": "[copr:copr.fedorainfracloud.org:phracek:PyCharm]\nname=PyCharm\nbaseurl=https://copr.fedorainfracloud.org\n",
+		"brave-browser.repo":                                   "[brave-browser]\nname=Brave Browser\nbaseurl=https://brave-browser-rpm-release.s3.brave.com\n",
+		"enpass-yum.repo": "[enpass]\nname=Enpass\nbaseurl=https://yum.enpass.io\n" +
+			"[enpass-testing]\nname=Enpass Testing\nbaseurl=https://yum.enpass.io\n",
+	}
+
+	for name, content := range files {
+		//nolint:gosec // test temp dir
+		require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, name), []byte(content), 0o644))
+	}
+
+	repos, err := parseDNFSources()
+	require.NoError(t, err)
+
+	names := make(map[string]bool)
+	for _, r := range repos {
+		names[r.Name] = true
+	}
+
+	// system + debug/source/testing + vendor repos all filtered
+	for _, sys := range []string{"fedora", "fedora-debuginfo", "fedora-source", "fedora-updates", "fedora-updates-debuginfo", "fedora-updates-testing", "docker-ce-stable", "docker-ce-stable-source", "google-chrome", "rpmfusion-nonfree-steam"} {
+		assert.False(t, names[sys], "system repo %s must be filtered", sys)
+	}
+
+	// genuine third-party repos survive (incl. user-enabled copr repos)
+	assert.True(t, names["brave-browser"], "brave-browser must be reported")
+	assert.True(t, names["enpass"], "enpass must be reported")
+	assert.True(t, names["enpass-testing"], "enpass-testing must be reported")
+	assert.True(t, names["copr:copr.fedorainfracloud.org:phracek:PyCharm"], "user-enabled copr must be reported")
+}
+
 // TestDNF_RemoveRepo_File verifies a URL-added repo is removed by deleting
 // its .repo file.
 func TestDNF_RemoveRepo_File(t *testing.T) {

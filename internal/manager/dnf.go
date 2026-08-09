@@ -76,25 +76,48 @@ func (m *DNF) Name() string {
 	return "dnf"
 }
 
+// ReconcileReliability reports OverInclusive: `repoquery --userinstalled` is
+// the documented dnf5 method but returns base OS packages (kernel, glibc,
+// bash) that Anaconda marks as "User". Output is consistent run-to-run, so
+// baseline diffing stays safe — reconcile may list system packages but will
+// not produce false-positive drift.
+func (m *DNF) ReconcileReliability() ReconcileReliability {
+	return ReliabilityOverInclusive
+}
+
 // ListInstalled returns a list of packages currently installed.
+//
+// Strategy (behavior-probed, never version-sniffed):
+//  1. `m.cmd history userinstalled` — transaction-based, precise on dnf4/legacy
+//     (RHEL/CentOS/Rocky) and any build where the subcommand exists.
+//  2. `m.cmd repoquery --userinstalled` — documented fallback for dnf5, where
+//     `history userinstalled` is absent. Over-reports on dnf5 (Anaconda marks
+//     system packages as user-installed), but output is consistent run-to-run.
+//  3. error otherwise.
+//
+// `yum` (RHEL 7) is special-cased: it has neither a `history userinstalled`
+// subcommand nor a `repoquery` subcommand — repoquery is a standalone binary
+// from yum-utils, so it is invoked without a manager prefix.
 func (m *DNF) ListInstalled(ctx context.Context) ([]string, error) {
-	var out []byte
-	var err error
 	if m.cmd == "yum" {
-		out, err = m.exec(ctx, "repoquery", "--userinstalled", "--qf", "%{name}\n")
-	} else {
-		out, err = m.exec(ctx, "dnf", "repoquery", "--userinstalled", "--qf", "%{name}\n")
-	}
-	if err != nil {
-		// Fallback: try dnf history userinstalled on repoquery failure.
-		out, err = m.exec(ctx, m.cmd, "history", "userinstalled")
+		out, err := m.exec(ctx, "repoquery", "--userinstalled", "--qf", "%{name}\n")
 		if err != nil {
 			return nil, fmt.Errorf("failed to list installed packages: %w", err)
 		}
+		return parseLines(out), nil
+	}
+
+	out, err := m.exec(ctx, m.cmd, "history", "userinstalled")
+	if err == nil {
 		return parseDNFHistoryUserInstalled(out), nil
 	}
 
-	return parseLines(out), nil
+	out, err = m.exec(ctx, m.cmd, "repoquery", "--userinstalled", "--qf", "%{name}\n")
+	if err == nil {
+		return parseLines(out), nil
+	}
+
+	return nil, fmt.Errorf("failed to list installed packages: %w", err)
 }
 
 // parseDNFHistoryUserInstalled parses the output of 'dnf history userinstalled'.

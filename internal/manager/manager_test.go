@@ -111,6 +111,44 @@ func TestParseLines(t *testing.T) {
 	assert.ElementsMatch(t, expected, actual)
 }
 
+// TestReconcileReliabilityReporters verifies every adapter that reports a
+// reliability level returns the expected one, keeping reconcile warnings
+// accurate.
+func TestReconcileReliabilityReporters(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		adapter Adapter
+		want    ReconcileReliability
+	}{
+		{"dnf over inclusive", NewDNF("dnf"), ReliabilityOverInclusive},
+		{"apt over inclusive", NewAPT("apt"), ReliabilityOverInclusive},
+		{"zypper over inclusive", NewZypper(), ReliabilityOverInclusive},
+		{"pacman over inclusive", NewPacman(), ReliabilityOverInclusive},
+		{"paru over inclusive", NewParu(), ReliabilityOverInclusive},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, ok := tt.adapter.(ReliabilityReporter)
+			require.True(t, ok, "%s must implement ReliabilityReporter", tt.adapter.Name())
+			assert.Equal(t, tt.want, r.ReconcileReliability())
+		})
+	}
+}
+
+// TestReconcileReliabilityDefaults verifies adapters WITHOUT a reporter are
+// treated as Reliable by default (no warning shown in reconcile).
+func TestReconcileReliabilityDefaults(t *testing.T) {
+	t.Parallel()
+
+	for _, a := range []Adapter{NewBrew(), NewFlatpak(), NewGo(), NewPipx(), NewUv(), NewNpm(), NewCargo(), NewMacPorts(), NewSnap(), &Mock{ManagerName: "mock"}} {
+		_, ok := a.(ReliabilityReporter)
+		assert.False(t, ok, "%s should not implement ReliabilityReporter (defaults to Reliable)", a.Name())
+	}
+}
+
 func TestResolveManager(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

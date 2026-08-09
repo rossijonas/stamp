@@ -23,6 +23,12 @@ func (m *Paru) Name() string {
 	return "paru"
 }
 
+// ReconcileReliability reports OverInclusive: `paru -Qq` returns all installed
+// packages including dependencies and AUR deps. Consistent run-to-run.
+func (m *Paru) ReconcileReliability() ReconcileReliability {
+	return ReliabilityOverInclusive
+}
+
 // ListInstalled returns a list of installed packages via paru.
 func (m *Paru) ListInstalled(ctx context.Context) ([]string, error) {
 	out, err := m.exec(ctx, "paru", "-Qq")
