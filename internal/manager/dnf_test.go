@@ -25,7 +25,7 @@ func TestDNF_Operations(t *testing.T) {
 		{
 			name:        "list installed success",
 			operation:   "list",
-			mockOutput:  "htop\nripgrep\n",
+			mockOutput:  "htop-3.2.2-1.fc37.x86_64\nripgrep-13.0.0-4.fc38.x86_64\n",
 			expectedRes: []string{"htop", "ripgrep"},
 		},
 		{
@@ -378,11 +378,11 @@ func TestParseDNFRepos(t *testing.T) {
 			input: "repo id                     repo name\n" +
 				"fedora                      Fedora 44 - x86_64\n" +
 				"fedora-updates              Fedora 44 - x86_64 - Updates\n" +
+				"fedora-updates-debuginfo    Fedora updates debuginfo\n" +
 				"copr:copr.fedorainfracloud.org:petersen:cava Copr repo\n" +
 				"google-chrome               Google Chrome repo\n",
 			expected: []string{
 				"copr:copr.fedorainfracloud.org:petersen:cava",
-				"google-chrome",
 			},
 		},
 		{
@@ -419,10 +419,10 @@ func TestDNF_ListRepos(t *testing.T) {
 			"enabled=1\n",
 	), 0o644))
 	//nolint:gosec
-	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "google-chrome.repo"), []byte(
-		"[google-chrome]\n"+
-			"name=Google Chrome\n"+
-			"baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64\n"+
+	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "brave-browser.repo"), []byte(
+		"[brave-browser]\n"+
+			"name=Brave Browser\n"+
+			"baseurl=https://brave-browser-rpm-release.s3.brave.com\n"+
 			"enabled=1\n",
 	), 0o644))
 	//nolint:gosec
@@ -443,7 +443,7 @@ func TestDNF_ListRepos(t *testing.T) {
 	}
 
 	assert.Equal(t, "https://yum.enpass.io/", names["enpass"])
-	assert.Equal(t, "https://dl.google.com/linux/chrome/rpm/stable/x86_64", names["google-chrome"])
+	assert.Equal(t, "https://brave-browser-rpm-release.s3.brave.com", names["brave-browser"])
 	assert.NotContains(t, names, "fedora")
 }
 
@@ -477,7 +477,25 @@ func TestParseDNFCheckUpdate(t *testing.T) {
 	assert.Equal(t, "2.43.0", updates[1].CurrentVersion)
 }
 
-func TestDNF_ListInstalledFallback(t *testing.T) {
+func TestDNF_ListInstalled_HistoryPrimary(t *testing.T) {
+	t.Parallel()
+	var calls []string
+	manager := NewDNF("dnf")
+	manager.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		calls = append(calls, append([]string{name}, args...)...)
+		return []byte("htop-3.2.2-1.fc37.x86_64\n"), nil
+	}
+
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop"}, pkgs)
+	// history userinstalled tried first (dnf4 precise, transaction-based)
+	assert.Contains(t, calls, "history")
+	assert.Contains(t, calls, "userinstalled")
+	assert.NotContains(t, calls, "repoquery")
+}
+
+func TestDNF_ListInstalled_RepoqueryFallback(t *testing.T) {
 	t.Parallel()
 	calls := 0
 	manager := NewDNF("dnf")
@@ -486,16 +504,43 @@ func TestDNF_ListInstalledFallback(t *testing.T) {
 		if calls == 1 {
 			return nil, assert.AnError
 		}
-		return []byte("htop-3.2.2-1.fc37.x86_64\n"), nil
+		return []byte("htop\nripgrep\n"), nil
+	}
+
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop", "ripgrep"}, pkgs)
+	assert.Equal(t, 2, calls)
+}
+
+func TestDNF_ListInstalled_YumUsesStandaloneRepoquery(t *testing.T) {
+	t.Parallel()
+	// RHEL 7 yum has no `history userinstalled` subcommand and no `repoquery`
+	// subcommand — repoquery is a standalone binary from yum-utils, invoked
+	// without a manager prefix.
+	manager := NewDNF("yum")
+	manager.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		assert.Equal(t, "repoquery", name)
+		assert.Contains(t, args, "--userinstalled")
+		return []byte("htop\n"), nil
 	}
 
 	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"htop"}, pkgs)
-	assert.Equal(t, 2, calls)
 }
 
-func TestDNF_ListInstalledFallbackError(t *testing.T) {
+func TestDNF_ListInstalled_YumError(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("yum")
+	manager.exec = mockExecutorHelper("", assert.AnError)
+
+	_, err := manager.ListInstalled(WithYes(context.Background()))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list installed packages")
+}
+
+func TestDNF_ListInstalled_BothFail(t *testing.T) {
 	t.Parallel()
 	calls := 0
 	manager := NewDNF("dnf")
@@ -507,6 +552,21 @@ func TestDNF_ListInstalledFallbackError(t *testing.T) {
 	_, err := manager.ListInstalled(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.Equal(t, 2, calls)
+	assert.Contains(t, err.Error(), "failed to list installed packages")
+}
+
+func TestDNF_ListInstalled_HistoryUsesMCmd(t *testing.T) {
+	t.Parallel()
+	manager := NewDNF("dnf5")
+	manager.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		assert.Equal(t, "dnf5", name)
+		assert.Contains(t, args, "history")
+		return []byte("htop-3.2.2-1.fc37.x86_64\n"), nil
+	}
+
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop"}, pkgs)
 }
 
 func TestDNF_CheckUpdateExecError(t *testing.T) {

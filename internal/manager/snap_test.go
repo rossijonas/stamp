@@ -23,7 +23,7 @@ func TestSnap_Operations(t *testing.T) {
 			name:        "list installed success",
 			operation:   "list",
 			mockOutput:  "Name    Version   Rev   Tracking         Publisher   Notes\nhtop    3.2.2     123   latest/stable    canonical✓  -\ncore    16-2.59   456   latest/stable    canonical✓  core\n",
-			expectedRes: []string{"htop", "core"},
+			expectedRes: []string{"htop"},
 		},
 		{
 			name:        "list installed error",
@@ -254,6 +254,60 @@ func TestSnap_Operations(t *testing.T) {
 	}
 }
 
+// TestIsSystemSnap verifies system-snap detection: runtime prefixes
+// (core*, gnome-*) and known system snap IDs. User apps must survive.
+func TestIsSystemSnap(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		want bool
+	}{
+		// core runtimes
+		{"core", true},
+		{"core18", true},
+		{"core20", true},
+		{"core22", true},
+		{"core24", true},
+		{"core26", true},
+		// gnome platform runtimes (digit-heavy shapes)
+		{"gnome-3-38-2004", true},
+		{"gnome-42-2204", true},
+		{"gnome-46-2404", true},
+		// known system snaps (exact)
+		{"snapd", true},
+		{"gtk-common-themes", true},
+		{"snap-store", true},
+		{"firmware-updater", true},
+		{"bare", true},
+		// genuine user apps — must NOT be filtered
+		{"firefox", false},
+		{"spotify", false},
+		{"gnome-calculator", false},
+		{"gnome-terminal", false},
+		{"vscode", false},
+		{"htop", false},
+		// user apps whose names merely start with "core" — must NOT be filtered
+		{"corebird", false},
+		{"coreutils", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isSystemSnap(tt.name))
+		})
+	}
+}
+
+func TestAllDigits(t *testing.T) {
+	t.Parallel()
+	assert.True(t, allDigits("20"))
+	assert.True(t, allDigits("3"))
+	assert.False(t, allDigits(""))
+	assert.False(t, allDigits("20a"))
+	assert.False(t, allDigits("a"))
+}
+
 func TestParseSnapTabular(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -262,11 +316,23 @@ func TestParseSnapTabular(t *testing.T) {
 		expected []string
 	}{
 		{
-			name: "standard snap list output",
+			name: "standard snap list output — core filtered",
 			input: "Name    Version   Rev   Tracking         Publisher   Notes\n" +
 				"htop    3.2.2     123   latest/stable    canonical✓  -\n" +
 				"core    16-2.59   456   latest/stable    canonical✓  core\n",
-			expected: []string{"htop", "core"},
+			expected: []string{"htop"},
+		},
+		{
+			name: "system snaps filtered",
+			input: "Name    Version   Rev   Tracking         Publisher   Notes\n" +
+				"firefox       125.0    4567  latest/stable  canonical  -\n" +
+				"core          16-2.59  456   latest/stable  canonical  core\n" +
+				"core22        1.2     789   latest/stable  canonical  -\n" +
+				"gnome-42-2204 42      123   latest/stable  canonical  -\n" +
+				"snapd         2.58    123   latest/stable  canonical  snapd\n" +
+				"gtk-common-themes 0  456   latest/stable  canonical  -\n" +
+				"htop          3.2.2   123   latest/stable  canonical  -\n",
+			expected: []string{"firefox", "htop"},
 		},
 		{
 			name:     "no snaps installed",

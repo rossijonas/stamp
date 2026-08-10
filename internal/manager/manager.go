@@ -128,6 +128,31 @@ func exitCodeFromError(err error) int {
 	return -1
 }
 
+// ReconcileReliability describes how trustworthy a manager's ListInstalled
+// output is for drift detection. Adapters implement ReliabilityReporter to
+// annotate themselves; reconcile surfaces this to the user.
+type ReconcileReliability int
+
+const (
+	// ReliabilityReliable means ListInstalled returns only user-installed packages
+	// (e.g. brew leaves --installed-on-request, pipx/uv/go tool listings).
+	ReliabilityReliable ReconcileReliability = iota
+	// ReliabilityOverInclusive means ListInstalled returns ALL installed packages
+	// including the base OS and dependencies. Output is consistent run-to-run,
+	// so baseline diffing stays safe, but reconcile may list system packages.
+	ReliabilityOverInclusive
+	// ReliabilityKnownUnreliable means ListInstalled output is inconsistent between
+	// runs, producing false-positive drift. Must be fixed, not just documented.
+	ReliabilityKnownUnreliable
+)
+
+// ReliabilityReporter is implemented by adapters whose ListInstalled output
+// needs a reliability annotation for reconcile. Optional — absent means
+// ReliabilityReliable.
+type ReliabilityReporter interface {
+	ReconcileReliability() ReconcileReliability
+}
+
 // Adapter abstracts operations for different underlying package managers
 // like dnf, brew, and flatpak.
 type Adapter interface {

@@ -26,6 +26,12 @@ func (m *Zypper) Name() string {
 	return "zypper"
 }
 
+// ReconcileReliability reports OverInclusive: `zypper search --installed-only`
+// returns all installed packages including the base OS. Consistent run-to-run.
+func (m *Zypper) ReconcileReliability() ReconcileReliability {
+	return ReliabilityOverInclusive
+}
+
 func parseZypperSearch(output []byte) []string {
 	lines := bytes.Split(output, []byte("\n"))
 	result := make([]string, 0, len(lines))

@@ -33,7 +33,77 @@ func TestReconcile_NoDrift(t *testing.T) {
 
 	buf, err := execCmd(t, []string{"reconcile"}, adapters)
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "No drift detected")
+	output := buf.String()
+	assert.Contains(t, output, "No drift detected")
+	// strategy banner always shown
+	assert.Contains(t, output, "reconcile is a fallback")
+	assert.Contains(t, output, "prefer 'stamp install")
+}
+
+// reliabilityMock wraps manager.Mock and reports a fixed reliability.
+type reliabilityMock struct {
+	manager.Mock
+	reliability manager.ReconcileReliability
+}
+
+func (r *reliabilityMock) ReconcileReliability() manager.ReconcileReliability {
+	return r.reliability
+}
+
+func TestReconcile_ReliabilityNotes_AlwaysShown(t *testing.T) {
+	tests := []struct {
+		name     string
+		level    manager.ReconcileReliability
+		wantNote string
+	}{
+		{"over inclusive", manager.ReliabilityOverInclusive, "lists all installed packages"},
+		{"reliable", manager.ReliabilityReliable, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := &reliabilityMock{
+				Mock:        manager.Mock{ManagerName: "dnf"},
+				reliability: tt.level,
+			}
+			// OverInclusive uses the snap message; keep manager name consistent
+			if tt.level == manager.ReliabilityOverInclusive {
+				adapter.ManagerName = "snap"
+			}
+
+			snapDir := setupSnapshots(t, []state.Snapshot{
+				{Manager: adapter.ManagerName, Packages: []string{}},
+			})
+			t.Setenv("XDG_DATA_HOME", snapDir)
+
+			buf, err := execCmd(t, []string{"reconcile", "-d"}, []manager.Adapter{adapter})
+			require.NoError(t, err)
+			output := buf.String()
+			// banner always present
+			assert.Contains(t, output, "reconcile is a fallback")
+			if tt.wantNote != "" {
+				assert.Contains(t, output, tt.wantNote)
+			} else {
+				assert.NotContains(t, output, "lists all installed packages")
+			}
+		})
+	}
+}
+
+func TestReconcile_ReliabilityNotes_OnlyForReporters(t *testing.T) {
+	// manager.Mock does NOT implement ReliabilityReporter → no notes.
+	adapter := &manager.Mock{ManagerName: "brew", InstalledPkgs: []string{"lazygit"}}
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile", "-d"}, []manager.Adapter{adapter})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "reconcile is a fallback")
+	assert.NotContains(t, output, "false positive")
+	assert.NotContains(t, output, "lists all installed packages")
 }
 
 func TestReconcile_DriftAndAutoTrack(t *testing.T) {

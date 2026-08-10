@@ -26,6 +26,13 @@ func (m *APT) Name() string {
 	return "apt"
 }
 
+// ReconcileReliability reports OverInclusive: `apt list --installed` returns
+// all installed packages including the base OS and dependencies. Output is
+// consistent run-to-run, so baseline diffing stays safe.
+func (m *APT) ReconcileReliability() ReconcileReliability {
+	return ReliabilityOverInclusive
+}
+
 // ListInstalled returns a list of packages currently installed.
 func (m *APT) ListInstalled(ctx context.Context) ([]string, error) {
 	// Primary: apt list --installed

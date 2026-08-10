@@ -25,7 +25,49 @@ func (m *Snap) Name() string {
 	return "snap"
 }
 
-// parseSnapTabular extracts the first column from snap tabular output.
+// isSystemSnap reports whether a snap ID is a system runtime or snapd daemon
+// that should be excluded from reconcile drift detection.
+//
+// Classification strategy (hybrid — pattern + exact):
+//   - `core` runtimes (core, core18, core20, core22, core24…) are matched by the
+//     exact name `core` or a `core` prefix followed only by digits, so a user
+//     snap like `corebird` or `coreutils` is never misclassified as a runtime.
+//   - `gnome-` prefix catches GNOME platform runtimes (gnome-3-38-2004, gnome-46-2404)
+//     only when the character after `gnome-` is a digit. User GNOME apps like
+//     `gnome-calculator` or `gnome-terminal` start with a letter and survive.
+//   - Remaining system snaps are listed exactly (snapd, gtk-common-themes, etc.).
+func isSystemSnap(name string) bool {
+	if name == "core" {
+		return true
+	}
+	if strings.HasPrefix(name, "core") && len(name) > 4 && allDigits(name[4:]) {
+		return true
+	}
+	if strings.HasPrefix(name, "gnome-") && len(name) > 6 && name[6] >= '0' && name[6] <= '9' {
+		return true
+	}
+	switch name {
+	case "snapd", "gtk-common-themes", "snap-store", "firmware-updater", "bare":
+		return true
+	}
+	return false
+}
+
+// allDigits reports whether s is non-empty and contains only ASCII digits.
+func allDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// parseSnapTabular extracts the first column from snap tabular output, filtering
+// out system snaps (core runtimes, snapd, gnome platform runtimes, etc.).
 func parseSnapTabular(output []byte) []string {
 	lines := bytes.Split(output, []byte("\n"))
 	result := make([]string, 0, len(lines))
@@ -42,7 +84,7 @@ func parseSnapTabular(output []byte) []string {
 			continue
 		}
 		name := string(fields[0])
-		if name == "" {
+		if name == "" || isSystemSnap(name) {
 			continue
 		}
 		result = append(result, name)

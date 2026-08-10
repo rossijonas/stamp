@@ -5,12 +5,31 @@ import (
 	"io"
 	"strings"
 
+	"github.com/rossijonas/stamp/internal/manager"
 	"github.com/rossijonas/stamp/internal/manifest"
 	"github.com/rossijonas/stamp/internal/state"
 )
 
 func renderNoBaselineDryRun(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "No baseline snapshot exists. Run without --dry-run to take baseline.")
+}
+
+// renderReconcileBanner frames reconcile as a fallback and steers users toward
+// `stamp install` as the primary intent-tracking path.
+func renderReconcileBanner(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "note: reconcile is a fallback for packages installed outside stamp.")
+	_, _ = fmt.Fprintln(w, "      prefer 'stamp install <pkg> -m <mgr>' so intent is tracked from day one.")
+}
+
+// renderReliabilityNotes prints reliability warnings for adapters whose
+// ListInstalled output is over-inclusive. Always shown so unexpected drift is
+// not mistaken for real package changes.
+func renderReliabilityNotes(w io.Writer, adapters []manager.Adapter) {
+	for _, a := range adapters {
+		if r, ok := a.(manager.ReliabilityReporter); ok && r.ReconcileReliability() == manager.ReliabilityOverInclusive {
+			_, _ = fmt.Fprintf(w, "note: %s lists all installed packages; reconcile may detect system packages\n", a.Name())
+		}
+	}
 }
 
 func renderBaselineTaken(w io.Writer) {

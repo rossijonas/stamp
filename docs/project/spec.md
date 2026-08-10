@@ -288,6 +288,8 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Usage:** Detects drift between the system state and the last snapshot, and auto-tracks discovered packages and repositories into the manifest.
 - **Flags:** `--manager`, `-m`, `--dry-run`, `-d`
 - **Behavior:**
+  - **Fallback framing:** reconcile always prints a reminder that it is a fallback — prefer `stamp install <pkg> -m <mgr>` for day-one intent tracking, and `stamp reinstall <pkg>` for existing packages.
+  - **Reliability notes (always shown):** per-adapter `ListInstalled` reliability is surfaced. `ReliabilityReliable` (default): no note. `ReliabilityOverInclusive` (apt, dnf, zypper, pacman, paru): `note: <mgr> lists all installed packages; reconcile may detect system packages`. Snap is `Reliable` — system snaps are filtered out of the listing.
   - Fetches current state (packages and repositories) from all adapters.
   - Diffs against the last snapshot.
   - If no drift: exits with "No drift detected".

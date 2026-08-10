@@ -61,26 +61,88 @@ func (m *DNF) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 	return parseDNFSources()
 }
 
+// exactSystemRepos is the set of known base OS repository IDs for
+// Fedora/RHEL/CentOS and their derivatives.
+var exactSystemRepos = map[string]bool{
+	"fedora":                true,
+	"fedora-updates":        true,
+	"fedora-modular":        true,
+	"updates":               true,
+	"updates-modular":       true,
+	"updates-testing":       true,
+	"baseos":                true,
+	"appstream":             true,
+	"extras":                true,
+	"epel":                  true,
+	"epel-next":             true,
+	"epel-testing":          true,
+	"epel-next-testing":     true,
+	"fedora-cisco-openh264": true,
+}
+
+// systemRepoSuffixes match repository IDs that are debug/source/testing
+// variants of system repos (e.g. fedora-debuginfo, updates-source).
+var systemRepoSuffixes = []string{
+	"-debuginfo",
+	"-debugsource",
+	"-source",
+	"-testing-debuginfo",
+	"-testing-source",
+}
+
+// systemRepoPrefixes match vendor repo IDs that ship system-level
+// configurations rather than user-tracked third-party repos.
+// Note: copr: repos are intentionally NOT filtered — they are always
+// user-initiated via `dnf copr enable` and should surface as drift.
+var systemRepoPrefixes = []string{
+	"docker-ce-",
+	"rpmfusion-",
+	"google-chrome",
+	"google-cloud-sdk",
+	"protonvpn-",
+}
+
+// systemRepoBasePrefixes identify OS repo families whose testing variants
+// (e.g. fedora-updates-testing, epel-testing) are still system repos, while a
+// third-party repo like enpass-testing must NOT be filtered.
+var systemRepoBasePrefixes = []string{
+	"fedora",
+	"updates",
+	"epel",
+	"baseos",
+	"appstream",
+	"extras",
+}
+
+// isSystemRepo reports whether a repository ID belongs to the OS or a
+// vendor system repo, and should therefore be hidden from reconcile drift.
+func isSystemRepo(repoID string) bool {
+	if exactSystemRepos[repoID] {
+		return true
+	}
+	for _, suffix := range systemRepoSuffixes {
+		if strings.HasSuffix(repoID, suffix) {
+			return true
+		}
+	}
+	for _, base := range systemRepoBasePrefixes {
+		if strings.HasPrefix(repoID, base) {
+			if strings.HasSuffix(repoID, "-testing") {
+				return true
+			}
+		}
+	}
+	for _, prefix := range systemRepoPrefixes {
+		if strings.HasPrefix(repoID, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // parseDNFSources reads .repo files from dnfReposDir and extracts
 // custom/third-party repository identifiers with their base URLs.
 func parseDNFSources() ([]RepositoryInfo, error) {
-	systemRepos := map[string]bool{
-		"fedora":                true,
-		"fedora-updates":        true,
-		"fedora-modular":        true,
-		"updates":               true,
-		"updates-modular":       true,
-		"updates-testing":       true,
-		"baseos":                true,
-		"appstream":             true,
-		"extras":                true,
-		"epel":                  true,
-		"epel-next":             true,
-		"epel-testing":          true,
-		"epel-next-testing":     true,
-		"fedora-cisco-openh264": true,
-	}
-
 	entries, err := os.ReadDir(dnfReposDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", dnfReposDir, err)
@@ -105,7 +167,7 @@ func parseDNFSources() ([]RepositoryInfo, error) {
 				continue
 			}
 			if strings.HasPrefix(line, "[") {
-				if currentID != "" && !systemRepos[currentID] {
+				if currentID != "" && !isSystemRepo(currentID) {
 					repos = append(repos, RepositoryInfo{Name: currentID, URL: currentURL})
 				}
 				end := strings.IndexByte(line, ']')
@@ -132,7 +194,7 @@ func parseDNFSources() ([]RepositoryInfo, error) {
 				currentURL = val
 			}
 		}
-		if currentID != "" && !systemRepos[currentID] {
+		if currentID != "" && !isSystemRepo(currentID) {
 			repos = append(repos, RepositoryInfo{Name: currentID, URL: currentURL})
 		}
 	}
@@ -142,23 +204,6 @@ func parseDNFSources() ([]RepositoryInfo, error) {
 // parseDNFRepos parses the output of 'dnf repolist' and extracts
 // custom/third-party repository identifiers, filtering out known system repos.
 func parseDNFRepos(output []byte) []string {
-	systemRepos := map[string]bool{
-		"fedora":                true,
-		"fedora-updates":        true,
-		"fedora-modular":        true,
-		"updates":               true,
-		"updates-modular":       true,
-		"updates-testing":       true,
-		"baseos":                true,
-		"appstream":             true,
-		"extras":                true,
-		"epel":                  true,
-		"epel-next":             true,
-		"epel-testing":          true,
-		"epel-next-testing":     true,
-		"fedora-cisco-openh264": true,
-	}
-
 	lines := bytes.Split(output, []byte("\n"))
 	repos := make([]string, 0, len(lines))
 	for _, line := range lines {
@@ -175,7 +220,7 @@ func parseDNFRepos(output []byte) []string {
 			continue
 		}
 		id := string(fields[0])
-		if systemRepos[id] {
+		if isSystemRepo(id) {
 			continue
 		}
 		repos = append(repos, id)
