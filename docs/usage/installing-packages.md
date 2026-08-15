@@ -16,6 +16,8 @@ Stamp auto-detects the best package manager for your system.
 ✓ installed htop via apt
 ```
 
+_Icons (`▪`, `✓`) are shown on interactive terminals; piped output is plain.
+
 ### Specify a manager
 
 ```bash
@@ -34,8 +36,9 @@ stamp install htop atop btop -m dnf
 ```
 
 ```text
-▪ Install 3 package(s) via dnf? [y/N]: y
-installed 3 package(s) via dnf
+Install 3 package(s) via dnf? [y/N]: y
+▪ installing 3 package(s) via dnf...
+✓ installed 3 package(s) via dnf
 ```
 
 Only managers with native multi-package support participate (`go`, `pipx`, and
