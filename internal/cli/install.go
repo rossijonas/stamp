@@ -85,6 +85,12 @@ func newInstallCmd() *cobra.Command {
 				return handleConsent(err)
 			}
 
+			errOut := cmd.ErrOrStderr()
+			tty := isOutputTerminal(errOut)
+			if line := statusLine(tty, false, "installing", pkgName, adapter.Name(), ""); line != "" {
+				_, _ = fmt.Fprintln(errOut, line)
+			}
+
 			if err := adapter.Install(manager.WithYes(installCtx), pkgName); err != nil {
 				return fmt.Errorf("install failed: %w", err)
 			}
@@ -102,7 +108,9 @@ func newInstallCmd() *cobra.Command {
 				return fmt.Errorf("failed to save manifest: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "installed %s via %s\n", pkgName, adapter.Name())
+			if line := statusLine(tty, true, "installed", pkgName, adapter.Name(), note); line != "" {
+				_, _ = fmt.Fprintln(errOut, line)
+			}
 			return nil
 		},
 	}
@@ -160,6 +168,13 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 		return handleConsent(err)
 	}
 
+	errOut := cmd.ErrOrStderr()
+	tty := isOutputTerminal(errOut)
+	target := fmt.Sprintf("%d package(s)", len(pkgs))
+	if line := statusLine(tty, false, "installing", target, adapter.Name(), ""); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
+
 	if mixed {
 		for _, p := range pkgs {
 			ctx := manager.WithYes(cmd.Context())
@@ -183,7 +198,9 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
-	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "installed %d package(s) via %s\n", len(pkgs), adapter.Name())
+	if line := statusLine(tty, true, "installed", target, adapter.Name(), note); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
 	return nil
 }
 
@@ -317,6 +334,12 @@ func newRemoveCmd() *cobra.Command {
 				return handleConsent(err)
 			}
 
+			errOut := cmd.ErrOrStderr()
+			tty := isOutputTerminal(errOut)
+			if line := statusLine(tty, false, "removing", pkgName, adapter.Name(), ""); line != "" {
+				_, _ = fmt.Fprintln(errOut, line)
+			}
+
 			if err := adapter.Remove(manager.WithYes(removeCtx), pkgName); err != nil {
 				return fmt.Errorf("remove failed: %w", err)
 			}
@@ -326,7 +349,9 @@ func newRemoveCmd() *cobra.Command {
 				return fmt.Errorf("failed to save manifest: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "removed %s via %s\n", pkgName, adapter.Name())
+			if line := statusLine(tty, true, "removed", pkgName, adapter.Name(), ""); line != "" {
+				_, _ = fmt.Fprintln(errOut, line)
+			}
 			return nil
 		},
 	}
@@ -383,6 +408,13 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 		return handleConsent(err)
 	}
 
+	errOut := cmd.ErrOrStderr()
+	tty := isOutputTerminal(errOut)
+	target := fmt.Sprintf("%d package(s)", len(pkgs))
+	if line := statusLine(tty, false, "removing", target, adapter.Name(), ""); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
+
 	if mixed {
 		for _, p := range pkgs {
 			ctx := manager.WithYes(cmd.Context())
@@ -406,7 +438,9 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
-	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "removed %d package(s) via %s\n", len(pkgs), adapter.Name())
+	if line := statusLine(tty, true, "removed", target, adapter.Name(), ""); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
 	return nil
 }
 

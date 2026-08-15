@@ -66,6 +66,8 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 **`[x]` Safety-First Confirmation** — Destructive commands (`install`, `remove`, `reinstall`, `restore`, `update`, `autoremove`, `clean`, `hold`, `unhold`, `repo add/remove`) show a native transaction preview and prompt before making changes. Pass `-y`/`--yes` to skip confirmation in scripts; non-interactive runs without `-y` abort instead of proceeding silently.
 
+Explore the full feature set and per-manager support at the **[Feature Reference](docs/project/features.md)**.
+
 See **[Installation](https://gostamp.dev/getting-started/installation.html)**, **[Usage](https://gostamp.dev/usage/)**, **[CLI Reference](https://gostamp.dev/usage/stamp.html)**, and more at  **[https://gostamp.dev](https://gostamp.dev)**.
 
 ## ▪ Compatibility

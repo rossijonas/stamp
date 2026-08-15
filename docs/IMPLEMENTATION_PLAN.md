@@ -872,3 +872,10 @@ false positives, and per-manager reliability is surfaced with a fallback banner.
 *   **Verify:** `go test ./internal/manager/ -run TestReconcileReliability -race`, `go test ./internal/cli/ -run TestReconcile_ReliabilityNotes -race`
 *   **Files:** `internal/manager/dnf.go`, `internal/manager/manager_test.go`, `internal/cli/reconcile_display.go`, `internal/cli/reconcile_test.go`
 *   **Status:** ✓ Completed
+
+**Task 102: TTY-conditional status output + note echo (#200)**
+*   **Description:** `install`/`reinstall`/`remove` (single + batch) status lines render `▪`/`✓` glyphs only when stderr is a TTY (`isOutputTerminal`); piped/CI output stays plain ASCII with no progress line (byte-compatible with prior script output). `install --note` now echoes `(note: ...)` on the result line in both TTY and piped forms. New `statusLine` helper in `internal/cli/status.go`. Docs: `installing-packages.md` batch block corrected and a note added that icons are interactive-only.
+*   **Acceptance:** `TestStatusLine` table (TTY/plain × progress/result × note), `TestIsOutputTerminal`; integration `TestInstallCmd_Status_{Plain,TTY,Note_Plain,Note_TTY,Batch_Plain,Batch_TTY}`, `TestRemoveCmd_Status_*`, `TestReinstallCmd_Status_*`; existing plain-output assertions unchanged.
+*   **Verify:** `go test ./internal/cli/ -race`, `task check`
+*   **Files:** `internal/cli/status.go`, `internal/cli/status_test.go`, `internal/cli/status_output_test.go`, `internal/cli/install.go`, `internal/cli/reinstall.go`, `docs/usage/installing-packages.md`
+*   **Status:** ✓ Completed

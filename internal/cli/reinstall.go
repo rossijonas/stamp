@@ -81,6 +81,12 @@ tracked in the manifest, resolve the manager and track it.`,
 				return handleConsent(err)
 			}
 
+			errOut := cmd.ErrOrStderr()
+			tty := isOutputTerminal(errOut)
+			if line := statusLine(tty, false, "reinstalling", pkgName, adapter.Name(), ""); line != "" {
+				_, _ = fmt.Fprintln(errOut, line)
+			}
+
 			// Execute native reinstall
 			if err := adapter.Reinstall(manager.WithYes(cmd.Context()), pkgName); err != nil {
 				return fmt.Errorf("reinstall failed: %w", err)
@@ -103,7 +109,9 @@ tracked in the manifest, resolve the manager and track it.`,
 				return fmt.Errorf("failed to save manifest: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "reinstalled %s via %s\n", pkgName, adapter.Name())
+			if line := statusLine(tty, true, "reinstalled", pkgName, adapter.Name(), ""); line != "" {
+				_, _ = fmt.Fprintln(errOut, line)
+			}
 			return nil
 		},
 	}
@@ -169,6 +177,13 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 		return handleConsent(err)
 	}
 
+	errOut := cmd.ErrOrStderr()
+	tty := isOutputTerminal(errOut)
+	target := fmt.Sprintf("%d package(s)", len(pkgs))
+	if line := statusLine(tty, false, "reinstalling", target, adapter.Name(), ""); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
+
 	if mixed {
 		for _, p := range pkgs {
 			ctx := manager.WithYes(cmd.Context())
@@ -203,6 +218,8 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
 
-	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "reinstalled %d package(s) via %s\n", len(pkgs), adapter.Name())
+	if line := statusLine(tty, true, "reinstalled", target, adapter.Name(), ""); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
 	return nil
 }
