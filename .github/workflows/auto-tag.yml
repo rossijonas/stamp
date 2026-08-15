@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-go@v6
         if: steps.get-version.outputs.hasNextVersion == 'true'
         with:
-          go-version: '1.26'
+          go-version-file: go.mod
           cache: true
 
       - name: Run Tests
