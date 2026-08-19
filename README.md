@@ -42,29 +42,21 @@ Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
 
 **`[*]` Automatic Intent Tracking** — Every install is recorded in a portable `manifest.toml`. Only your intentional choices, not dependency noise.
 
-**`[<]` One-Command Restore** — Clone your dotfiles and run `stamp restore` to rebuild your entire environment on a new machine in minutes.
+**`[<]` One-Command Restore** — Drop your `manifest.toml` into `~/.config/stamp/` and run `stamp restore` to rebuild your entire environment on a new machine in minutes.
 
 **`[/]` Safety Net Reconciliation** — Forgot to use stamp? `stamp reconcile` detects packages installed outside the tool and tracks them automatically.
 
-**`[^]` Origin-Aware Listing** — Every manifest entry records how stamp learned about it: `stamped` (installed via stamp) or `reconciled` (discovered by reconcile). `stamp list -t stamped` shows what you explicitly tracked; `stamp list -t reconciled` shows what reconcile discovered.
-
-**`[&]` Batch Operations** — Install, remove, or reinstall several packages in one native command: `stamp install htop atop btop -m dnf`. Batches are per-manager only, so `-m` is required.
-
-**`[?]` Manifest Tooling** — `stamp manifest history` / `stamp manifest diff` track every manifest backup, and `stamp doctor` / `stamp ls --type missing` surface packages removed behind your back.
-
 **`[#]` Unified Repository Management** — Add, remove, and list third-party repositories &mdash; PPAs, taps, remotes &mdash; across all managers with the same interface.
 
-**`[@]` Familiar Features** — Homebrew casks, file-to-package resolution, orphan cleanup, cache management, version pinning &mdash; stamp brings your native package manager's best features into one CLI. [See the full list &rarr;](docs/project/features.md)
+**`[@]` Familiar Features** — Homebrew casks, `stamp provides`, `stamp autoremove`, cache cleanup, version pinning &mdash; the native features you already know, unified. [See the full list &rarr;](docs/project/features.md)
 
-**`[%]` Speaks Your Language** — `stamp show` like `apt show`, `stamp outdated` like `brew outdated`, `stamp tap` like `brew tap` &mdash; every command has aliases matching your favorite tool's syntax. [See the aliases matrix &rarr;](docs/usage/aliases.md)
+**`[%]` Speaks Your Language** — Every stamp command has aliases matching your package manager's native syntax &mdash; `stamp show` (APT/DNF), `stamp outdated` (Brew/npm), `stamp tap` (Brew). [See the matrix &rarr;](docs/usage/aliases.md)
 
 **`[?]` Self-Contained Docs** — Built-in man pages (`stamp man install`), shell completions, and auto-generated CLI reference docs.
 
 **`[!]` Context Preservation** — Add `--note` to any install so you remember *why* you needed a package six months later.
 
 **`[$]` UNIX Compliant** — XDG Base Directory, NO_COLOR support, strict stdout/stderr separation, and TTY-aware sudo.
-
-**`[x]` Safety-First Confirmation** — Destructive commands (`install`, `remove`, `reinstall`, `restore`, `update`, `autoremove`, `clean`, `hold`, `unhold`, `repo add/remove`) show a native transaction preview and prompt before making changes. Pass `-y`/`--yes` to skip confirmation in scripts; non-interactive runs without `-y` abort instead of proceeding silently.
 
 Explore the full feature set and per-manager support at the **[Feature Reference](docs/project/features.md)**.
 
