@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossijonas/stamp/internal/manager"
 )
 
 func newTapCmd() *cobra.Command {
@@ -23,7 +25,10 @@ Equivalent to "stamp repo add <name> -m brew".`,
 			name := args[0]
 			for _, a := range app.adapters {
 				if a.Name() == "brew" {
-					if err := a.AddRepo(cmd.Context(), name, ""); err != nil {
+					if err := requireConsent(cmd, fmt.Sprintf("Tap %s via brew", name)); err != nil {
+						return handleConsent(err)
+					}
+					if err := a.AddRepo(manager.WithYes(cmd.Context()), name, ""); err != nil {
 						return fmt.Errorf("failed to tap %s: %w", name, err)
 					}
 					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "added tap %s via brew\n", name)
@@ -52,7 +57,10 @@ Equivalent to "stamp repo remove <name> -m brew".`,
 			name := args[0]
 			for _, a := range app.adapters {
 				if a.Name() == "brew" {
-					if err := a.RemoveRepo(cmd.Context(), name); err != nil {
+					if err := requireConsent(cmd, fmt.Sprintf("Untap %s via brew", name)); err != nil {
+						return handleConsent(err)
+					}
+					if err := a.RemoveRepo(manager.WithYes(cmd.Context()), name); err != nil {
 						return fmt.Errorf("failed to untap %s: %w", name, err)
 					}
 					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "removed tap %s via brew\n", name)

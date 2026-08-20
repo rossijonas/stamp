@@ -271,6 +271,44 @@ func TestMock_RemoveRepoNonexistent(t *testing.T) {
 	require.NoError(t, err) // removing uninstalled repo doesn't fail
 }
 
+func TestMock_Trust(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew"}
+	ctx := WithYes(context.Background())
+	require.NoError(t, mock.Trust(ctx, "user/repo"))
+	assert.Equal(t, []string{"user/repo"}, mock.TrustedRepos)
+	// trusting twice is idempotent
+	require.NoError(t, mock.Trust(ctx, "user/repo"))
+	assert.Equal(t, []string{"user/repo"}, mock.TrustedRepos)
+}
+
+func TestMock_Untrust(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew", TrustedRepos: []string{"user/repo", "other/tap"}}
+	ctx := WithYes(context.Background())
+	require.NoError(t, mock.Untrust(ctx, "user/repo"))
+	assert.Equal(t, []string{"other/tap"}, mock.TrustedRepos)
+}
+
+func TestMock_TrustConsentRequired(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew"}
+	require.ErrorIs(t, mock.Trust(context.Background(), "user/repo"), ErrConfirmationRequired)
+	require.ErrorIs(t, mock.Untrust(context.Background(), "user/repo"), ErrConfirmationRequired)
+}
+
+func TestMock_TrustInvalidName(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew"}
+	require.Error(t, mock.Trust(WithYes(context.Background()), "-formula"))
+}
+
+func TestMock_TrustError(t *testing.T) {
+	t.Parallel()
+	mock := &Mock{ManagerName: "brew", TrustErr: assert.AnError}
+	require.Error(t, mock.Trust(WithYes(context.Background()), "user/repo"))
+}
+
 func TestMockInfo_Result(t *testing.T) {
 	t.Parallel()
 	mock := &Mock{

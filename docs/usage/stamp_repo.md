@@ -38,4 +38,6 @@ Manage third-party repositories
 * [stamp repo add](stamp_repo_add.html)	 - Add a third-party repository
 * [stamp repo list](stamp_repo_list.html)	 - List all tracked repositories
 * [stamp repo remove](stamp_repo_remove.html)	 - Remove a third-party repository
+* [stamp repo trust](stamp_repo_trust.html)	 - Trust a Homebrew tap
+* [stamp repo untrust](stamp_repo_untrust.html)	 - Stop trusting a Homebrew tap
 

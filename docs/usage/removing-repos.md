@@ -39,3 +39,9 @@ For DNF, removal follows how the repository was added:
 Repos added by URL are removed by deleting their `.repo` file; name-only COPR
 repos are disabled via `dnf copr disable`.
 
+### Homebrew tap removal
+
+`stamp repo remove <tap> -m brew` untaps the tap **and** best-effort untrusts it
+(the prompt reads "Remove and untrust repo X via brew"), so a later re-tap
+starts clean under Homebrew 6.0.0+ tap-trust.
+

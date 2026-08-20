@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type contextKey int
@@ -16,6 +17,7 @@ const (
 	streamIOKey contextKey = iota
 	outputPrefixKey
 	combinedOutputKey
+	stdInStringKey
 )
 
 // WithStreamIO returns a new context that signals the executor to stream I/O.
@@ -26,6 +28,20 @@ func WithStreamIO(ctx context.Context) context.Context {
 func isStreamIO(ctx context.Context) bool {
 	b, _ := ctx.Value(streamIOKey).(bool)
 	return b
+}
+
+// WithStdInString returns a context that feeds the given string to the child
+// process's stdin instead of the terminal. Used to auto-answer a native
+// manager prompt (e.g. Homebrew's "Do you want to proceed? [y/n]") when the
+// operator has already consented via stamp's own gate (-y/--yes). It mirrors
+// the sudo-password stdin pattern and only applies when consent is set.
+func WithStdInString(ctx context.Context, s string) context.Context {
+	return context.WithValue(ctx, stdInStringKey, s)
+}
+
+func getStdInString(ctx context.Context) string {
+	s, _ := ctx.Value(stdInStringKey).(string)
+	return s
 }
 
 // WithCombinedOutput returns a new context that signals the executor to
@@ -108,7 +124,11 @@ func defaultExecutor(ctx context.Context, name string, args ...string) ([]byte, 
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		if cmd.Stdin == nil {
+		if s := getStdInString(ctx); s != "" {
+			// Auto-answer a native manager prompt when the operator has already
+			// consented via stamp's gate. Takes precedence over the terminal.
+			cmd.Stdin = strings.NewReader(s)
+		} else if cmd.Stdin == nil {
 			cmd.Stdin = os.Stdin
 		}
 

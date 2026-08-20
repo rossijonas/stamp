@@ -246,7 +246,7 @@ func TestRepoCmd_Subcommands(t *testing.T) {
 	require.NoError(t, repo.ValidateArgs([]string{}))
 	require.Error(t, repo.ValidateArgs([]string{"x"}))
 
-	for _, name := range []string{"add", "remove", "list"} {
+	for _, name := range []string{"add", "remove", "list", "trust", "untrust"} {
 		require.NotNil(t, lookupCmd(repo.Commands(), name), "missing repo subcommand: %s", name)
 	}
 }
@@ -384,6 +384,51 @@ func TestRepoRemoveCmd_Executes(t *testing.T) {
 	buf, err := execCmd(t, []string{"repo", "remove", "mytap", "-m", "flatpak", "-y"}, []manager.Adapter{&mockAdapter{name: "flatpak"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "removed repo mytap via flatpak")
+}
+
+func TestRepoTrustCmd_NonBrewManagerFails(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "trust", "mytap", "-m", "dnf", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only supported for the brew manager")
+}
+
+func TestRepoUntrustCmd_NonBrewManagerFails(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "untrust", "mytap", "-m", "dnf", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only supported for the brew manager")
+}
+
+func TestRepoTrustCmd_UntrackedWithoutManagerFails(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "trust", "mytap", "-y"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is not tracked")
+}
+
+func TestRepoTrustCmd_RefusesWithoutYesNonInteractive(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"repo", "trust", "mytap", "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.ErrorIs(t, err, errNonInteractive)
+}
+
+func TestRepoTrustCmd_Executes(t *testing.T) {
+	t.Parallel()
+	brew := &manager.Mock{ManagerName: "brew"}
+	buf, err := execCmd(t, []string{"repo", "trust", "mytap", "-m", "brew", "-y"}, []manager.Adapter{brew})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "trusted repo mytap via brew")
+	assert.Equal(t, []string{"mytap"}, brew.TrustedRepos)
+}
+
+func TestRepoUntrustCmd_Executes(t *testing.T) {
+	t.Parallel()
+	brew := &manager.Mock{ManagerName: "brew", TrustedRepos: []string{"mytap"}}
+	buf, err := execCmd(t, []string{"repo", "untrust", "mytap", "-m", "brew", "-y"}, []manager.Adapter{brew})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "untrusted repo mytap via brew")
+	assert.Empty(t, brew.TrustedRepos)
 }
 
 func TestInstallCmd_Error(t *testing.T) {

@@ -22,6 +22,8 @@ type Mock struct {
 	SearchErr           error
 	AddRepoErr          error
 	RemoveRepoErr       error
+	TrustedRepos        []string
+	TrustErr            error
 	InfoErr             error
 	InfoResult          string
 	DoctorResult        string
@@ -218,6 +220,45 @@ func (m *Mock) RemoveRepo(ctx context.Context, name string) error {
 	}
 	return nil
 }
+
+// Trust marks a tap as trusted in the mock.
+func (m *Mock) Trust(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validateTapName(name); err != nil {
+		return err
+	}
+	if m.TrustErr != nil {
+		return m.TrustErr
+	}
+	if !slices.Contains(m.TrustedRepos, name) {
+		m.TrustedRepos = append(m.TrustedRepos, name)
+	}
+	return nil
+}
+
+// Untrust stops trusting a tap in the mock.
+func (m *Mock) Untrust(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validateTapName(name); err != nil {
+		return err
+	}
+	if m.TrustErr != nil {
+		return m.TrustErr
+	}
+	for i, r := range m.TrustedRepos {
+		if r == name {
+			m.TrustedRepos = slices.Delete(m.TrustedRepos, i, i+1)
+			break
+		}
+	}
+	return nil
+}
+
+var _ TapTrustManager = (*Mock)(nil)
 
 // Info queries mock info metadata.
 func (m *Mock) Info(_ context.Context, pkg string) (string, error) {

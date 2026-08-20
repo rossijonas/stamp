@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -21,6 +23,35 @@ func WithCask(ctx context.Context) context.Context {
 func isCask(ctx context.Context) bool {
 	v, _ := ctx.Value(caskKey{}).(bool)
 	return v
+}
+
+// brewExecCtx returns the context used to run a brew subprocess. When the
+// operator has already consented via stamp's gate (WithYes), it pipes "y\n" to
+// brew's stdin so a native confirmation prompt ("Do you want to proceed?") is
+// auto-accepted instead of hanging a non-interactive run. Interactive runs
+// (no consent yet) keep streaming to the terminal so the user can answer.
+func brewExecCtx(ctx context.Context) context.Context {
+	if isYes(ctx) {
+		return WithStreamIO(WithStdInString(ctx, "y\n"))
+	}
+	return WithStreamIO(ctx)
+}
+
+// validTapNameRegex matches a Homebrew tap name (e.g. "user/repo" or
+// "homebrew/cask"). It rejects a leading '-' (flag injection) and restricts
+// characters to a safe set passed as an argument (no shell interpolation).
+var validTapNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/\+]*$`)
+
+// validateTapName ensures a tap name is safe to pass to `brew trust` /
+// `brew untrust` as an argument.
+func validateTapName(name string) error {
+	if strings.HasPrefix(name, "-") {
+		return fmt.Errorf("invalid tap name %q: cannot start with '-'", name)
+	}
+	if !validTapNameRegex.MatchString(name) {
+		return fmt.Errorf("invalid tap name %q: contains invalid characters", name)
+	}
+	return nil
 }
 
 // Brew implements the Adapter interface for Homebrew.
@@ -93,7 +124,7 @@ func (m *Brew) Install(ctx context.Context, pkg string) error {
 		args = append(args, "--cask")
 	}
 	args = append(args, pkg)
-	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", pkg, err)
 	}
@@ -114,7 +145,7 @@ func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
 		args = append(args, "--cask")
 	}
 	args = append(args, pkg)
-	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
 	}
@@ -135,7 +166,7 @@ func (m *Brew) Remove(ctx context.Context, pkg string) error {
 		args = append(args, "--cask")
 	}
 	args = append(args, pkg)
-	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", pkg, err)
 	}
@@ -157,7 +188,7 @@ func (m *Brew) InstallMany(ctx context.Context, pkgs ...string) error {
 		args = append(args, "--cask")
 	}
 	args = append(args, pkgs...)
-	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to install packages: %w", err)
 	}
@@ -177,7 +208,7 @@ func (m *Brew) ReinstallMany(ctx context.Context, pkgs ...string) error {
 		args = append(args, "--cask")
 	}
 	args = append(args, pkgs...)
-	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall packages: %w", err)
 	}
@@ -197,7 +228,7 @@ func (m *Brew) RemoveMany(ctx context.Context, pkgs ...string) error {
 		args = append(args, "--cask")
 	}
 	args = append(args, pkgs...)
-	_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 	if err != nil {
 		return fmt.Errorf("failed to remove packages: %w", err)
 	}
@@ -260,10 +291,18 @@ func (m *Brew) PreviewReinstall(ctx context.Context, pkg string) (Preview, error
 		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
 	}
 	s := string(out)
+	// brew reinstall has no --dry-run flag; when the invocation is rejected with
+	// usage/help text, surface an error so the confirmation gate degrades to a
+	// warn-and-prompt instead of rendering raw usage output as the preview.
+	if strings.Contains(s, "invalid option") || strings.Contains(s, "Usage: brew reinstall") {
+		return Preview{}, fmt.Errorf("brew reinstall does not support a dry-run preview: %s", strings.TrimSpace(s))
+	}
 	return Preview{Output: s, Noop: strings.Contains(s, "No such keg") || strings.Contains(s, "is not installed")}, nil
 }
 
 var _ Previewer = (*Brew)(nil)
+
+var _ TapTrustManager = (*Brew)(nil)
 
 // Search queries the native package manager for the given package name.
 func (m *Brew) Search(ctx context.Context, query string) ([]string, error) {
@@ -292,31 +331,74 @@ func (m *Brew) ListRepos(ctx context.Context) ([]RepositoryInfo, error) {
 	return result, nil
 }
 
-// AddRepo enables a third-party tap.
+// AddRepo enables a third-party tap and, when the subcommand supports it,
+// best-effort trusts the whole tap. Trusting the tap is what lets Homebrew
+// 6.0.0+ load formulae/casks from a non-official tap; if `brew trust` is
+// unavailable (older brew) or the tap is already trusted, we warn instead of
+// failing the add.
 func (m *Brew) AddRepo(ctx context.Context, name, url string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
 	var err error
 	if url != "" {
-		_, err = m.exec(WithStreamIO(ctx), "brew", "tap", name, url)
+		_, err = m.exec(brewExecCtx(ctx), "brew", "tap", name, url)
 	} else {
-		_, err = m.exec(WithStreamIO(ctx), "brew", "tap", name)
+		_, err = m.exec(brewExecCtx(ctx), "brew", "tap", name)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to tap %s: %w", name, err)
 	}
+	if err := m.Trust(ctx, name); err != nil {
+		// Trust is best-effort: a tap that works without explicit trust (or an
+		// older brew without `brew trust`) should not fail the repo add.
+		_, _ = fmt.Fprintf(os.Stderr, "⚠ could not trust tap %s: %v\n", name, err)
+	}
 	return nil
 }
 
-// RemoveRepo disables a third-party tap.
+// RemoveRepo disables a third-party tap and best-effort untrusts it.
 func (m *Brew) RemoveRepo(ctx context.Context, name string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	_, err := m.exec(WithStreamIO(ctx), "brew", "untap", name)
+	_, err := m.exec(brewExecCtx(ctx), "brew", "untap", name)
 	if err != nil {
 		return fmt.Errorf("failed to untap %s: %w", name, err)
+	}
+	if err := m.Untrust(ctx, name); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "⚠ could not untrust tap %s: %v\n", name, err)
+	}
+	return nil
+}
+
+// Trust marks a whole tap as trusted so Homebrew 6.0.0+ will load its
+// formulae, casks, and commands.
+func (m *Brew) Trust(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validateTapName(name); err != nil {
+		return err
+	}
+	_, err := m.exec(brewExecCtx(ctx), "brew", "trust", name)
+	if err != nil {
+		return fmt.Errorf("failed to trust %s: %w", name, err)
+	}
+	return nil
+}
+
+// Untrust stops trusting a whole tap.
+func (m *Brew) Untrust(ctx context.Context, name string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := validateTapName(name); err != nil {
+		return err
+	}
+	_, err := m.exec(brewExecCtx(ctx), "brew", "untrust", name)
+	if err != nil {
+		return fmt.Errorf("failed to untrust %s: %w", name, err)
 	}
 	return nil
 }
@@ -357,22 +439,22 @@ func (m *Brew) Update(ctx context.Context, pkg string) error {
 		if isCask(ctx) {
 			args = []string{"upgrade", "--cask", pkg}
 		}
-		_, err := m.exec(WithStreamIO(ctx), "brew", args...)
+		_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 		if err != nil {
 			return fmt.Errorf("failed to upgrade %s: %w", pkg, err)
 		}
 		return nil
 	}
 
-	_, err := m.exec(WithStreamIO(ctx), "brew", "update")
+	_, err := m.exec(brewExecCtx(ctx), "brew", "update")
 	if err != nil {
 		return fmt.Errorf("failed to update homebrew: %w", err)
 	}
-	if _, err := m.exec(WithStreamIO(ctx), "brew", "upgrade"); err != nil {
+	if _, err := m.exec(brewExecCtx(ctx), "brew", "upgrade"); err != nil {
 		return fmt.Errorf("failed to upgrade packages: %w", err)
 	}
 	// Cask upgrade is best-effort — may fail on systems with no casks installed
-	_, _ = m.exec(WithStreamIO(ctx), "brew", "upgrade", "--cask")
+	_, _ = m.exec(brewExecCtx(ctx), "brew", "upgrade", "--cask")
 	return nil
 }
 

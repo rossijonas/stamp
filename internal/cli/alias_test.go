@@ -40,21 +40,31 @@ func TestCheckUpdateCmd(t *testing.T) {
 }
 
 func TestTapCmd(t *testing.T) {
-	buf, err := execCmd(t, []string{"tap", "mytap"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	buf, err := execCmd(t, []string{"tap", "mytap", "-y"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "added tap mytap via brew")
 }
 
 func TestTapCmd_BrewNotAvailable(t *testing.T) {
-	_, err := execCmd(t, []string{"tap", "mytap"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	_, err := execCmd(t, []string{"tap", "mytap", "-y"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "brew is not available")
 }
 
+func TestTapCmd_RefusesWithoutYesNonInteractive(t *testing.T) {
+	_, err := execCmd(t, []string{"tap", "mytap"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.ErrorIs(t, err, errNonInteractive)
+}
+
 func TestUntapCmd(t *testing.T) {
-	buf, err := execCmd(t, []string{"untap", "mytap"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	buf, err := execCmd(t, []string{"untap", "mytap", "-y"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "removed tap mytap via brew")
+}
+
+func TestUntapCmd_RefusesWithoutYesNonInteractive(t *testing.T) {
+	_, err := execCmd(t, []string{"untap", "mytap"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.ErrorIs(t, err, errNonInteractive)
 }
 
 func TestTapsCmd(t *testing.T) {

@@ -65,17 +65,19 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp override <app-id>` | | ✓ | ✓ | ✓ Flatpak-only, CLI command via type assertion | ✓ Complete |
 | `stamp outdated` | | ✓ | ✓ | ✓ Delegates to runCheck (same as update --check) | ✓ Complete |
 | `stamp check-update` | | ✓ | ✓ | ✓ Delegates to runCheck (same as update --check) | ✓ Complete |
-| `stamp tap <name>` | | ✓ | ✓ | ✓ Delegates to brew AddRepo | ✓ Complete |
-| `stamp untap <name>` | | ✓ | ✓ | ✓ Delegates to brew RemoveRepo | ✓ Complete |
+| `stamp tap <name>` | | ✓ | ✓ | ✓ Delegates to brew AddRepo (taps + trusts, consent-gated) | ✓ Complete |
+| `stamp untap <name>` | | ✓ | ✓ | ✓ Delegates to brew RemoveRepo (untaps + untrusts, consent-gated) | ✓ Complete |
 | `stamp taps` | | ✓ | ✓ | ✓ Delegates to brew ListRepos | ✓ Complete |
 
 ### Repository Commands
 
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
-| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager optional when tracked) | ✓ Complete |
+| `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required); brew taps are also trusted | ✓ Complete |
+| `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager optional when tracked); brew taps are untrusted on removal | ✓ Complete |
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
+| `stamp repo trust <name>` | | ✓ | ✓ | ✓ Brew-only; trusts a whole tap | ✓ Complete |
+| `stamp repo untrust <name>` | | ✓ | ✓ | ✓ Brew-only; stops trusting a tap | ✓ Complete |
 
 ### Man Command (Subcommands)
 
@@ -173,6 +175,8 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 - **Cask:** Brew-specific feature for macOS GUI applications (`brew install --cask`). Flatpak and Snap support GUI apps natively on Linux through their standard install flow — no separate flag needed.
 - **Hold:** APT (apt-mark), DNF (dnf versionlock), Pacman/Paru (IgnorePkg in pacman.conf). Other managers do not support version pinning.
 - **Repo management:** DNF supports COPR repos and `.repo` file URLs (fetched verbatim, gpg settings preserved; URL-added repos are removed by deleting the `.repo` file, COPR repos via `dnf copr disable`), APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
+- **Brew tap trust:** On Homebrew 6.0.0+, `stamp repo add <tap> -m brew` taps **and** trusts the tap (prompt reads "Add and trust ..."); `stamp repo remove <tap> -m brew` untrusts it. `stamp repo trust` / `stamp repo untrust` manage whole-tap trust explicitly. Trust is best-effort on older brew (warn instead of fail).
+- **Non-interactive (`-y`):** With `-y`, stamp suppresses each manager's native prompt — `-y`/`--assume-no` for apt/dnf, `--noconfirm` for pacman/paru, `-y` for zypper, and a piped `y\n` to Homebrew's stdin for brew. Snap, MacPorts, and the toolchain adapters (Go, Npm, Pipx, Uv, Cargo) do not present native confirmation prompts.
 - **CheckUpdate:** Toolchain managers (Go, Pipx, Uv) cannot preview updates. They print an informational notice during `stamp update --check` and continue.
 - **Backup retention:** The `[backup]` section of `config.toml` controls timestamped backup retention (logrotate-style: max/min count + min/max age axes, `0` = unlimited). `stamp reconcile` rotates manifest backups; `stamp init` re-init rotates manifest + snapshot backups. Misconfigurations are reported by `stamp doctor`.
 - **Reconcile reliability:** `stamp reconcile` always prints a reminder that it is a fallback (prefer `stamp install`) and a per-manager reliability note. `ListInstalled` reliability: Reliable (brew, flatpak, go, pipx, uv, npm, cargo, macports, snap — system snaps filtered); Over-inclusive (apt, dnf, zypper, pacman, paru). See `docs/usage/reconcile.md`.
