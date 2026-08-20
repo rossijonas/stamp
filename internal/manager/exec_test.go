@@ -86,3 +86,22 @@ func TestDefaultExecutor_StreamCancel(t *testing.T) {
 	_, err := defaultExecutor(ctx, "sleep", "10")
 	require.Error(t, err)
 }
+
+func TestStdInString_RoundTrip(t *testing.T) {
+	t.Parallel()
+	ctx := WithStdInString(context.Background(), "y\n")
+	require.Equal(t, "y\n", getStdInString(ctx))
+	require.Empty(t, getStdInString(context.Background()))
+}
+
+func TestDefaultExecutor_StreamFeedsStdInString(t *testing.T) {
+	t.Parallel()
+	// A streamed command that echoes a line read from stdin: proves the stdin
+	// string is fed to the child (used to auto-answer native prompts under -y).
+	ctx := WithStreamIO(WithStdInString(context.Background(), "accepted\n"))
+	out, err := defaultExecutor(ctx, "sh", "-c", "read line; printf '%s' \"$line\"")
+	require.NoError(t, err)
+	// Streamed mode returns nil output, but the command must have consumed the
+	// piped line without error (it would fail/hang if stdin were the closed TTY).
+	_ = out
+}

@@ -608,6 +608,22 @@ func TestBrew_Update_FormulaFailureIsError(t *testing.T) {
 	assert.Equal(t, 2, call)
 }
 
+func TestBrew_Update_BatchPipesYesWhenConsent(t *testing.T) {
+	t.Parallel()
+	var stdins []string
+	mgr := NewBrew()
+	mgr.exec = func(ctx context.Context, _ string, _ ...string) ([]byte, error) {
+		stdins = append(stdins, getStdInString(ctx))
+		return []byte(""), nil
+	}
+	err := mgr.Update(WithYes(context.Background()), "")
+	require.NoError(t, err)
+	require.Len(t, stdins, 3, "batch update should run update, upgrade, upgrade --cask")
+	for i, s := range stdins {
+		assert.Equal(t, "y\n", s, "batch update call %d should pipe yes under consent", i+1)
+	}
+}
+
 func TestBrew_ListReposError(t *testing.T) {
 	t.Parallel()
 	manager := NewBrew()
@@ -687,4 +703,156 @@ func TestBrew_ListHeld_NotSupported(t *testing.T) {
 	_, err := mgr.ListHeld(WithYes(context.Background()))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestBrew_PreviewReinstall_UsageError(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		assert.Equal(t, []string{"reinstall", "--dry-run", "htop"}, args)
+		return []byte("Usage: brew reinstall [options] formula|cask [...]\nError: invalid option: --dry-run\n"), assert.AnError
+	}
+	_, err := mgr.PreviewReinstall(context.Background(), "htop")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not support a dry-run preview")
+}
+
+func TestBrew_PreviewReinstall_UsageErrorWithOnlyText(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		return []byte("Error: invalid option: --dry-run\n"), nil
+	}
+	_, err := mgr.PreviewReinstall(context.Background(), "htop")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not support a dry-run preview")
+}
+
+func TestBrew_PreviewReinstall_ValidPreview(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		assert.Equal(t, []string{"reinstall", "--dry-run", "htop"}, args)
+		return []byte("Would reinstall: htop\n"), nil
+	}
+	pv, err := mgr.PreviewReinstall(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.Contains(t, pv.Output, "Would reinstall")
+	assert.False(t, pv.Noop)
+}
+
+func TestBrew_PreviewReinstall_Noop(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		return []byte("Error: htop is not installed\n"), nil
+	}
+	pv, err := mgr.PreviewReinstall(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.True(t, pv.Noop)
+}
+
+func TestBrewExecCtx_WithYesPipesYes(t *testing.T) {
+	t.Parallel()
+	ctx := brewExecCtx(WithYes(context.Background()))
+	require.True(t, isStreamIO(ctx))
+	require.Equal(t, "y\n", getStdInString(ctx))
+}
+
+func TestBrewExecCtx_WithoutYesNoStdinString(t *testing.T) {
+	t.Parallel()
+	ctx := brewExecCtx(context.Background())
+	require.True(t, isStreamIO(ctx))
+	require.Empty(t, getStdInString(ctx))
+}
+
+func TestBrew_InstallWithoutConsentFails(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	err := mgr.Install(context.Background(), "htop")
+	require.ErrorIs(t, err, ErrConfirmationRequired)
+}
+
+func TestBrew_AddRepo_TapsAndTrusts(t *testing.T) {
+	t.Parallel()
+	var calls [][]string
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		calls = append(calls, args)
+		return nil, nil
+	}
+	err := mgr.AddRepo(WithYes(context.Background()), "user/repo", "")
+	require.NoError(t, err)
+	require.Equal(t, [][]string{{"tap", "user/repo"}, {"trust", "user/repo"}}, calls)
+}
+
+func TestBrew_AddRepo_TrustFailureWarnsNotFails(t *testing.T) {
+	t.Parallel()
+	var calls [][]string
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		calls = append(calls, args)
+		if args[0] == "trust" {
+			return nil, assert.AnError
+		}
+		return nil, nil
+	}
+	err := mgr.AddRepo(WithYes(context.Background()), "user/repo", "")
+	require.NoError(t, err) // tap succeeded; trust failure is best-effort
+	require.Equal(t, [][]string{{"tap", "user/repo"}, {"trust", "user/repo"}}, calls)
+}
+
+func TestBrew_RemoveRepo_UntapsAndUntrusts(t *testing.T) {
+	t.Parallel()
+	var calls [][]string
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		calls = append(calls, args)
+		return nil, nil
+	}
+	err := mgr.RemoveRepo(WithYes(context.Background()), "user/repo")
+	require.NoError(t, err)
+	require.Equal(t, [][]string{{"untap", "user/repo"}, {"untrust", "user/repo"}}, calls)
+}
+
+func TestBrew_Trust(t *testing.T) {
+	t.Parallel()
+	var calls [][]string
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		calls = append(calls, args)
+		return nil, nil
+	}
+	require.NoError(t, mgr.Trust(WithYes(context.Background()), "user/repo"))
+	require.Equal(t, [][]string{{"trust", "user/repo"}}, calls)
+}
+
+func TestBrew_Untrust(t *testing.T) {
+	t.Parallel()
+	var calls [][]string
+	mgr := NewBrew()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		calls = append(calls, args)
+		return nil, nil
+	}
+	require.NoError(t, mgr.Untrust(WithYes(context.Background()), "user/repo"))
+	require.Equal(t, [][]string{{"untrust", "user/repo"}}, calls)
+}
+
+func TestBrew_TrustWithoutConsentFails(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	err := mgr.Trust(context.Background(), "user/repo")
+	require.ErrorIs(t, err, ErrConfirmationRequired)
+	err = mgr.Untrust(context.Background(), "user/repo")
+	require.ErrorIs(t, err, ErrConfirmationRequired)
+}
+
+func TestBrew_TrustInvalidName(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	err := mgr.Trust(WithYes(context.Background()), "-formula")
+	require.Error(t, err)
+	err = mgr.Untrust(WithYes(context.Background()), "-formula")
+	require.Error(t, err)
 }

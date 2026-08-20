@@ -88,6 +88,29 @@ homebrew/cask
 homebrew/core
 ```
 
+### Homebrew tap trust
+
+Homebrew 6.0.0+ refuses to load formulae, casks, and commands from untrusted
+taps. `stamp repo add <tap> -m brew` taps **and** trusts the tap in one
+consent-gated step (the prompt reads "Add and trust repo X via brew"), so
+`stamp install` from that tap works immediately.
+
+```bash
+stamp repo add anomalyco/tap -m brew     # prompts: "Add and trust repo anomalyco/tap via brew?"
+stamp install opencode -m brew           # works, no untrusted-tap warning
+```
+
+Manage trust explicitly:
+
+```bash
+stamp repo trust anomalyco/tap -m brew   # trust a whole tap
+stamp repo untrust anomalyco/tap -m brew # stop trusting a tap
+```
+
+`stamp repo remove <tap> -m brew` untrusts the tap as part of removal. On
+Homebrew versions without `brew trust` (< 6.0.0), tapping still succeeds and a
+warning is printed instead of an error.
+
 ### List repositories
 
 ```bash

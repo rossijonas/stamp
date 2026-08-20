@@ -47,6 +47,14 @@ type BatchReinstaller interface {
 	ReinstallMany(ctx context.Context, pkgs ...string) error
 }
 
+// TapTrustManager is implemented by adapters that can manage whole-tap trust
+// (Homebrew 6.0.0+). The CLI type-asserts this interface for
+// `stamp repo trust`/`stamp repo untrust`; only brew implements it today.
+type TapTrustManager interface {
+	Trust(ctx context.Context, name string) error
+	Untrust(ctx context.Context, name string) error
+}
+
 // validatePackages validates every package name in a batch before any native
 // command runs, so a bad name aborts the whole operation upfront.
 func validatePackages(pkgs []string) error {

@@ -87,6 +87,8 @@ func newRepoCmd() *cobra.Command {
 	cmd.AddCommand(newRepoAddCmd())
 	cmd.AddCommand(newRepoRemoveCmd())
 	cmd.AddCommand(newRepoListCmd())
+	cmd.AddCommand(newRepoTrustCmd())
+	cmd.AddCommand(newRepoUntrustCmd())
 
 	return cmd
 }
@@ -153,7 +155,11 @@ func newRepoAddCmd() *cobra.Command {
 				return fmt.Errorf("manager %q not found (required)", managerFlag)
 			}
 
-			if err := requireConsent(cmd, fmt.Sprintf("Add repo %s via %s", name, managerFlag)); err != nil {
+			verb := fmt.Sprintf("Add repo %s via %s", name, managerFlag)
+			if manager.ResolveManager(managerFlag) == "brew" {
+				verb = fmt.Sprintf("Add and trust repo %s via brew", name)
+			}
+			if err := requireConsent(cmd, verb); err != nil {
 				return handleConsent(err)
 			}
 			if err := adapter.AddRepo(manager.WithYes(cmd.Context()), name, url); err != nil {
@@ -207,42 +213,16 @@ func newRepoRemoveCmd() *cobra.Command {
 				return err
 			}
 
-			var adapter manager.Adapter
-
-			// Check the manifest first: if the repo is tracked, use its
-			// recorded manager so `-m` is optional.
-			if managerFlag == "" {
-				for _, r := range app.manifest.Repositories {
-					if r.Name != name {
-						continue
-					}
-					for _, a := range app.adapters {
-						if a.Name() == r.Manager {
-							adapter = a
-							break
-						}
-					}
-					break
-				}
-				if adapter == nil {
-					return catErr(ErrUsage, "repository %q is not tracked; specify its manager with --manager", name)
-				}
+			adapter, err := resolveRepoAdapter(cmd, name, managerFlag)
+			if err != nil {
+				return err
 			}
 
-			// Fall back to the explicit flag.
-			if adapter == nil {
-				for _, a := range app.adapters {
-					if a.Name() == manager.ResolveManager(managerFlag) {
-						adapter = a
-						break
-					}
-				}
-				if adapter == nil {
-					return fmt.Errorf("manager %q not found", managerFlag)
-				}
+			verb := fmt.Sprintf("Remove repo %s via %s", name, adapter.Name())
+			if adapter.Name() == "brew" {
+				verb = fmt.Sprintf("Remove and untrust repo %s via brew", name)
 			}
-
-			if err := requireConsent(cmd, fmt.Sprintf("Remove repo %s via %s", name, adapter.Name())); err != nil {
+			if err := requireConsent(cmd, verb); err != nil {
 				return handleConsent(err)
 			}
 			if err := adapter.RemoveRepo(manager.WithYes(cmd.Context()), name); err != nil {
@@ -323,5 +303,142 @@ func newRepoListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to list")
+	return cmd
+}
+
+// resolveRepoAdapter resolves the adapter for a repository operation. It
+// resolves via the explicit -m flag when given, otherwise from the manager
+// recorded in the manifest for the named repository. Shared by `repo remove`
+// and the `repo trust`/`repo untrust` brew operations.
+func resolveRepoAdapter(cmd *cobra.Command, name, managerFlag string) (manager.Adapter, error) {
+	app := appFromCtx(cmd)
+	if app.manifestErr != nil {
+		return nil, app.manifestErr
+	}
+
+	var adapter manager.Adapter
+
+	// Check the manifest first: if the repo is tracked, use its recorded
+	// manager so `-m` is optional.
+	if managerFlag == "" {
+		for _, r := range app.manifest.Repositories {
+			if r.Name != name {
+				continue
+			}
+			for _, a := range app.adapters {
+				if a.Name() == r.Manager {
+					adapter = a
+					break
+				}
+			}
+			break
+		}
+		if adapter == nil {
+			return nil, catErr(ErrUsage, "repository %q is not tracked; specify its manager with --manager", name)
+		}
+	}
+
+	// Fall back to the explicit flag.
+	if adapter == nil {
+		for _, a := range app.adapters {
+			if a.Name() == manager.ResolveManager(managerFlag) {
+				adapter = a
+				break
+			}
+		}
+		if adapter == nil {
+			return nil, fmt.Errorf("manager %q not found", managerFlag)
+		}
+	}
+	return adapter, nil
+}
+
+// resolveBrewAdapter resolves the brew adapter for a repo trust/untrust
+// operation. It returns an error if the resolved manager is not brew.
+func resolveBrewAdapter(cmd *cobra.Command, name, managerFlag string) (manager.Adapter, error) {
+	adapter, err := resolveRepoAdapter(cmd, name, managerFlag)
+	if err != nil {
+		return nil, err
+	}
+	if adapter.Name() != "brew" {
+		return nil, fmt.Errorf("trust/untrust is only supported for the brew manager, got %q", adapter.Name())
+	}
+	return adapter, nil
+}
+
+func newRepoTrustCmd() *cobra.Command {
+	var managerFlag string
+
+	cmd := &cobra.Command{
+		Use:   "trust <name>",
+		Short: "Trust a Homebrew tap",
+		Example: `  # trust a tap recorded in the manifest
+  stamp repo trust homebrew/cask
+
+  # specify the manager explicitly
+  stamp repo trust anomalyco/tap -m brew`,
+		Long: `Mark a Homebrew tap as trusted so Homebrew 6.0.0+ loads its formulae,
+casks, and commands. Only brew taps can be trusted.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			adapter, err := resolveBrewAdapter(cmd, name, managerFlag)
+			if err != nil {
+				return err
+			}
+			if err := requireConsent(cmd, fmt.Sprintf("Trust repo %s via brew", name)); err != nil {
+				return handleConsent(err)
+			}
+			brew, ok := adapter.(manager.TapTrustManager)
+			if !ok {
+				return fmt.Errorf("brew adapter is unavailable")
+			}
+			if err := brew.Trust(manager.WithYes(cmd.Context()), name); err != nil {
+				return fmt.Errorf("failed to trust repo: %w", err)
+			}
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "trusted repo %s via brew\n", name)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use (optional if the repo is tracked in the manifest)")
+	return cmd
+}
+
+func newRepoUntrustCmd() *cobra.Command {
+	var managerFlag string
+
+	cmd := &cobra.Command{
+		Use:   "untrust <name>",
+		Short: "Stop trusting a Homebrew tap",
+		Example: `  # untrust a tap recorded in the manifest
+  stamp repo untrust homebrew/cask
+
+  # specify the manager explicitly
+  stamp repo untrust anomalyco/tap -m brew`,
+		Long: `Stop trusting a Homebrew tap. Only brew taps can be untrusted.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			adapter, err := resolveBrewAdapter(cmd, name, managerFlag)
+			if err != nil {
+				return err
+			}
+			if err := requireConsent(cmd, fmt.Sprintf("Untrust repo %s via brew", name)); err != nil {
+				return handleConsent(err)
+			}
+			brew, ok := adapter.(manager.TapTrustManager)
+			if !ok {
+				return fmt.Errorf("brew adapter is unavailable")
+			}
+			if err := brew.Untrust(manager.WithYes(cmd.Context()), name); err != nil {
+				return fmt.Errorf("failed to untrust repo: %w", err)
+			}
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "untrusted repo %s via brew\n", name)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use (optional if the repo is tracked in the manifest)")
 	return cmd
 }
