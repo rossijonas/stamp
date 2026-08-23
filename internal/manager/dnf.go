@@ -144,6 +144,65 @@ func parseDNFHistoryUserInstalled(output []byte) []string {
 	return result
 }
 
+// CheckInstalled reports which of pkgs are absent from the system. Presence
+// resolves against the full installed set rather than userinstalled history,
+// so dependency- and preseed-installed packages count as present, and intent
+// names resolve through provides to their concrete packages (nodejs →
+// nodejs22) — mirroring what `dnf install <pkg>` would satisfy. Read-only;
+// never needs root.
+//
+// Names that fail ValidatePackageName are reported absent without executing
+// anything. A failed full-set or provides lookup aborts the whole check with
+// an error so callers can degrade to legacy ListInstalled matching instead of
+// reporting false absences from partial data.
+func (m *DNF) CheckInstalled(ctx context.Context, pkgs []string) ([]string, error) {
+	bin := m.cmd
+	if m.cmd == "yum" {
+		bin = "repoquery"
+	}
+
+	valid := make([]string, 0, len(pkgs))
+	var absent []string
+	for _, p := range pkgs {
+		if err := ValidatePackageName(p); err != nil {
+			absent = append(absent, p)
+			continue
+		}
+		valid = append(valid, p)
+	}
+	if len(valid) == 0 {
+		return absent, nil
+	}
+
+	out, err := m.exec(ctx, bin, "repoquery", "--installed", "--qf", "%{name}\n")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list installed packages: %w", err)
+	}
+	system := make(map[string]struct{}, 128)
+	for _, n := range parseLines(out) {
+		system[n] = struct{}{}
+	}
+
+	for _, p := range valid {
+		if _, ok := system[p]; ok {
+			continue
+		}
+		// Scope to installed packages: a bare --whatprovides also matches
+		// available repo providers, which would report genuinely-missing
+		// packages as present.
+		out, err := m.exec(ctx, bin, "repoquery", "--installed", "--whatprovides", p, "--qf", "%{name}\n")
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve provides for %s: %w", p, err)
+		}
+		if len(bytes.TrimSpace(out)) == 0 {
+			absent = append(absent, p)
+		}
+	}
+	return absent, nil
+}
+
+var _ InstalledChecker = (*DNF)(nil)
+
 // Install executes the native installation command.
 func (m *DNF) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {

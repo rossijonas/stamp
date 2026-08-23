@@ -44,8 +44,8 @@ func missingFromSystem(ctx context.Context, adapters []manager.Adapter, m *manif
 	}
 
 	type result struct {
-		manager   string
-		installed []string
+		manager string
+		present map[string]struct{}
 	}
 	ch := make(chan result, len(active))
 	var wg sync.WaitGroup
@@ -53,33 +53,50 @@ func missingFromSystem(ctx context.Context, adapters []manager.Adapter, m *manif
 		wg.Add(1)
 		go func(a manager.Adapter) {
 			defer wg.Done()
+			candidates := byManager[a.Name()]
+			names := make([]string, 0, len(candidates))
+			for _, p := range candidates {
+				names = append(names, p.Name)
+			}
+			// Adapters with a real presence check win: their system view
+			// includes dependency-installed packages and provides aliases
+			// that ListInstalled matching cannot see.
+			if c, ok := a.(manager.InstalledChecker); ok {
+				absent, err := c.CheckInstalled(ctx, names)
+				if err == nil {
+					absentSet := make(map[string]struct{}, len(absent))
+					for _, n := range absent {
+						absentSet[n] = struct{}{}
+					}
+					present := make(map[string]struct{}, len(names)-len(absentSet))
+					for _, n := range names {
+						if _, gone := absentSet[n]; !gone {
+							present[n] = struct{}{}
+						}
+					}
+					ch <- result{manager: a.Name(), present: present}
+					return
+				}
+				// Fall through to the best-effort legacy path below.
+			}
 			pkgs, err := a.ListInstalled(ctx)
 			if err != nil {
 				return
 			}
-			ch <- result{manager: a.Name(), installed: pkgs}
+			present := make(map[string]struct{}, len(pkgs))
+			for _, p := range pkgs {
+				present[p] = struct{}{}
+			}
+			ch <- result{manager: a.Name(), present: present}
 		}(a)
 	}
 	wg.Wait()
 	close(ch)
 
-	installed := make(map[string]map[string]struct{}, len(active))
-	for r := range ch {
-		set := make(map[string]struct{}, len(r.installed))
-		for _, p := range r.installed {
-			set[p] = struct{}{}
-		}
-		installed[r.manager] = set
-	}
-
 	var missing []manifest.Package
-	for managerName, pkgs := range byManager {
-		set, ok := installed[managerName]
-		if !ok {
-			continue
-		}
-		for _, p := range pkgs {
-			if _, present := set[p.Name]; !present {
+	for r := range ch {
+		for _, p := range byManager[r.manager] {
+			if _, isPresent := r.present[p.Name]; !isPresent {
 				missing = append(missing, p)
 			}
 		}

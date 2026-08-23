@@ -345,6 +345,51 @@ manager = "brew"
 	assert.Empty(t, report.Manifest.Missing)
 }
 
+func TestDoctor_SystemMissing_ProvidesAlias(t *testing.T) {
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	// nodejs resolves to nodejs22 through provides — the checker must keep it
+	// out of the Missing list even though the raw listing lacks the name.
+	checker := &checkerMock{
+		Mock:   manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"nodejs22"}},
+		absent: map[string]bool{"ghost": true},
+	}
+	adapters := []manager.Adapter{checker}
+
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	cPath := filepath.Join(tmpDir, "config.toml")
+
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "nodejs"
+manager = "dnf"
+
+[[packages]]
+name = "ghost"
+manager = "dnf"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"doctor", "--json"})
+
+	require.NoError(t, root.Execute())
+
+	var report doctorReport
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &report))
+	require.True(t, report.Manifest.Valid)
+	require.Len(t, report.Manifest.Missing, 1)
+	assert.Equal(t, "ghost", report.Manifest.Missing[0].Name)
+}
+
 func TestDoctor_Manifest_Healthy(t *testing.T) {
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
