@@ -276,28 +276,14 @@ func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 }
 
 // PreviewReinstall previews reinstalling pkg.
-func (m *Brew) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
+// brew reinstall has no --dry-run option (unlike brew install), so a native
+// preview is impossible. Returning an error makes the confirmation gate
+// degrade to a clean warn-and-prompt instead of rendering brew's usage text.
+func (m *Brew) PreviewReinstall(_ context.Context, pkg string) (Preview, error) {
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
 	}
-	ctx = WithCombinedOutput(ctx)
-	args := []string{"reinstall", "--dry-run"}
-	if isCask(ctx) {
-		args = append(args, "--cask")
-	}
-	args = append(args, pkg)
-	out, err := m.exec(ctx, "brew", args...)
-	if err != nil && len(bytes.TrimSpace(out)) == 0 {
-		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
-	}
-	s := string(out)
-	// brew reinstall has no --dry-run flag; when the invocation is rejected with
-	// usage/help text, surface an error so the confirmation gate degrades to a
-	// warn-and-prompt instead of rendering raw usage output as the preview.
-	if strings.Contains(s, "invalid option") || strings.Contains(s, "Usage: brew reinstall") {
-		return Preview{}, fmt.Errorf("brew reinstall does not support a dry-run preview: %s", strings.TrimSpace(s))
-	}
-	return Preview{Output: s, Noop: strings.Contains(s, "No such keg") || strings.Contains(s, "is not installed")}, nil
+	return Preview{}, fmt.Errorf("brew reinstall does not support a dry-run preview")
 }
 
 var _ Previewer = (*Brew)(nil)

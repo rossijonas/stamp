@@ -198,18 +198,6 @@ func TestPreview_Reinstall(t *testing.T) {
 			wantArgs: []string{"-S", "--print", "htop"},
 		},
 		{
-			name:     "brew preview reinstall",
-			build:    func(exec Executor) Previewer { a := NewBrew(); a.exec = exec; return a },
-			wantName: "brew",
-			wantArgs: []string{"reinstall", "--dry-run", "htop"},
-		},
-		{
-			name:     "brew preview reinstall cask",
-			build:    func(exec Executor) Previewer { a := NewBrew(); a.exec = exec; return a },
-			wantName: "brew",
-			wantArgs: []string{"reinstall", "--dry-run", "--cask", "spotify"},
-		},
-		{
 			name:     "flatpak preview reinstall",
 			build:    func(exec Executor) Previewer { a := NewFlatpak(); a.exec = exec; return a },
 			wantName: "flatpak",
@@ -313,7 +301,6 @@ func TestPreview_NonZeroExitStillReturnsOutput(t *testing.T) {
 		{name: "dnf", build: func(e Executor) Previewer { a := NewDNF("dnf"); a.exec = e; return a }, method: "remove"},
 		{name: "apt", build: func(e Executor) Previewer { a := NewAPT("apt"); a.exec = e; return a }, method: "install"},
 		{name: "pacman", build: func(e Executor) Previewer { a := NewPacman(); a.exec = e; return a }, method: "remove"},
-		{name: "brew", build: func(e Executor) Previewer { a := NewBrew(); a.exec = e; return a }, method: "reinstall"},
 		{name: "flatpak", build: func(e Executor) Previewer { a := NewFlatpak(); a.exec = e; return a }, method: "install"},
 		{name: "zypper", build: func(e Executor) Previewer { a := NewZypper(); a.exec = e; return a }, method: "reinstall"},
 		{name: "npm", build: func(e Executor) Previewer { a := NewNpm(); a.exec = e; return a }, method: "remove"},
@@ -424,14 +411,15 @@ func TestPreview_ReinstallNoop(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, pv.Noop, "reinstall of an installed package must never be a no-op")
 	})
-	t.Run("brew absent is noop", func(t *testing.T) {
+	t.Run("brew reinstall has no preview", func(t *testing.T) {
 		a := NewBrew()
 		a.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-			return []byte("Error: No such keg: htop\n"), nil
+			t.Fatal("exec must not be called: brew reinstall has no --dry-run")
+			return nil, nil
 		}
-		pv, err := a.PreviewReinstall(ctx, "htop")
-		require.NoError(t, err)
-		require.True(t, pv.Noop)
+		_, err := a.PreviewReinstall(ctx, "htop")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not support a dry-run preview")
 	})
 }
 
@@ -484,6 +472,11 @@ func TestPreview_Adapters_ValidationAndErrors(t *testing.T) {
 					_, err = a.PreviewReinstall(ctx, "htop")
 				}
 				require.Error(t, err)
+				if tt.name == "brew" && method == "reinstall" {
+					// brew reinstall short-circuits: no exec, so no wrapping
+					assert.Contains(t, err.Error(), "does not support a dry-run preview")
+					return
+				}
 				assert.Contains(t, err.Error(), "failed to preview")
 				assert.ErrorIs(t, err, previewErr)
 			})
