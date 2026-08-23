@@ -705,51 +705,18 @@ func TestBrew_ListHeld_NotSupported(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotSupported)
 }
 
-func TestBrew_PreviewReinstall_UsageError(t *testing.T) {
+func TestBrew_PreviewReinstall_Unsupported(t *testing.T) {
 	t.Parallel()
 	mgr := NewBrew()
-	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
-		assert.Equal(t, []string{"reinstall", "--dry-run", "htop"}, args)
-		return []byte("Usage: brew reinstall [options] formula|cask [...]\nError: invalid option: --dry-run\n"), assert.AnError
+	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		t.Fatal("exec must not be called: brew reinstall has no --dry-run")
+		return nil, nil
 	}
 	_, err := mgr.PreviewReinstall(context.Background(), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support a dry-run preview")
-}
-
-func TestBrew_PreviewReinstall_UsageErrorWithOnlyText(t *testing.T) {
-	t.Parallel()
-	mgr := NewBrew()
-	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		return []byte("Error: invalid option: --dry-run\n"), nil
-	}
-	_, err := mgr.PreviewReinstall(context.Background(), "htop")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not support a dry-run preview")
-}
-
-func TestBrew_PreviewReinstall_ValidPreview(t *testing.T) {
-	t.Parallel()
-	mgr := NewBrew()
-	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
-		assert.Equal(t, []string{"reinstall", "--dry-run", "htop"}, args)
-		return []byte("Would reinstall: htop\n"), nil
-	}
-	pv, err := mgr.PreviewReinstall(context.Background(), "htop")
-	require.NoError(t, err)
-	assert.Contains(t, pv.Output, "Would reinstall")
-	assert.False(t, pv.Noop)
-}
-
-func TestBrew_PreviewReinstall_Noop(t *testing.T) {
-	t.Parallel()
-	mgr := NewBrew()
-	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		return []byte("Error: htop is not installed\n"), nil
-	}
-	pv, err := mgr.PreviewReinstall(context.Background(), "htop")
-	require.NoError(t, err)
-	assert.True(t, pv.Noop)
+	assert.NotContains(t, err.Error(), "Usage: brew reinstall")
+	assert.NotContains(t, err.Error(), "invalid option")
 }
 
 func TestBrewExecCtx_WithYesPipesYes(t *testing.T) {
