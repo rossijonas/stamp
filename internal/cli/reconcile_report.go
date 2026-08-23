@@ -68,6 +68,29 @@ func collectDiscovered(deltas []state.Delta) ([]discoveredPkg, []discoveredRepo)
 	return discovered, discoveredRepos
 }
 
+// filterDiscoveredByManifest drops drift entries already tracked in the
+// manifest. Reconcile is a fallback for packages installed outside stamp, so
+// entries stamp already knows about (via install/repo add) must not be reported
+// as new drift. Matching is by (name, manager), mirroring HasPackage.
+func filterDiscoveredByManifest(discovered []discoveredPkg, discoveredRepos []discoveredRepo, m *manifest.Manifest) ([]discoveredPkg, []discoveredRepo) {
+	if m == nil {
+		return discovered, discoveredRepos
+	}
+	var pkgs []discoveredPkg
+	for _, p := range discovered {
+		if !m.HasPackage(p.Name, p.Manager) {
+			pkgs = append(pkgs, p)
+		}
+	}
+	var repos []discoveredRepo
+	for _, r := range discoveredRepos {
+		if !m.HasRepository(r.Name, r.Manager) {
+			repos = append(repos, r)
+		}
+	}
+	return pkgs, repos
+}
+
 func saveCurrentSnaps(w io.Writer, snapDir string, snaps []state.Snapshot) {
 	for _, s := range snaps {
 		if err := state.Save(snapDir, s); err != nil {

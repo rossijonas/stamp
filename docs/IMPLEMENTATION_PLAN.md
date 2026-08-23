@@ -879,3 +879,10 @@ false positives, and per-manager reliability is surfaced with a fallback banner.
 *   **Verify:** `go test ./internal/cli/ -race`, `task check`
 *   **Files:** `internal/cli/status.go`, `internal/cli/status_test.go`, `internal/cli/status_output_test.go`, `internal/cli/install.go`, `internal/cli/reinstall.go`, `docs/usage/installing-packages.md`
 *   **Status:** ✓ Completed
+
+**Task 103: Reconcile manifest-filtered drift (#204)**
+*   **Description:** `filterDiscoveredByManifest` drops snapshot-drift entries already tracked in the manifest (by name+manager via `HasPackage`/`HasRepository`) before rendering/tracking. Reconcile is a fallback for *untracked* installations: `stamp install`/`stamp repo add` intent is never re-discovered ("Discovered N" + "Tracked 0" contradiction eliminated; `reconcile -d` shows "No drift detected" after a stamp write op). `reconcile_test.go` split into semantics + `reconcile_safety_test.go` (backup/fault tests) to stay under the 1000-line cap.
+*   **Acceptance:** tracked package/repo → no drift reported (real + dry-run); genuinely untracked drift still discovered+tracked; missing-path warning unaffected.
+*   **Verify:** `go test ./internal/cli/ -run 'TestReconcile|TestFilterDiscoveredByManifest' -race`, `task check`
+*   **Files:** `internal/cli/reconcile_report.go`, `internal/cli/reconcile.go`, `internal/cli/reconcile_test.go`, `internal/cli/reconcile_safety_test.go`, `docs/usage/reconcile.md`
+*   **Status:** ✓ Completed

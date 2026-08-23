@@ -74,6 +74,10 @@ Limits drift detection to a single manager.
 3. Any new packages or repositories are detected as drift
 4. Drift is auto-tracked into the manifest (or printed with `--dry-run`)
 
+Packages and repositories already tracked in the manifest are **never**
+reported as drift — reconcile is a fallback for *untracked* installations, so
+`stamp install`/`stamp repo add` intent is respected and never re-discovered.
+
 Reconcile is fully deterministic — no prompts, no decisions. It's the safety net for when you forget to use Stamp.
 
 ## Reconcile is a fallback
