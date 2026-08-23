@@ -83,6 +83,9 @@ Dry-run performs no writes, no backups, and no rotation.`,
 
 			deltas := state.DiffAll(oldSnaps, currentSnaps)
 			discovered, discoveredRepos := collectDiscovered(deltas)
+			// Reconcile is a fallback for packages installed outside stamp:
+			// drift already tracked in the manifest is not new drift.
+			discovered, discoveredRepos = filterDiscoveredByManifest(discovered, discoveredRepos, app.manifest)
 			missing := missingFromDeltas(deltas, app.manifest)
 
 			if len(discovered) == 0 && len(discoveredRepos) == 0 {

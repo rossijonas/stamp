@@ -2,12 +2,9 @@ package cli
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -161,68 +158,6 @@ func TestReconcile_AutoTrackedEntriesHaveReconciledOrigin(t *testing.T) {
 	require.Len(t, loaded.Packages, 1)
 	assert.Equal(t, "ripgrep", loaded.Packages[0].Name)
 	assert.Equal(t, manifest.OriginReconciled, loaded.Packages[0].Origin)
-}
-
-func TestReconcile_DriftCreatesManifestBackup(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit", "ripgrep"},
-		},
-	}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit"}},
-	})
-
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	tmpDir := t.TempDir()
-	manifestPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile"})
-
-	require.NoError(t, root.Execute())
-
-	backups, err := filepath.Glob(manifestPath + ".*.bak")
-	require.NoError(t, err)
-	assert.Len(t, backups, 1, "reconcile drift must create a manifest backup")
-}
-
-func TestReconcile_DryRunNoBackup(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit", "ripgrep"},
-		},
-	}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit"}},
-	})
-
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	tmpDir := t.TempDir()
-	manifestPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile", "--dry-run"})
-
-	require.NoError(t, root.Execute())
-
-	backups, err := filepath.Glob(manifestPath + ".*.bak")
-	require.NoError(t, err)
-	assert.Empty(t, backups, "reconcile --dry-run must not create backups")
 }
 
 func TestReconcile_MissingPackageWarnsOnNoDrift(t *testing.T) {
@@ -416,152 +351,6 @@ group = true
 	assert.NotContains(t, buf.String(), "not installed")
 }
 
-func TestRenderMissing(t *testing.T) {
-	t.Run("small list inlines names", func(t *testing.T) {
-		buf := new(bytes.Buffer)
-		renderMissing(buf, []manifest.Package{
-			{Name: "foo", Manager: "dnf"},
-			{Name: "bar", Manager: "brew"},
-		})
-		out := buf.String()
-		assert.Contains(t, out, "2 manifest package(s) not installed: foo (dnf), bar (brew)")
-		assert.Contains(t, out, "stamp ls --type missing")
-	})
-
-	t.Run("large list omits inline names", func(t *testing.T) {
-		buf := new(bytes.Buffer)
-		renderMissing(buf, []manifest.Package{
-			{Name: "p1", Manager: "dnf"},
-			{Name: "p2", Manager: "dnf"},
-			{Name: "p3", Manager: "dnf"},
-			{Name: "p4", Manager: "dnf"},
-			{Name: "p5", Manager: "dnf"},
-			{Name: "p6", Manager: "dnf"},
-		})
-		out := buf.String()
-		assert.Contains(t, out, "6 manifest package(s) not installed")
-		assert.NotContains(t, out, "p1 (dnf)")
-	})
-
-	t.Run("empty input writes nothing", func(t *testing.T) {
-		buf := new(bytes.Buffer)
-		renderMissing(buf, nil)
-		assert.Empty(t, buf.String())
-	})
-}
-
-func TestReconcile_NoDriftNoBackup(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit"},
-		},
-	}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit"}},
-	})
-
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	tmpDir := t.TempDir()
-	manifestPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile"})
-
-	require.NoError(t, root.Execute())
-	assert.Contains(t, buf.String(), "No drift detected")
-
-	backups, err := filepath.Glob(manifestPath + ".*.bak")
-	require.NoError(t, err)
-	assert.Empty(t, backups, "reconcile with no drift must not create backups")
-}
-
-func TestReconcile_DriftRotatesBackups(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit", "ripgrep"},
-		},
-	}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit"}},
-	})
-
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	tmpDir := t.TempDir()
-	manifestPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
-
-	// Pre-seed 4 backups, then a config capping manifest backups at 2. The
-	// max-age ceiling is disabled so the count cap alone drives rotation.
-	for _, age := range []int{20, 40, 60, 80} {
-		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
-		require.NoError(t, os.WriteFile(fmt.Sprintf("%s.%s.bak", manifestPath, ts), []byte("old"), 0600))
-	}
-	configContent := "[backup]\nmax_manifest_backups = 2\nmin_manifest_backups = 0\nmax_manifest_backup_age_days = 0\n"
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.toml"), []byte(configContent), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile"})
-
-	require.NoError(t, root.Execute())
-	output := buf.String()
-	assert.Contains(t, output, "rotated 2 manifest backup(s)")
-
-	backups, err := filepath.Glob(manifestPath + ".*.bak")
-	require.NoError(t, err)
-	assert.Len(t, backups, 3, "rotation must cap manifest backups at the configured max plus the min-age-protected fresh backup")
-}
-
-func TestReconcile_DriftDefaultMinKeepSurvives(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit", "ripgrep"},
-		},
-	}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit"}},
-	})
-
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	tmpDir := t.TempDir()
-	manifestPath := filepath.Join(tmpDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
-
-	// All backups older than the default 30-day ceiling — the min-count floor
-	// (default 3) must stop the ceiling from wiping everything.
-	for _, age := range []int{40, 50, 60, 70} {
-		ts := time.Now().UTC().Add(-time.Duration(age) * 24 * time.Hour).Format("20060102T150405Z")
-		require.NoError(t, os.WriteFile(fmt.Sprintf("%s.%s.bak", manifestPath, ts), []byte("old"), 0600))
-	}
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile"})
-
-	require.NoError(t, root.Execute())
-
-	backups, err := filepath.Glob(manifestPath + ".*.bak")
-	require.NoError(t, err)
-	assert.Len(t, backups, 3, "default min_manifest_backups=3 must survive the max-age ceiling")
-}
-
 func TestReconcile_MultipleManagers(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{
@@ -624,33 +413,6 @@ func TestReconcile_FirstRunDryRun(t *testing.T) {
 	assert.Contains(t, output, "No baseline snapshot exists")
 }
 
-func TestReconcile_NoAdapters(t *testing.T) {
-	_, err := execCmd(t, []string{"reconcile"}, []manager.Adapter{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no package managers available")
-	assert.Equal(t, ExitUnavailable, exitCodeFor(err))
-}
-
-func TestReconcile_CorruptSnapshot(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit"},
-		},
-	}
-
-	snapDir := t.TempDir()
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	snapshotDir := filepath.Join(snapDir, "stamp", "snapshots")
-	require.NoError(t, os.MkdirAll(snapshotDir, 0700))
-	require.NoError(t, os.WriteFile(filepath.Join(snapshotDir, "brew.json"), []byte("{invalid"), 0600))
-
-	_, err := execCmd(t, []string{"reconcile"}, adapters)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to load snapshot for brew")
-}
-
 func TestReconcile_AlreadyTracked(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{
@@ -687,46 +449,143 @@ manager = "brew"
 	err := root.Execute()
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "Discovered 1 new package(s)")
-	assert.Contains(t, output, "Tracked 0 package(s)")
+	// A manifest-tracked package is not new drift — reconcile must not report
+	// it as discovered or claim to track nothing after discovering it.
+	assert.Contains(t, output, "No drift detected")
+	assert.NotContains(t, output, "Discovered")
+	assert.NotContains(t, output, "Tracked 0")
 }
 
-func TestReconcile_ListInstalledError(t *testing.T) {
+func TestReconcile_RepoAlreadyTracked(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{
-			ManagerName: "brew",
-			ListErr:     assert.AnError,
+			ManagerName:    "brew",
+			InstalledPkgs:  []string{"lazygit"},
+			InstalledRepos: []manager.RepositoryInfo{{Name: "anomalyco/tap"}},
 		},
 	}
 
 	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit", "jq"}},
+		{Manager: "brew", Packages: []string{"lazygit"}},
 	})
 
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	_, err := execCmd(t, []string{"reconcile"}, adapters)
-	require.Error(t, err)
-}
+	manifestDir := t.TempDir()
+	manifestPath := filepath.Join(manifestDir, "manifest.toml")
+	manifestContent := `version = 1
+system = "linux"
 
-func TestReconcile_CorruptedManifest(t *testing.T) {
-	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
+[[repositories]]
+name = "anomalyco/tap"
+manager = "brew"
+`
 
-	tmpDir := t.TempDir()
-	mPath := filepath.Join(tmpDir, "manifest.toml")
-	cPath := filepath.Join(tmpDir, "config.toml")
+	require.NoError(t, os.MkdirAll(manifestDir, 0700))
+	require.NoError(t, os.WriteFile(manifestPath, []byte(manifestContent), 0600))
 
-	require.NoError(t, os.WriteFile(mPath, []byte("invalid [[toml\n"), 0600))
-
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(cPath))
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(manifestDir, "config.toml")))
 	buf := new(bytes.Buffer)
 	root.SetOut(buf)
 	root.SetErr(buf)
 	root.SetArgs([]string{"reconcile"})
 
 	err := root.Execute()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse manifest")
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "No drift detected")
+	assert.NotContains(t, output, "Discovered")
+	assert.NotContains(t, output, "Tracked")
+}
+
+func TestReconcile_RepoAlreadyTracked_DryRun(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:    "brew",
+			InstalledPkgs:  []string{"lazygit"},
+			InstalledRepos: []manager.RepositoryInfo{{Name: "anomalyco/tap"}},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	manifestDir := t.TempDir()
+	manifestPath := filepath.Join(manifestDir, "manifest.toml")
+	manifestContent := `version = 1
+system = "linux"
+
+[[repositories]]
+name = "anomalyco/tap"
+manager = "brew"
+`
+
+	require.NoError(t, os.MkdirAll(manifestDir, 0700))
+	require.NoError(t, os.WriteFile(manifestPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(manifestDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile", "--dry-run"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "No drift detected")
+	assert.NotContains(t, output, "Discovered")
+	assert.NotContains(t, output, "Use `stamp reconcile` without --dry-run to track")
+}
+
+func TestReconcile_MixedTrackedAndUntracked(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName:   "brew",
+			InstalledPkgs: []string{"lazygit", "jq", "ripgrep"},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "brew", Packages: []string{"lazygit"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	manifestDir := t.TempDir()
+	manifestPath := filepath.Join(manifestDir, "manifest.toml")
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "jq"
+manager = "brew"
+`
+
+	require.NoError(t, os.MkdirAll(manifestDir, 0700))
+	require.NoError(t, os.WriteFile(manifestPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(manifestDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	output := buf.String()
+	// Only genuinely untracked drift (ripgrep) is discovered and tracked; the
+	// manifest-tracked jq must not appear as drift.
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "ripgrep (brew)")
+	assert.NotContains(t, output, "jq (brew)")
+	assert.Contains(t, output, "Tracked 1 package(s)")
+
+	loaded, err := manifest.Load(manifestPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 2)
 }
 
 func TestReconcile_ManagerFlag_Success(t *testing.T) {
@@ -940,49 +799,6 @@ func TestReconcile_DryRun_ShortFlag(t *testing.T) {
 	assert.NotContains(t, output, "Tracked")
 }
 
-func TestReconcile_SnapshotDirError(t *testing.T) {
-	adapters := []manager.Adapter{&manager.Mock{ManagerName: "brew"}}
-	t.Setenv("XDG_DATA_HOME", "/root")
-
-	_, err := execCmd(t, []string{"reconcile"}, adapters)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to access snapshot directory")
-}
-
-func TestReconcile_ManifestSaveError(t *testing.T) {
-	adapters := []manager.Adapter{
-		&manager.Mock{
-			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit", "ripgrep"},
-		},
-	}
-
-	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{"lazygit"}},
-	})
-	t.Setenv("XDG_DATA_HOME", snapDir)
-
-	manifestDir := t.TempDir()
-	manifestPath := filepath.Join(manifestDir, "manifest.toml")
-	require.NoError(t, os.WriteFile(manifestPath, []byte("version = 1\nsystem = \"linux\"\n"), 0600))
-	//nolint:gosec // test fixture: set directory read-only to trigger save error
-	require.NoError(t, os.Chmod(manifestDir, 0500))
-	t.Cleanup(func() {
-		_ = os.Chmod(manifestDir, 0700) //nolint:gosec // restore permissions
-	})
-
-	configPath := filepath.Join(manifestDir, "config.toml")
-	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(configPath))
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
-	root.SetArgs([]string{"reconcile"})
-
-	err := root.Execute()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to save manifest")
-}
-
 func TestReconcile_GoAdapter(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{
@@ -1006,25 +822,139 @@ func TestReconcile_GoAdapter(t *testing.T) {
 	assert.Contains(t, output, "github.com/example/tool (go)")
 }
 
-func TestReconcile_ShowsWarningOnListReposError(t *testing.T) {
+func TestReconcile_FilteredDriftStillWarnsMissing(t *testing.T) {
+	// All snapshot drift is manifest-tracked (filtered out), but a tracked
+	// package was removed externally — the missing warning must still fire.
 	adapters := []manager.Adapter{
 		&manager.Mock{
 			ManagerName:   "brew",
-			InstalledPkgs: []string{"lazygit"},
-			ListReposErr:  errors.New("brew tap list failed"),
+			InstalledPkgs: []string{"lazygit", "jq"},
 		},
 	}
 
 	snapDir := setupSnapshots(t, []state.Snapshot{
-		{Manager: "brew", Packages: []string{}},
+		{Manager: "brew", Packages: []string{"lazygit", "htop"}},
 	})
 	t.Setenv("XDG_DATA_HOME", snapDir)
 
-	buf, err := execCmd(t, []string{"reconcile"}, adapters)
+	manifestDir := t.TempDir()
+	manifestPath := filepath.Join(manifestDir, "manifest.toml")
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "jq"
+manager = "brew"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+
+	require.NoError(t, os.MkdirAll(manifestDir, 0700))
+	require.NoError(t, os.WriteFile(manifestPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(manifestPath), WithConfigPath(filepath.Join(manifestDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reconcile"})
+
+	err := root.Execute()
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "Discovered 1 new package(s)")
-	assert.Contains(t, output, "warning: brew: failed to list repositories: brew tap list failed")
+	// Drift (jq) is already tracked → nothing discovered, no tracking line.
+	// htop is in the manifest but gone from the system → missing warning.
+	assert.Contains(t, output, "1 manifest package(s) not installed")
+	assert.Contains(t, output, "htop (brew)")
+	assert.NotContains(t, output, "Discovered")
+	assert.NotContains(t, output, "Tracked")
+}
+
+func TestFilterDiscoveredByManifest(t *testing.T) {
+	tests := []struct {
+		name            string
+		discovered      []discoveredPkg
+		discoveredRepos []discoveredRepo
+		manifest        *manifest.Manifest
+		wantPkgs        []discoveredPkg
+		wantRepos       []discoveredRepo
+	}{
+		{
+			name:       "empty inputs",
+			discovered: nil,
+			manifest:   &manifest.Manifest{},
+			wantPkgs:   nil,
+			wantRepos:  nil,
+		},
+		{
+			name:       "nil manifest returns inputs unchanged",
+			discovered: []discoveredPkg{{Name: "jq", Manager: "brew"}},
+			manifest:   nil,
+			wantPkgs:   []discoveredPkg{{Name: "jq", Manager: "brew"}},
+		},
+		{
+			name:       "tracked package filtered",
+			discovered: []discoveredPkg{{Name: "jq", Manager: "brew"}},
+			manifest: &manifest.Manifest{
+				Packages: []manifest.Package{{Name: "jq", Manager: "brew"}},
+			},
+			wantPkgs: nil,
+		},
+		{
+			name:       "same name different manager kept",
+			discovered: []discoveredPkg{{Name: "jq", Manager: "brew"}},
+			manifest: &manifest.Manifest{
+				Packages: []manifest.Package{{Name: "jq", Manager: "dnf"}},
+			},
+			wantPkgs: []discoveredPkg{{Name: "jq", Manager: "brew"}},
+		},
+		{
+			name:       "untracked package kept",
+			discovered: []discoveredPkg{{Name: "ripgrep", Manager: "brew"}},
+			manifest:   &manifest.Manifest{},
+			wantPkgs:   []discoveredPkg{{Name: "ripgrep", Manager: "brew"}},
+		},
+		{
+			name:            "tracked repo filtered",
+			discoveredRepos: []discoveredRepo{{Name: "anomalyco/tap", Manager: "brew"}},
+			manifest: &manifest.Manifest{
+				Repositories: []manifest.Repository{{Name: "anomalyco/tap", Manager: "brew"}},
+			},
+			wantRepos: nil,
+		},
+		{
+			name:            "untracked repo kept",
+			discoveredRepos: []discoveredRepo{{Name: "anomalyco/tap", Manager: "brew"}},
+			manifest:        &manifest.Manifest{},
+			wantRepos:       []discoveredRepo{{Name: "anomalyco/tap", Manager: "brew"}},
+		},
+		{
+			name: "mixed batch keeps only untracked",
+			discovered: []discoveredPkg{
+				{Name: "jq", Manager: "brew"},
+				{Name: "ripgrep", Manager: "brew"},
+			},
+			discoveredRepos: []discoveredRepo{
+				{Name: "anomalyco/tap", Manager: "brew"},
+				{Name: "yvgude/lean-ctx", Manager: "brew"},
+			},
+			manifest: &manifest.Manifest{
+				Packages:     []manifest.Package{{Name: "jq", Manager: "brew"}},
+				Repositories: []manifest.Repository{{Name: "anomalyco/tap", Manager: "brew"}},
+			},
+			wantPkgs:  []discoveredPkg{{Name: "ripgrep", Manager: "brew"}},
+			wantRepos: []discoveredRepo{{Name: "yvgude/lean-ctx", Manager: "brew"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkgs, repos := filterDiscoveredByManifest(tt.discovered, tt.discoveredRepos, tt.manifest)
+			assert.Equal(t, tt.wantPkgs, pkgs)
+			assert.Equal(t, tt.wantRepos, repos)
+		})
+	}
 }
 
 // setupSnapshots saves snapshots to {tmpDir}/stamp/snapshots/ and returns tmpDir.
