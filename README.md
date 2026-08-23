@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/rossijonas/stamp/actions/workflows/ci.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://sonarcloud.io/dashboard?id=rossijonas_stamp"><img src="https://sonarcloud.io/api/project_badges/quality_gate?project=rossijonas_stamp&organization=rossijonas" alt="Quality Gate"></a>
   <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-ubuntu.yml/badge.svg" alt="Ubuntu"></a>
   <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-debian.yml/badge.svg" alt="Debian"></a>
   <a href="https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/test-integration-fedora.yml/badge.svg" alt="Fedora"></a>

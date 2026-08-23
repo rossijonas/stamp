@@ -27,6 +27,7 @@ We use `task` instead of `make`. Here are the essential commands:
 - `task lint:sh` - Lints shell scripts with ShellCheck. Requires `shellcheck` (`sudo dnf install -y shellcheck`).
 - `task verify` - Ensures `go.mod` and `go.sum` are clean and cryptographically verified.
 - `task security` - Runs `govulncheck` to scan for known CVEs.
+- SonarCloud - Analyzes every push/PR automatically (code smells, duplication, complexity hotspots; quality gate evaluates new code). View results at [sonarcloud.io](https://sonarcloud.io/project/overview?id=rossijonas_stamp).
 - `task test:integration` - Builds the binary, runs integration smoke tests in Docker containers (Ubuntu, Debian, Fedora, CentOS Stream 10, Rocky Linux 9, Arch Linux, openSUSE Tumbleweed). Requires Docker or Podman (`podman-docker` on Fedora).
 - `task clean` - Removes build artifacts.
 - `task docs` - Regenerates CLI reference docs from cobra into `docs/usage/` and `docs/man/`.
