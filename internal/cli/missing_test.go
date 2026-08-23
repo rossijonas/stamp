@@ -117,6 +117,76 @@ func TestMissingFromSystem(t *testing.T) {
 	}
 }
 
+// checkerMock wraps manager.Mock and answers presence checks through
+// InstalledChecker instead of ListInstalled, mirroring the DNF adapter.
+type checkerMock struct {
+	manager.Mock
+	absent map[string]bool
+	err    error
+	calls  int
+}
+
+func (c *checkerMock) CheckInstalled(_ context.Context, pkgs []string) ([]string, error) {
+	c.calls++
+	if c.err != nil {
+		return nil, c.err
+	}
+	var out []string
+	for _, p := range pkgs {
+		if c.absent[p] {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+var _ manager.InstalledChecker = (*checkerMock)(nil)
+
+func TestMissingFromSystem_InstalledChecker(t *testing.T) {
+	manifestWith := func(pkgs ...manifest.Package) *manifest.Manifest {
+		return &manifest.Manifest{Packages: pkgs}
+	}
+
+	t.Run("checker preferred over ListInstalled", func(t *testing.T) {
+		// nodejs is absent from the raw listing (alias for nodejs22) but the
+		// checker resolves it as present — no false Missing may be reported.
+		checker := &checkerMock{
+			Mock:   manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"nodejs22"}},
+			absent: map[string]bool{"ghost": true},
+		}
+		got := missingFromSystem(context.Background(), []manager.Adapter{checker}, manifestWith(
+			manifest.Package{Name: "nodejs", Manager: "dnf"},
+			manifest.Package{Name: "ghost", Manager: "dnf"},
+		))
+		require.Len(t, got, 1)
+		assert.Equal(t, "ghost", got[0].Name)
+		assert.Equal(t, 1, checker.calls)
+	})
+
+	t.Run("all present via checker yields none", func(t *testing.T) {
+		checker := &checkerMock{Mock: manager.Mock{ManagerName: "dnf"}}
+		got := missingFromSystem(context.Background(), []manager.Adapter{checker}, manifestWith(
+			manifest.Package{Name: "vim", Manager: "dnf"},
+		))
+		assert.Empty(t, got)
+		assert.Equal(t, 1, checker.calls)
+	})
+
+	t.Run("checker error degrades to ListInstalled matching", func(t *testing.T) {
+		checker := &checkerMock{
+			Mock: manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"htop"}},
+			err:  errors.New("repoquery boom"),
+		}
+		got := missingFromSystem(context.Background(), []manager.Adapter{checker}, manifestWith(
+			manifest.Package{Name: "htop", Manager: "dnf"},
+			manifest.Package{Name: "ghost", Manager: "dnf"},
+		))
+		// Legacy exact-match path: htop present, ghost absent.
+		require.Len(t, got, 1)
+		assert.Equal(t, "ghost", got[0].Name)
+	})
+}
+
 func TestMissingFromDeltas(t *testing.T) {
 	manifestWith := func(pkgs ...manifest.Package) *manifest.Manifest {
 		return &manifest.Manifest{Packages: pkgs}

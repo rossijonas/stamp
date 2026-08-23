@@ -47,6 +47,16 @@ type BatchReinstaller interface {
 	ReinstallMany(ctx context.Context, pkgs ...string) error
 }
 
+// InstalledChecker is implemented by adapters that can verify package
+// presence against the actual system state — including packages installed as
+// dependencies or under different concrete names (provides aliases). The CLI
+// type-asserts this interface for missing-package detection (doctor,
+// `stamp ls --type missing`); adapters without it fall back to matching
+// manifest names against ListInstalled output.
+type InstalledChecker interface {
+	CheckInstalled(ctx context.Context, pkgs []string) ([]string, error)
+}
+
 // TapTrustManager is implemented by adapters that can manage whole-tap trust
 // (Homebrew 6.0.0+). The CLI type-asserts this interface for
 // `stamp repo trust`/`stamp repo untrust`; only brew implements it today.

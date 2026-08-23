@@ -115,6 +115,13 @@ is drift, not corruption. `stamp ls --type missing` lists the same set;
 `stamp restore` reinstalls them. Managers whose installed state cannot be
 queried are skipped.
 
+On dnf, presence resolves against the full installed set plus provides
+resolution — so packages installed as dependencies (e.g. `flatpak`) and
+intent names that map to different concrete packages (`nodejs` → `nodejs22`,
+`vim` → `vim-enhanced`) are correctly **not** reported missing. This matches
+what `dnf install <pkg>` itself would satisfy, so doctor and `stamp restore`
+always agree.
+
 ### Config validation
 
 Doctor validates the `[backup]` retention policy in `config.toml`. A

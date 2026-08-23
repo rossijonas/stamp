@@ -886,3 +886,10 @@ false positives, and per-manager reliability is surfaced with a fallback banner.
 *   **Verify:** `go test ./internal/cli/ -run 'TestReconcile|TestFilterDiscoveredByManifest' -race`, `task check`
 *   **Files:** `internal/cli/reconcile_report.go`, `internal/cli/reconcile.go`, `internal/cli/reconcile_test.go`, `internal/cli/reconcile_safety_test.go`, `docs/usage/reconcile.md`
 *   **Status:** ✓ Completed
+
+**Task 104: dnf presence check for missing detection (#206)**
+*   **Description:** Optional `InstalledChecker` interface (BatchInstaller precedent); DNF implements `CheckInstalled` — presence against full `repoquery --installed` set + lazy per-candidate `--whatprovides --installed` (scoped to installed packages so available-only providers cannot mask missing packages), so dep/preseed-installed packages and provides aliases (nodejs→nodejs22, vim→vim-enhanced) stop being reported Missing by doctor, `ls --type missing`, and reconcile warnings. `missingFromSystem` prefers the checker and degrades to legacy ListInstalled matching on error or non-implementation. Issue's epoch-parser claim verified incorrect — parser untouched, zero snapshot churn.
+*   **Acceptance:** issue repro packages report clean; doctor matches restore; checker-error degrades; existing missing tests unchanged-green.
+*   **Verify:** `go test ./internal/manager/ -run TestDNF_CheckInstalled -race`, `go test ./internal/cli/ -run 'TestMissing|TestDoctor' -race`, `task check`
+*   **Files:** `internal/manager/manager.go`, `internal/manager/dnf.go`, `internal/manager/dnf_test.go`, `internal/cli/missing.go`, `internal/cli/missing_test.go`, `internal/cli/doctor_test.go`, `docs/usage/doctor.md`
+*   **Status:** ✓ Completed
