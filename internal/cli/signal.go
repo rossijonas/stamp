@@ -46,7 +46,13 @@ func restoreTerminalEcho() {
 // The returned cleanup stops the handler and blocks until its goroutine exits.
 func cancelOnInterrupt(ctx context.Context, errOut io.Writer) (context.Context, func()) {
 	ctx, cancel := context.WithCancel(ctx)
-	sigCh := notifySigint()
+	return ctx, watchSigint(errOut, notifySigint(), cancel)
+}
+
+// watchSigint runs the two-phase SIGINT handler described by cancelOnInterrupt.
+// It takes ownership of cancel: the first SIGINT invokes it, and the returned
+// cleanup invokes it again after stopping the handler.
+func watchSigint(errOut io.Writer, sigCh chan os.Signal, cancel context.CancelFunc) func() {
 	done := make(chan struct{})
 	exited := make(chan struct{})
 	go func() {
@@ -75,5 +81,5 @@ func cancelOnInterrupt(ctx context.Context, errOut io.Writer) (context.Context, 
 			<-exited
 		})
 	}
-	return ctx, cleanup
+	return cleanup
 }

@@ -12,20 +12,24 @@ permissions:
 
 jobs:
   test:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.release.tag_name }}
 
       - name: Download linux/amd64 binary from release
         run: |
+          TAG="${EVENT_TAG:-$(gh release view --json tagName -q .tagName)}"
           gh release download "$TAG" --pattern "*linux_amd64.tar.gz" \
             --dir /tmp --clobber
           tar xzf /tmp/stamp_*_linux_amd64.tar.gz -C /tmp
           mkdir -p bin && mv /tmp/stamp bin/stamp
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
           GH_TOKEN: ${{ github.token }}
 
       - name: Build Docker image

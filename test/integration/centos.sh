@@ -139,4 +139,4 @@ check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m dnf
 
 echo
 echo "  Results: $pass_count / $test_count passed"
-[ "$pass_count" = "$test_count" ]
+[[ "$pass_count" = "$test_count" ]]
