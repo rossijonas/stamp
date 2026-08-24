@@ -26,8 +26,6 @@
 
 ## ▪ Intro
 
-> ⚠ **Active Development:** `stamp` is currently in the MVP phase of active development. Features are being delivered incrementally. For a complete look at our progress, check the [Implementation Plan](docs/IMPLEMENTATION_PLAN.md).
-
 A lightweight yet powerful tool that wraps many package managers into one. Install, track, and restore without changing your tools. One manifest. One command to restore it all.
 
 Full documentation at **[https://gostamp.dev](https://gostamp.dev)**.
