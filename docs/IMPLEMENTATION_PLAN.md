@@ -876,6 +876,15 @@ false positives, and per-manager reliability is surfaced with a fallback banner.
 **Task 102: TTY-conditional status output + note echo (#200)**
 *   **Description:** `install`/`reinstall`/`remove` (single + batch) status lines render `▪`/`✓` glyphs only when stderr is a TTY (`isOutputTerminal`); piped/CI output stays plain ASCII with no progress line (byte-compatible with prior script output). `install --note` now echoes `(note: ...)` on the result line in both TTY and piped forms. New `statusLine` helper in `internal/cli/status.go`. Docs: `installing-packages.md` batch block corrected and a note added that icons are interactive-only.
 *   **Acceptance:** `TestStatusLine` table (TTY/plain × progress/result × note), `TestIsOutputTerminal`; integration `TestInstallCmd_Status_{Plain,TTY,Note_Plain,Note_TTY,Batch_Plain,Batch_TTY}`, `TestRemoveCmd_Status_*`, `TestReinstallCmd_Status_*`; existing plain-output assertions unchanged.
+### Phase 20: Cognitive Complexity refactor — install/remove/search (go:S3776, #assessment-001)
+*   **Goal:** Reduce Sonar `go:S3776` Cognitive Complexity on the five flagged command builders in `internal/cli/install.go`, each from its current value to ≤15: `newInstallCmd` RunE (25 → ≤5), `installMany` (20 → ≤9), `newRemoveCmd` RunE (55 → ≤4), `removeMany` (20 → ≤9), `newSearchCmd` RunE (35 → ≤4).
+*   **Strategy:** Pure mechanical extraction into package-private helpers. No behavior change: error strings, check ordering, output bytes, and `--group`/cask/`--manager` semantics preserved verbatim.
+*   **New shared helpers:** `printStatus` (status.go), `detectBrewCask`, `validateGroupSupport`, `applyOpFlags`, `countCasks`, `validateBatchPackages`.
+*   **Extracted runners/selectors:** `runSingleInstall`, `runSingleRemove`, `resolveRemoveTarget` (manifest-first `findTrackedAdapter`, then flag path with distinct `"unknown manager %q"` error — must NOT reuse `resolveAdapterByFlag`'s message — then first-adapter fallback, then `ErrUnavailable`), `installMixedBatch`/`removeMixedBatch`, `addTrackedAll`/`removeTrackedAll`, `selectSearchTargets`, `validateGroupSearch`, `searchManagers`.
+*   **Ordering preserved:** `validateGroupSupport` before `applyOpFlags` + confirm gate (group errors preempt prompt); search: selection → `--group requires --manager` → dnf-only validation.
+*   **Tests:** Existing e2e suite unchanged (zero-drift proof). Add `install_helpers_test.go` table-driven tests for `resolveRemoveTarget` (priority), `findTrackedAdapter`, `selectSearchTargets`, `validateGroupSearch`, `validateGroupSupport`, `countCasks`, `detectBrewCask`.
+*   **Verification:** `task lint`, `task test` (race + ≥90% coverage), `task check`, `gocognit` at threshold 15 as Sonar proxy.
+*   **Docs:** No user-facing change → no README/docs edits beyond this entry.
 *   **Verify:** `go test ./internal/cli/ -race`, `task check`
 *   **Files:** `internal/cli/status.go`, `internal/cli/status_test.go`, `internal/cli/status_output_test.go`, `internal/cli/install.go`, `internal/cli/reinstall.go`, `docs/usage/installing-packages.md`
 *   **Status:** ✓ Completed
