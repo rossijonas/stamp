@@ -3,6 +3,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -30,40 +32,15 @@ Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePk
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
-			pkgName := args[0]
 
-			targets := app.adapters
-			if managerFlag != "" {
-				resolved := manager.ResolveManager(managerFlag)
-				var found bool
-				for _, a := range targets {
-					if a.Name() == resolved {
-						targets = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("manager %q not available", managerFlag)
-				}
+			targets, err := resolveTargets(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
 
-			for _, a := range targets {
-				if err := requireConsent(cmd, fmt.Sprintf("Hold %s via %s", pkgName, a.Name())); err != nil {
-					return handleConsent(err)
-				}
-				err := a.Hold(manager.WithYes(cmd.Context()), pkgName)
-				if err != nil {
-					if errors.Is(err, manager.ErrNotSupported) {
-						continue
-					}
-					return fmt.Errorf("failed to hold %s via %s: %w", pkgName, a.Name(), err)
-				}
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "held %s via %s\n", pkgName, a.Name())
-				return nil
-			}
-
-			return fmt.Errorf("no manager supports hold for package %s", pkgName)
+			return applyFirstSupported(cmd, args[0], targets, "Hold", "held", func(a manager.Adapter) error {
+				return a.Hold(manager.WithYes(cmd.Context()), args[0])
+			})
 		},
 	}
 
@@ -89,40 +66,15 @@ Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePk
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
-			pkgName := args[0]
 
-			targets := app.adapters
-			if managerFlag != "" {
-				resolved := manager.ResolveManager(managerFlag)
-				var found bool
-				for _, a := range targets {
-					if a.Name() == resolved {
-						targets = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("manager %q not available", managerFlag)
-				}
+			targets, err := resolveTargets(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
 
-			for _, a := range targets {
-				if err := requireConsent(cmd, fmt.Sprintf("Unhold %s via %s", pkgName, a.Name())); err != nil {
-					return handleConsent(err)
-				}
-				err := a.Unhold(manager.WithYes(cmd.Context()), pkgName)
-				if err != nil {
-					if errors.Is(err, manager.ErrNotSupported) {
-						continue
-					}
-					return fmt.Errorf("failed to unhold %s via %s: %w", pkgName, a.Name(), err)
-				}
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "unheld %s via %s\n", pkgName, a.Name())
-				return nil
-			}
-
-			return fmt.Errorf("no manager supports unhold for package %s", pkgName)
+			return applyFirstSupported(cmd, args[0], targets, "Unhold", "unheld", func(a manager.Adapter) error {
+				return a.Unhold(manager.WithYes(cmd.Context()), args[0])
+			})
 		},
 	}
 
@@ -147,52 +99,87 @@ Use --manager to scope to a single package manager.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 
-			targets := app.adapters
-			if managerFlag != "" {
-				resolved := manager.ResolveManager(managerFlag)
-				var found bool
-				for _, a := range targets {
-					if a.Name() == resolved {
-						targets = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("manager %q not available", managerFlag)
-				}
+			targets, err := resolveTargets(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
 
-			var results []string
-			for _, a := range targets {
-				pkgs, err := a.ListHeld(cmd.Context())
-				if err != nil {
-					if errors.Is(err, manager.ErrNotSupported) {
-						continue
-					}
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s held failed: %v\n", a.Name(), err)
-					continue
-				}
-				if len(pkgs) == 0 {
-					continue
-				}
-				for _, p := range pkgs {
-					results = append(results, fmt.Sprintf("%s (%s)", p, a.Name()))
-				}
-			}
-
-			if len(results) == 0 {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no packages held")
-				return nil
-			}
-
-			for _, r := range results {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), r)
-			}
+			printHeld(cmd.OutOrStdout(), collectHeld(cmd, targets))
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to query")
 	return cmd
+}
+
+// resolveTargets scopes adapters to the single manager selected by the
+// --manager flag, or returns them unchanged when the flag is empty.
+func resolveTargets(adapters []manager.Adapter, managerFlag string) ([]manager.Adapter, error) {
+	if managerFlag == "" {
+		return adapters, nil
+	}
+	resolved := manager.ResolveManager(managerFlag)
+	for _, a := range adapters {
+		if a.Name() == resolved {
+			return []manager.Adapter{a}, nil
+		}
+	}
+	return nil, fmt.Errorf("manager %q not available", managerFlag)
+}
+
+// applyFirstSupported runs act against targets in precedence order until one
+// succeeds, prompting consent before each attempt. Managers reporting
+// ErrNotSupported are skipped; any other error aborts the walk. The first
+// success prints a confirmation line and stops.
+func applyFirstSupported(cmd *cobra.Command, pkg string, targets []manager.Adapter, verbTitle, verbPast string, act func(manager.Adapter) error) error {
+	verb := strings.ToLower(verbTitle)
+	for _, a := range targets {
+		if err := requireConsent(cmd, fmt.Sprintf("%s %s via %s", verbTitle, pkg, a.Name())); err != nil {
+			return handleConsent(err)
+		}
+		err := act(a)
+		if err != nil {
+			if errors.Is(err, manager.ErrNotSupported) {
+				continue
+			}
+			return fmt.Errorf("failed to %s %s via %s: %w", verb, pkg, a.Name(), err)
+		}
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s %s via %s\n", verbPast, pkg, a.Name())
+		return nil
+	}
+	return fmt.Errorf("no manager supports %s for package %s", verb, pkg)
+}
+
+// collectHeld gathers held packages from every target, formatted as
+// "<pkg> (<manager>)". Unsupported managers are skipped silently; other
+// failures print a warning and processing continues.
+func collectHeld(cmd *cobra.Command, targets []manager.Adapter) []string {
+	var results []string
+	for _, a := range targets {
+		pkgs, err := a.ListHeld(cmd.Context())
+		if err != nil {
+			if errors.Is(err, manager.ErrNotSupported) {
+				continue
+			}
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s held failed: %v\n", a.Name(), err)
+			continue
+		}
+		for _, p := range pkgs {
+			results = append(results, fmt.Sprintf("%s (%s)", p, a.Name()))
+		}
+	}
+	return results
+}
+
+// printHeld lists held packages, one per line, or prints a friendly message
+// when none exist.
+func printHeld(out io.Writer, results []string) {
+	if len(results) == 0 {
+		_, _ = fmt.Fprintln(out, "no packages held")
+		return
+	}
+	for _, r := range results {
+		_, _ = fmt.Fprintln(out, r)
+	}
 }
