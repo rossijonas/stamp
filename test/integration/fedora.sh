@@ -161,4 +161,4 @@ check "stamp (no args)" bash -c "stamp 2>/dev/null | head -5 > /dev/null"
 
 echo
 echo "  Results: $pass_count / $test_count passed"
-[ "$pass_count" = "$test_count" ]
+[[ "$pass_count" = "$test_count" ]]
