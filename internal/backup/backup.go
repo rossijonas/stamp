@@ -127,26 +127,38 @@ func Rotate(globPattern string, p Policy) (int, error) {
 		kept = append(kept, e)
 	}
 
-	if p.MaxKeep > 0 {
-		eligible := 0
-		for _, e := range kept {
-			if e.age >= p.MinAge {
-				eligible++
-			}
-		}
-		// kept is sorted oldest-first and all eligible entries (age >= MinAge)
-		// precede protected ones, so trimming from the front only ever removes
-		// eligible backups.
-		surplus := eligible - p.MaxKeep
-		for i := 0; i < len(kept) && surplus > 0 && budget > 0; i++ {
-			if err := os.RemoveAll(kept[i].path); err != nil {
-				return removed, fmt.Errorf("failed to remove backup %s: %w", kept[i].path, err)
-			}
-			removed++
-			surplus--
-			budget--
+	trimmed, err := trimToMaxKeep(kept, p, budget)
+	if err != nil {
+		return removed + trimmed, err
+	}
+	removed += trimmed
+
+	return removed, nil
+}
+
+// trimToMaxKeep trims kept (sorted oldest-first) so that at most MaxKeep
+// eligible backups remain, bounded by the shared deletion budget. All eligible
+// entries (age >= MinAge) precede protected ones, so trimming from the front
+// only ever removes eligible backups. Returns the number of entries removed.
+func trimToMaxKeep(kept []entry, p Policy, budget int) (int, error) {
+	if p.MaxKeep <= 0 {
+		return 0, nil
+	}
+	eligible := 0
+	for _, e := range kept {
+		if e.age >= p.MinAge {
+			eligible++
 		}
 	}
-
+	surplus := eligible - p.MaxKeep
+	removed := 0
+	for i := 0; i < len(kept) && surplus > 0 && budget > 0; i++ {
+		if err := os.RemoveAll(kept[i].path); err != nil {
+			return removed, fmt.Errorf("failed to remove backup %s: %w", kept[i].path, err)
+		}
+		removed++
+		surplus--
+		budget--
+	}
 	return removed, nil
 }

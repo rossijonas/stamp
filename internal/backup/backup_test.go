@@ -328,9 +328,131 @@ func TestRotate_RemoveAllError_Cap(t *testing.T) {
 	require.NoError(t, os.Chmod(roDir, 0500))
 	t.Cleanup(func() { _ = os.Chmod(roDir, 0700) }) //nolint:gosec // restore perms for cleanup
 
-	_, err := Rotate(base+".*.bak", Policy{MaxKeep: 1})
+	n, err := Rotate(base+".*.bak", Policy{MaxKeep: 1})
 	require.Error(t, err)
+	assert.Zero(t, n, "the count excludes entries whose removal failed")
 	assert.Contains(t, err.Error(), "failed to remove backup")
+}
+
+func TestTrimToMaxKeep_DisabledWhenMaxKeepZero(t *testing.T) {
+	t.Parallel()
+	base := filepath.Join(t.TempDir(), "manifest.toml")
+	names := []string{
+		writeBackup(t, base, 5*24*time.Hour),
+		writeBackup(t, base, 3*24*time.Hour),
+	}
+	kept := []entry{
+		{path: names[0], age: 5 * 24 * time.Hour},
+		{path: names[1], age: 3 * 24 * time.Hour},
+	}
+	n, err := trimToMaxKeep(kept, Policy{MaxKeep: 0}, 10)
+	require.NoError(t, err)
+	assert.Zero(t, n, "MaxKeep 0 disables count-cap trimming")
+	for _, name := range names {
+		_, err = os.Stat(name)
+		require.NoError(t, err, "nothing is removed when MaxKeep is 0")
+	}
+}
+
+func TestTrimToMaxKeep_TrimsOldestEligible(t *testing.T) {
+	t.Parallel()
+	base := filepath.Join(t.TempDir(), "manifest.toml")
+	names := []string{
+		writeBackup(t, base, 5*24*time.Hour),
+		writeBackup(t, base, 4*24*time.Hour),
+		writeBackup(t, base, 3*24*time.Hour),
+	}
+	kept := []entry{
+		{path: names[0], age: 5 * 24 * time.Hour},
+		{path: names[1], age: 4 * 24 * time.Hour},
+		{path: names[2], age: 3 * 24 * time.Hour},
+	}
+	n, err := trimToMaxKeep(kept, Policy{MaxKeep: 1}, 10)
+	require.NoError(t, err)
+	assert.Equal(t, 2, n, "surplus eligible entries are trimmed oldest-first")
+	_, err = os.Stat(names[0])
+	assert.True(t, os.IsNotExist(err), "oldest eligible removed")
+	_, err = os.Stat(names[1])
+	assert.True(t, os.IsNotExist(err), "second-oldest eligible removed")
+	_, err = os.Stat(names[2])
+	require.NoError(t, err, "newest eligible kept")
+}
+
+func TestTrimToMaxKeep_BudgetStopsTrim(t *testing.T) {
+	t.Parallel()
+	base := filepath.Join(t.TempDir(), "manifest.toml")
+	names := []string{
+		writeBackup(t, base, 5*24*time.Hour),
+		writeBackup(t, base, 4*24*time.Hour),
+		writeBackup(t, base, 3*24*time.Hour),
+	}
+	kept := []entry{
+		{path: names[0], age: 5 * 24 * time.Hour},
+		{path: names[1], age: 4 * 24 * time.Hour},
+		{path: names[2], age: 3 * 24 * time.Hour},
+	}
+	n, err := trimToMaxKeep(kept, Policy{MaxKeep: 1}, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, n, "shared budget caps how many entries are trimmed")
+	_, err = os.Stat(names[0])
+	assert.True(t, os.IsNotExist(err))
+	_, err = os.Stat(names[1])
+	require.NoError(t, err, "second deletion skipped once the budget is exhausted")
+}
+
+func TestTrimToMaxKeep_SkipsProtectedEntries(t *testing.T) {
+	t.Parallel()
+	base := filepath.Join(t.TempDir(), "manifest.toml")
+	names := []string{
+		writeBackup(t, base, 5*24*time.Hour),
+		writeBackup(t, base, 4*24*time.Hour),
+		writeBackup(t, base, 1*24*time.Hour),
+	}
+	kept := []entry{
+		{path: names[0], age: 5 * 24 * time.Hour},
+		{path: names[1], age: 4 * 24 * time.Hour},
+		{path: names[2], age: 1 * 24 * time.Hour},
+	}
+	n, err := trimToMaxKeep(kept, Policy{MaxKeep: 1, MinAge: 3 * 24 * time.Hour}, 10)
+	require.NoError(t, err)
+	assert.Equal(t, 1, n, "only entries older than MinAge count toward the surplus")
+	_, err = os.Stat(names[0])
+	assert.True(t, os.IsNotExist(err), "oldest eligible removed")
+	_, err = os.Stat(names[1])
+	require.NoError(t, err, "newest eligible kept")
+	_, err = os.Stat(names[2])
+	require.NoError(t, err, "min-age-protected entry never removed")
+}
+
+func TestTrimToMaxKeep_PartialFailureReturnsCount(t *testing.T) {
+	t.Parallel()
+	base := filepath.Join(t.TempDir(), "manifest.toml")
+	writable1 := writeBackup(t, base, 5*24*time.Hour)
+	writable2 := writeBackup(t, base, 3*24*time.Hour)
+
+	tmpDir := t.TempDir()
+	roDir := filepath.Join(tmpDir, "ro")
+	require.NoError(t, os.Mkdir(roDir, 0700))
+	roBase := filepath.Join(roDir, "manifest.toml")
+	roBackup := writeBackup(t, roBase, 4*24*time.Hour)
+	//nolint:gosec // simulate a write-protected dir to force a removal error
+	require.NoError(t, os.Chmod(roDir, 0500))
+	t.Cleanup(func() { _ = os.Chmod(roDir, 0700) }) //nolint:gosec // restore perms for cleanup
+
+	kept := []entry{
+		{path: writable1, age: 5 * 24 * time.Hour},
+		{path: roBackup, age: 4 * 24 * time.Hour},
+		{path: writable2, age: 3 * 24 * time.Hour},
+	}
+	n, err := trimToMaxKeep(kept, Policy{MaxKeep: 1}, 10)
+	require.Error(t, err)
+	assert.Equal(t, 1, n, "the entry removed before the failure is counted")
+	_, err = os.Stat(writable1)
+	require.True(t, os.IsNotExist(err), "first eligible entry removed before the failure")
+	_, err = os.Stat(roBackup)
+	require.NoError(t, err, "entry in the read-only dir survives the failed removal")
+	_, err = os.Stat(writable2)
+	require.NoError(t, err, "no deletion after the failure")
 }
 
 func TestList_NewestFirst(t *testing.T) {
