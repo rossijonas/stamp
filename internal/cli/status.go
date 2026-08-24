@@ -41,3 +41,12 @@ func statusLine(tty, done bool, verb, target, mgr, note string) string {
 	}
 	return line
 }
+
+// printStatus emits a progress/completion line to w when statusLine is
+// non-empty. It collapses the six repeated "if line := statusLine(...)" sites
+// across the install/remove/reinstall command builders into one call.
+func printStatus(w io.Writer, tty, done bool, verb, target, mgr, note string) {
+	if line := statusLine(tty, done, verb, target, mgr, note); line != "" {
+		_, _ = fmt.Fprintln(w, line)
+	}
+}

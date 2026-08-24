@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -56,62 +57,8 @@ func newInstallCmd() *cobra.Command {
 				return fmt.Errorf("invalid package name: %w", err)
 			}
 
-			// Detect cask for brew packages before install so --cask is passed
-			cask := false
-			if adapter.Name() == "brew" {
-				if brewAdapter, ok := adapter.(*manager.Brew); ok {
-					if isCask, err := brewAdapter.IsCask(cmd.Context(), pkgName); err == nil && isCask {
-						cask = true
-					}
-				}
-			}
-
-			if groupInstall && adapter.Name() != "dnf" && adapter.Name() != "yum" {
-				return fmt.Errorf("--group is only supported for dnf")
-			}
-
-			installCtx := cmd.Context()
-			if cask {
-				installCtx = manager.WithCask(cmd.Context())
-			}
-			if groupInstall {
-				installCtx = manager.WithGroup(installCtx)
-			}
-
-			// Confirmation gate: prompts unless -y is passed. Non-interactive
-			// runs without -y abort (fail closed, non-zero exit).
-			if err := confirmDestructive(installCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
-				adapter, previewInstall, "Install", pkgName); err != nil {
-				return handleConsent(err)
-			}
-
-			errOut := cmd.ErrOrStderr()
-			tty := isOutputTerminal(errOut)
-			if line := statusLine(tty, false, "installing", pkgName, adapter.Name(), ""); line != "" {
-				_, _ = fmt.Fprintln(errOut, line)
-			}
-
-			if err := adapter.Install(manager.WithYes(installCtx), pkgName); err != nil {
-				return fmt.Errorf("install failed: %w", err)
-			}
-
-			app.manifest.AddPackage(manifest.Package{
-				Name:    pkgName,
-				Manager: adapter.Name(),
-				Notes:   note,
-				Cask:    cask,
-				Group:   groupInstall,
-				Origin:  manifest.OriginStamped,
-			})
-
-			if err := app.saveManifest(); err != nil {
-				return fmt.Errorf("failed to save manifest: %w", err)
-			}
-
-			if line := statusLine(tty, true, "installed", pkgName, adapter.Name(), note); line != "" {
-				_, _ = fmt.Fprintln(errOut, line)
-			}
-			return nil
+			cask := detectBrewCask(cmd.Context(), adapter, pkgName)
+			return runSingleInstall(cmd, app, adapter, pkgName, note, cask, groupInstall)
 		},
 	}
 
@@ -119,6 +66,48 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&note, "note", "n", "", "annotation for this package")
 	cmd.Flags().BoolVarP(&groupInstall, "group", "g", false, "install a DNF package group")
 	return cmd
+}
+
+// runSingleInstall performs one package install: group validation, context
+// flag stacking, confirmation gate, native install, manifest record, save, and
+// the completion status line. Shared by the single-package install path.
+func runSingleInstall(cmd *cobra.Command, app *AppContext, adapter manager.Adapter, pkgName, note string, cask, group bool) error {
+	if err := validateGroupSupport(adapter, group); err != nil {
+		return err
+	}
+
+	installCtx := applyOpFlags(cmd.Context(), cask, group)
+
+	// Confirmation gate: prompts unless -y is passed. Non-interactive
+	// runs without -y abort (fail closed, non-zero exit).
+	if err := confirmDestructive(installCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+		adapter, previewInstall, "Install", pkgName); err != nil {
+		return handleConsent(err)
+	}
+
+	errOut := cmd.ErrOrStderr()
+	tty := isOutputTerminal(errOut)
+	printStatus(errOut, tty, false, "installing", pkgName, adapter.Name(), "")
+
+	if err := adapter.Install(manager.WithYes(installCtx), pkgName); err != nil {
+		return fmt.Errorf("install failed: %w", err)
+	}
+
+	app.manifest.AddPackage(manifest.Package{
+		Name:    pkgName,
+		Manager: adapter.Name(),
+		Notes:   note,
+		Cask:    cask,
+		Group:   group,
+		Origin:  manifest.OriginStamped,
+	})
+
+	if err := app.saveManifest(); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+
+	printStatus(errOut, tty, true, "installed", pkgName, adapter.Name(), note)
+	return nil
 }
 
 // installMany installs multiple packages in a single native invocation.
@@ -136,10 +125,8 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 	if err != nil {
 		return err
 	}
-	for _, p := range pkgs {
-		if err := manager.ValidatePackageForManager(adapter.Name(), p); err != nil {
-			return fmt.Errorf("invalid package name %q: %w", p, err)
-		}
+	if err := validateBatchPackages(adapter, pkgs); err != nil {
+		return err
 	}
 
 	bi, ok := adapter.(manager.BatchInstaller)
@@ -150,12 +137,7 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 	// Brew: --cask is batch-wide, so a mixed cask/formula batch falls back to
 	// per-package single installs. A uniform batch uses one command.
 	casks := brewCasks(cmd.Context(), adapter, pkgs)
-	caskCount := 0
-	for _, isCask := range casks {
-		if isCask {
-			caskCount++
-		}
-	}
+	caskCount := countCasks(casks)
 	mixed := caskCount > 0 && caskCount < len(pkgs)
 
 	installCtx := cmd.Context()
@@ -171,9 +153,7 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 	errOut := cmd.ErrOrStderr()
 	tty := isOutputTerminal(errOut)
 	target := fmt.Sprintf("%d package(s)", len(pkgs))
-	if line := statusLine(tty, false, "installing", target, adapter.Name(), ""); line != "" {
-		_, _ = fmt.Fprintln(errOut, line)
-	}
+	printStatus(errOut, tty, false, "installing", target, adapter.Name(), "")
 
 	if mixed {
 		for _, p := range pkgs {
@@ -184,24 +164,50 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 			if err := adapter.Install(ctx, p); err != nil {
 				return fmt.Errorf("install failed: %w", err)
 			}
-			app.manifest.AddPackage(manifest.Package{Name: p, Manager: adapter.Name(), Notes: note, Origin: manifest.OriginStamped})
 		}
 	} else {
 		if err := bi.InstallMany(manager.WithYes(installCtx), pkgs...); err != nil {
 			return fmt.Errorf("install failed: %w", err)
 		}
-		for _, p := range pkgs {
-			app.manifest.AddPackage(manifest.Package{Name: p, Manager: adapter.Name(), Notes: note, Origin: manifest.OriginStamped})
-		}
 	}
+	addTrackedAll(app, pkgs, adapter.Name(), note)
 
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
-	if line := statusLine(tty, true, "installed", target, adapter.Name(), note); line != "" {
-		_, _ = fmt.Fprintln(errOut, line)
+	printStatus(errOut, tty, true, "installed", target, adapter.Name(), note)
+	return nil
+}
+
+// countCasks returns how many packages in the map are casks.
+func countCasks(casks map[string]bool) int {
+	n := 0
+	for _, isCask := range casks {
+		if isCask {
+			n++
+		}
+	}
+	return n
+}
+
+// validateBatchPackages validates every package name against the chosen
+// manager before any native command runs, so a bad name aborts the whole
+// operation upfront.
+func validateBatchPackages(adapter manager.Adapter, pkgs []string) error {
+	for _, p := range pkgs {
+		if err := manager.ValidatePackageForManager(adapter.Name(), p); err != nil {
+			return fmt.Errorf("invalid package name %q: %w", p, err)
+		}
 	}
 	return nil
+}
+
+// addTrackedAll records every installed package in the manifest. Called once
+// after a batch install succeeds (saveManifest persists it).
+func addTrackedAll(app *AppContext, pkgs []string, mgr, note string) {
+	for _, p := range pkgs {
+		app.manifest.AddPackage(manifest.Package{Name: p, Manager: mgr, Notes: note, Origin: manifest.OriginStamped})
+	}
 }
 
 // resolveAdapterByFlag returns the adapter whose name matches -m, or an
@@ -238,6 +244,42 @@ func brewCasks(ctx context.Context, adapter manager.Adapter, pkgs []string) map[
 		}
 	}
 	return m
+}
+
+// detectBrewCask reports whether pkg is a brew cask on the given adapter. Only
+// *manager.Brew implements cask detection, so a failed type assertion is a
+// non-cask result (matching the previous Name()=="brew" guard).
+func detectBrewCask(ctx context.Context, adapter manager.Adapter, pkg string) bool {
+	d, ok := adapter.(caskDetector)
+	if !ok {
+		return false
+	}
+	isCask, err := d.IsCask(ctx, pkg)
+	return err == nil && isCask
+}
+
+// validateGroupSupport rejects --group for managers that do not support
+// package groups (only dnf and yum do). The error text preserves the existing
+// message even though yum is accepted.
+func validateGroupSupport(adapter manager.Adapter, group bool) error {
+	if !group {
+		return nil
+	}
+	if n := adapter.Name(); n != "dnf" && n != "yum" {
+		return fmt.Errorf("--group is only supported for dnf")
+	}
+	return nil
+}
+
+// applyOpFlags stacks the --cask and --group context markers onto ctx.
+func applyOpFlags(ctx context.Context, cask, group bool) context.Context {
+	if cask {
+		ctx = manager.WithCask(ctx)
+	}
+	if group {
+		ctx = manager.WithGroup(ctx)
+	}
+	return ctx
 }
 
 func newRemoveCmd() *cobra.Command {
@@ -277,88 +319,91 @@ func newRemoveCmd() *cobra.Command {
 			}
 			pkgName := args[0]
 
-			var adapter manager.Adapter
-			var isCask bool
-
-			// Check manifest first: if package is tracked, use its recorded manager
-			if managerFlag == "" {
-				for _, p := range app.manifest.Packages {
-					if p.Name == pkgName {
-						for _, a := range app.adapters {
-							if a.Name() == p.Manager {
-								adapter = a
-								isCask = p.Cask
-								break
-							}
-						}
-						break
-					}
-				}
+			adapter, isCask, err := resolveRemoveTarget(app, pkgName, managerFlag)
+			if err != nil {
+				return err
 			}
 
-			// Fall back to explicit flag or first available adapter
-			if adapter == nil {
-				switch {
-				case managerFlag != "":
-					for _, a := range app.adapters {
-						if a.Name() == manager.ResolveManager(managerFlag) {
-							adapter = a
-							break
-						}
-					}
-					if adapter == nil {
-						return fmt.Errorf("unknown manager %q", managerFlag)
-					}
-				case len(app.adapters) > 0:
-					adapter = app.adapters[0]
-				default:
-					return catErr(ErrUnavailable, "no package managers available")
-				}
-			}
-
-			removeCtx := cmd.Context()
-			if isCask && adapter.Name() == "brew" {
-				removeCtx = manager.WithCask(cmd.Context())
-			}
-			if groupRemove {
-				if adapter.Name() != "dnf" && adapter.Name() != "yum" {
-					return fmt.Errorf("--group is only supported for dnf")
-				}
-				removeCtx = manager.WithGroup(removeCtx)
-			}
-
-			// Confirmation gate: prompts unless -y is passed. Non-interactive
-			// runs without -y abort (fail closed, non-zero exit).
-			if err := confirmDestructive(removeCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
-				adapter, previewRemove, "Remove", pkgName); err != nil {
-				return handleConsent(err)
-			}
-
-			errOut := cmd.ErrOrStderr()
-			tty := isOutputTerminal(errOut)
-			if line := statusLine(tty, false, "removing", pkgName, adapter.Name(), ""); line != "" {
-				_, _ = fmt.Fprintln(errOut, line)
-			}
-
-			if err := adapter.Remove(manager.WithYes(removeCtx), pkgName); err != nil {
-				return fmt.Errorf("remove failed: %w", err)
-			}
-
-			app.manifest.RemovePackage(pkgName, adapter.Name())
-			if err := app.saveManifest(); err != nil {
-				return fmt.Errorf("failed to save manifest: %w", err)
-			}
-
-			if line := statusLine(tty, true, "removed", pkgName, adapter.Name(), ""); line != "" {
-				_, _ = fmt.Fprintln(errOut, line)
-			}
-			return nil
+			return runSingleRemove(cmd, app, adapter, pkgName, isCask, groupRemove)
 		},
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use")
 	cmd.Flags().BoolVarP(&groupRemove, "group", "g", false, "remove a DNF package group")
 	return cmd
+}
+
+// findTrackedAdapter looks up a tracked package in the manifest and returns the
+// matching adapter plus its recorded cask flag. found is false when the package
+// is not tracked.
+func findTrackedAdapter(pkgs []manifest.Package, adapters []manager.Adapter, name string) (manager.Adapter, bool, bool) {
+	for _, p := range pkgs {
+		if p.Name != name {
+			continue
+		}
+		for _, a := range adapters {
+			if a.Name() == p.Manager {
+				return a, p.Cask, true
+			}
+		}
+	}
+	return nil, false, false
+}
+
+// resolveRemoveTarget selects the adapter for a single-package remove: the
+// manifest-recorded manager when available, otherwise the -m manager, otherwise
+// the first adapter, otherwise ErrUnavailable. The -m path reports "unknown
+// manager %q" (distinct from resolveAdapterByFlag's message).
+func resolveRemoveTarget(app *AppContext, pkgName, managerFlag string) (manager.Adapter, bool, error) {
+	if managerFlag == "" {
+		if a, cask, found := findTrackedAdapter(app.manifest.Packages, app.adapters, pkgName); found {
+			return a, cask, nil
+		}
+		if len(app.adapters) > 0 {
+			return app.adapters[0], false, nil
+		}
+		return nil, false, catErr(ErrUnavailable, "no package managers available")
+	}
+
+	want := manager.ResolveManager(managerFlag)
+	for _, a := range app.adapters {
+		if a.Name() == want {
+			return a, false, nil
+		}
+	}
+	return nil, false, fmt.Errorf("unknown manager %q", managerFlag)
+}
+
+// runSingleRemove performs one package removal: group validation, context flag
+// stacking, confirmation gate, native remove, untrack, save, and the completion
+// status line.
+func runSingleRemove(cmd *cobra.Command, app *AppContext, adapter manager.Adapter, pkgName string, isCask, group bool) error {
+	if err := validateGroupSupport(adapter, group); err != nil {
+		return err
+	}
+
+	removeCtx := applyOpFlags(cmd.Context(), isCask && adapter.Name() == "brew", group)
+
+	if err := confirmDestructive(removeCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
+		adapter, previewRemove, "Remove", pkgName); err != nil {
+		return handleConsent(err)
+	}
+
+	errOut := cmd.ErrOrStderr()
+	tty := isOutputTerminal(errOut)
+	printStatus(errOut, tty, false, "removing", pkgName, adapter.Name(), "")
+
+	if err := adapter.Remove(manager.WithYes(removeCtx), pkgName); err != nil {
+		return fmt.Errorf("remove failed: %w", err)
+	}
+
+	app.manifest.RemovePackage(pkgName, adapter.Name())
+	if err := app.saveManifest(); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+
+	printStatus(errOut, tty, true, "removed", pkgName, adapter.Name(), "")
+	return nil
 }
 
 // removeMany removes multiple packages in a single native invocation. Requires
@@ -376,10 +421,8 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 	if err != nil {
 		return err
 	}
-	for _, p := range pkgs {
-		if err := manager.ValidatePackageForManager(adapter.Name(), p); err != nil {
-			return fmt.Errorf("invalid package name %q: %w", p, err)
-		}
+	if err := validateBatchPackages(adapter, pkgs); err != nil {
+		return err
 	}
 
 	br, ok := adapter.(manager.BatchRemover)
@@ -390,12 +433,7 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 	// Brew: --cask is batch-wide; a mixed cask/formula batch falls back to
 	// per-package single removals.
 	casks := brewCasks(cmd.Context(), adapter, pkgs)
-	caskCount := 0
-	for _, isCask := range casks {
-		if isCask {
-			caskCount++
-		}
-	}
+	caskCount := countCasks(casks)
 	mixed := caskCount > 0 && caskCount < len(pkgs)
 
 	removeCtx := cmd.Context()
@@ -411,9 +449,7 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 	errOut := cmd.ErrOrStderr()
 	tty := isOutputTerminal(errOut)
 	target := fmt.Sprintf("%d package(s)", len(pkgs))
-	if line := statusLine(tty, false, "removing", target, adapter.Name(), ""); line != "" {
-		_, _ = fmt.Fprintln(errOut, line)
-	}
+	printStatus(errOut, tty, false, "removing", target, adapter.Name(), "")
 
 	if mixed {
 		for _, p := range pkgs {
@@ -424,24 +460,27 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 			if err := adapter.Remove(ctx, p); err != nil {
 				return fmt.Errorf("remove failed: %w", err)
 			}
-			app.manifest.RemovePackage(p, adapter.Name())
 		}
 	} else {
 		if err := br.RemoveMany(manager.WithYes(removeCtx), pkgs...); err != nil {
 			return fmt.Errorf("remove failed: %w", err)
 		}
-		for _, p := range pkgs {
-			app.manifest.RemovePackage(p, adapter.Name())
-		}
 	}
+	removeTrackedAll(app, pkgs, adapter.Name())
 
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
-	if line := statusLine(tty, true, "removed", target, adapter.Name(), ""); line != "" {
-		_, _ = fmt.Fprintln(errOut, line)
-	}
+	printStatus(errOut, tty, true, "removed", target, adapter.Name(), "")
 	return nil
+}
+
+// removeTrackedAll untracks every removed package from the manifest. Called
+// once after a batch remove succeeds (saveManifest persists it).
+func removeTrackedAll(app *AppContext, pkgs []string, mgr string) {
+	for _, p := range pkgs {
+		app.manifest.RemovePackage(p, mgr)
+	}
 }
 
 func newSearchCmd() *cobra.Command {
@@ -464,48 +503,15 @@ func newSearchCmd() *cobra.Command {
 			app := appFromCtx(cmd)
 			query := args[0]
 
-			targets := app.adapters
-			if managerFlag != "" {
-				var found bool
-				for _, a := range app.adapters {
-					if a.Name() == manager.ResolveManager(managerFlag) {
-						targets = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("unknown manager %q", managerFlag)
-				}
+			targets, err := selectSearchTargets(app.adapters, managerFlag)
+			if err != nil {
+				return err
+			}
+			if err := validateGroupSearch(targets, managerFlag, groupSearch); err != nil {
+				return err
 			}
 
-			if groupSearch && managerFlag == "" {
-				return fmt.Errorf("--group requires --manager <name>")
-			}
-			if groupSearch {
-				for _, a := range targets {
-					if a.Name() != "dnf" && a.Name() != "yum" {
-						return fmt.Errorf("--group is only supported for dnf")
-					}
-				}
-			}
-
-			var results []string
-			for _, a := range targets {
-				searchCtx := cmd.Context()
-				if groupSearch {
-					searchCtx = manager.WithGroup(searchCtx)
-				}
-				pkgs, err := a.Search(searchCtx, query)
-				if err != nil {
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s search: %v\n", a.Name(), err)
-					continue
-				}
-				for _, p := range pkgs {
-					results = append(results, fmt.Sprintf("%s (%s)", p, a.Name()))
-				}
-			}
-
+			results := searchManagers(cmd.Context(), targets, query, cmd.ErrOrStderr(), groupSearch)
 			if len(results) == 0 {
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no results found")
 				return nil
@@ -519,4 +525,56 @@ func newSearchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to search")
 	cmd.Flags().BoolVarP(&groupSearch, "group", "g", false, "search DNF package groups")
 	return cmd
+}
+
+// selectSearchTargets returns the adapters to search: the -m manager when
+// given, otherwise all adapters.
+func selectSearchTargets(adapters []manager.Adapter, managerFlag string) ([]manager.Adapter, error) {
+	if managerFlag == "" {
+		return adapters, nil
+	}
+	want := manager.ResolveManager(managerFlag)
+	for _, a := range adapters {
+		if a.Name() == want {
+			return []manager.Adapter{a}, nil
+		}
+	}
+	return nil, fmt.Errorf("unknown manager %q", managerFlag)
+}
+
+// validateGroupSearch enforces the --group constraints: it requires --manager
+// and only supports dnf/yum.
+func validateGroupSearch(targets []manager.Adapter, managerFlag string, group bool) error {
+	if group && managerFlag == "" {
+		return fmt.Errorf("--group requires --manager <name>")
+	}
+	if group {
+		for _, a := range targets {
+			if a.Name() != "dnf" && a.Name() != "yum" {
+				return fmt.Errorf("--group is only supported for dnf")
+			}
+		}
+	}
+	return nil
+}
+
+// searchManagers queries each adapter and returns the rendered results, warning
+// to warnOut on per-adapter search failure without aborting the batch.
+func searchManagers(ctx context.Context, targets []manager.Adapter, query string, warnOut io.Writer, group bool) []string {
+	var results []string
+	for _, a := range targets {
+		searchCtx := ctx
+		if group {
+			searchCtx = manager.WithGroup(searchCtx)
+		}
+		pkgs, err := a.Search(searchCtx, query)
+		if err != nil {
+			_, _ = fmt.Fprintf(warnOut, "warning: %s search: %v\n", a.Name(), err)
+			continue
+		}
+		for _, p := range pkgs {
+			results = append(results, fmt.Sprintf("%s (%s)", p, a.Name()))
+		}
+	}
+	return results
 }
