@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // Paru implements the Adapter interface for Arch Linux's Paru (AUR helper).
@@ -40,99 +39,32 @@ func (m *Paru) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via paru.
 func (m *Paru) Install(ctx context.Context, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-	args := sudoCmd("paru", "-S", "--noconfirm", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to install %s: %w", pkg, err)
-	}
-	return nil
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", "--noconfirm", pkg), "install", pkg)
 }
 
 // Reinstall reinstalls a package via paru.
 func (m *Paru) Reinstall(ctx context.Context, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-	args := sudoCmd("paru", "-S", "--noconfirm", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
-	}
-	return nil
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", "--noconfirm", pkg), "reinstall", pkg)
 }
 
 // Remove removes a package and its unneeded dependencies via paru.
 func (m *Paru) Remove(ctx context.Context, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-	// -Rs removes the package and its unneeded dependencies.
-	args := sudoCmd("paru", "-Rs", "--noconfirm", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to remove %s: %w", pkg, err)
-	}
-	return nil
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-Rs", "--noconfirm", pkg), "remove", pkg)
 }
 
 // InstallMany installs multiple packages in one paru invocation.
 func (m *Paru) InstallMany(ctx context.Context, pkgs ...string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := validatePackages(pkgs); err != nil {
-		return err
-	}
-	args := batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to install packages: %w", err)
-	}
-	return nil
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs), "install", pkgs)
 }
 
 // ReinstallMany reinstalls multiple packages in one paru invocation.
 func (m *Paru) ReinstallMany(ctx context.Context, pkgs ...string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := validatePackages(pkgs); err != nil {
-		return err
-	}
-	args := batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to reinstall packages: %w", err)
-	}
-	return nil
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs), "reinstall", pkgs)
 }
 
 // RemoveMany removes multiple packages in one paru invocation.
 func (m *Paru) RemoveMany(ctx context.Context, pkgs ...string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := validatePackages(pkgs); err != nil {
-		return err
-	}
-	args := batchArgs(sudoCmd("paru", "-Rs", "--noconfirm"), pkgs)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to remove packages: %w", err)
-	}
-	return nil
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-Rs", "--noconfirm"), pkgs), "remove", pkgs)
 }
 
 // Search searches for packages via paru (official repos + AUR).
@@ -229,11 +161,7 @@ func (m *Paru) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 	}
 	args := sudoCmd("pacman", "-Rs", "--noconfirm")
 	args = append(args, orphans...)
-	_, err = m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to remove orphans: %w", err)
-	}
-	return orphans, nil
+	return orphans, sudoExec(ctx, m.exec, args, "failed to remove orphans")
 }
 
 // Clean runs paru -Sc to clear the package cache.
@@ -246,12 +174,7 @@ func (m *Paru) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return nil, nil
 	}
-	args := sudoCmd("paru", "-Sc", "--noconfirm")
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to clean paru cache: %w", err)
-	}
-	return nil, nil
+	return nil, sudoExec(ctx, m.exec, sudoCmd("paru", "-Sc", "--noconfirm"), "failed to clean paru cache")
 }
 
 // Refresh syncs paru databases via paru -Sy.
@@ -286,118 +209,12 @@ func (m *Paru) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error
 
 // Hold adds a package to IgnorePkg in pacman.conf (shared with pacman).
 func (m *Paru) Hold(ctx context.Context, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-
-	lines, err := pacmanConfRead(ctx, m.exec)
-	if err != nil {
-		return err
-	}
-	modified := false
-
-	inOptions := false
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "[options]" {
-			inOptions = true
-			continue
-		}
-		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
-			break
-		}
-		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
-			eqIdx := strings.Index(trimmed, "=")
-			if eqIdx < 0 {
-				continue
-			}
-			value := strings.TrimSpace(trimmed[eqIdx+1:])
-			pkgs := strings.Fields(value)
-			for _, p := range pkgs {
-				if p == pkg {
-					return nil
-				}
-			}
-			lines[i] = line + " " + pkg
-			modified = true
-			break
-		}
-	}
-
-	if !modified {
-		for i, line := range lines {
-			if strings.TrimSpace(line) == "[options]" {
-				lines = append(lines[:i+1], append([]string{"IgnorePkg = " + pkg}, lines[i+1:]...)...)
-				modified = true
-				break
-			}
-		}
-	}
-
-	if !modified {
-		return fmt.Errorf("could not find [options] section in pacman.conf")
-	}
-
-	return pacmanConfWrite(ctx, m.exec, lines)
+	return pacmanHold(ctx, m.exec, pkg)
 }
 
 // Unhold removes a package from IgnorePkg in pacman.conf.
 func (m *Paru) Unhold(ctx context.Context, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-
-	lines, err := pacmanConfRead(ctx, m.exec)
-	if err != nil {
-		return err
-	}
-	inOptions := false
-
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "[options]" {
-			inOptions = true
-			continue
-		}
-		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
-			break
-		}
-		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
-			eqIdx := strings.Index(trimmed, "=")
-			if eqIdx < 0 {
-				continue
-			}
-			before := strings.TrimSpace(trimmed[:eqIdx])
-			value := strings.TrimSpace(trimmed[eqIdx+1:])
-			pkgs := strings.Fields(value)
-			newPkgs := make([]string, 0, len(pkgs))
-			found := false
-			for _, p := range pkgs {
-				if p == pkg {
-					found = true
-				} else {
-					newPkgs = append(newPkgs, p)
-				}
-			}
-			if !found {
-				return fmt.Errorf("package %s is not held", pkg)
-			}
-			if len(newPkgs) == 0 {
-				lines[i] = before + " ="
-			} else {
-				lines[i] = before + " = " + strings.Join(newPkgs, " ")
-			}
-			return pacmanConfWrite(ctx, m.exec, lines)
-		}
-	}
-
-	return fmt.Errorf("package %s is not held", pkg)
+	return pacmanUnhold(ctx, m.exec, pkg)
 }
 
 // ListHeld returns the list of packages in IgnorePkg from pacman.conf.
