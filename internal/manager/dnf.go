@@ -209,22 +209,12 @@ func (m *DNF) Install(ctx context.Context, pkg string) error {
 		return err
 	}
 	if isGroup(ctx) {
-		args := sudoCmd(m.cmd, "group", "install", "-y", pkg)
-		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-		if err != nil {
-			return fmt.Errorf("failed to install group %s: %w", pkg, err)
-		}
-		return nil
+		return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "group", "install", "-y", pkg), fmt.Sprintf("failed to install group %s", pkg))
 	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd(m.cmd, "install", "-y", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to install %s: %w", pkg, err)
-	}
-	return nil
+	return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "install", "-y", pkg), fmt.Sprintf("failed to install %s", pkg))
 }
 
 // Reinstall executes the native reinstallation command.
@@ -233,18 +223,12 @@ func (m *DNF) Reinstall(ctx context.Context, pkg string) error {
 		return err
 	}
 	if isGroup(ctx) {
-		// Reinstall is same as install for groups
 		return m.Install(ctx, pkg)
 	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd(m.cmd, "reinstall", "-y", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
-	}
-	return nil
+	return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "reinstall", "-y", pkg), fmt.Sprintf("failed to reinstall %s", pkg))
 }
 
 // Remove executes the native removal command.
@@ -253,22 +237,12 @@ func (m *DNF) Remove(ctx context.Context, pkg string) error {
 		return err
 	}
 	if isGroup(ctx) {
-		args := sudoCmd(m.cmd, "group", "remove", "-y", pkg)
-		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-		if err != nil {
-			return fmt.Errorf("failed to remove group %s: %w", pkg, err)
-		}
-		return nil
+		return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "group", "remove", "-y", pkg), fmt.Sprintf("failed to remove group %s", pkg))
 	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd(m.cmd, "remove", "-y", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to remove %s: %w", pkg, err)
-	}
-	return nil
+	return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "remove", "-y", pkg), fmt.Sprintf("failed to remove %s", pkg))
 }
 
 // InstallMany installs multiple packages in one dnf invocation. Groups are
@@ -283,12 +257,7 @@ func (m *DNF) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := validatePackages(pkgs); err != nil {
 		return err
 	}
-	args := batchArgs(sudoCmd(m.cmd, "install", "-y"), pkgs)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to install packages: %w", err)
-	}
-	return nil
+	return sudoExec(ctx, m.exec, batchArgs(sudoCmd(m.cmd, "install", "-y"), pkgs), "failed to install packages")
 }
 
 // ReinstallMany reinstalls multiple packages in one dnf invocation.
@@ -299,12 +268,7 @@ func (m *DNF) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := validatePackages(pkgs); err != nil {
 		return err
 	}
-	args := batchArgs(sudoCmd(m.cmd, "reinstall", "-y"), pkgs)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to reinstall packages: %w", err)
-	}
-	return nil
+	return sudoExec(ctx, m.exec, batchArgs(sudoCmd(m.cmd, "reinstall", "-y"), pkgs), "failed to reinstall packages")
 }
 
 // RemoveMany removes multiple packages in one dnf invocation.
@@ -315,12 +279,7 @@ func (m *DNF) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := validatePackages(pkgs); err != nil {
 		return err
 	}
-	args := batchArgs(sudoCmd(m.cmd, "remove", "-y"), pkgs)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to remove packages: %w", err)
-	}
-	return nil
+	return sudoExec(ctx, m.exec, batchArgs(sudoCmd(m.cmd, "remove", "-y"), pkgs), "failed to remove packages")
 }
 
 // PreviewInstall previews installing pkg.
@@ -571,12 +530,7 @@ func (m *DNF) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return nil, nil
 	}
-	args := sudoCmd(m.cmd, "autoremove", "-y")
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to autoremove: %w", err)
-	}
-	return nil, nil
+	return nil, sudoExec(ctx, m.exec, sudoCmd(m.cmd, "autoremove", "-y"), "failed to autoremove")
 }
 
 // Clean runs dnf clean all to clear the package cache.
@@ -589,44 +543,17 @@ func (m *DNF) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return nil, nil
 	}
-	args := sudoCmd(m.cmd, "clean", "all")
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to clean dnf cache: %w", err)
-	}
-	return nil, nil
+	return nil, sudoExec(ctx, m.exec, sudoCmd(m.cmd, "clean", "all"), "failed to clean dnf cache")
 }
 
 // Hold pins a package via dnf versionlock add.
 func (m *DNF) Hold(ctx context.Context, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-	args := sudoCmd(m.cmd, "versionlock", "add", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to hold %s: %w", pkg, err)
-	}
-	return nil
+	return runSingle(ctx, m.exec, sudoCmd(m.cmd, "versionlock", "add", pkg), "hold", pkg)
 }
 
 // Unhold removes a version pin via dnf versionlock delete.
 func (m *DNF) Unhold(ctx context.Context, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-	args := sudoCmd(m.cmd, "versionlock", "delete", pkg)
-	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to unhold %s: %w", pkg, err)
-	}
-	return nil
+	return runSingle(ctx, m.exec, sudoCmd(m.cmd, "versionlock", "delete", pkg), "unhold", pkg)
 }
 
 // ListHeld returns held packages via dnf versionlock list.
