@@ -445,18 +445,10 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 
 	// In -y mode the gate skips the per-package preview; drop not-installed
 	// packages so they are not falsely reported as removed and untracked.
-	// Cask-aware adapters (brew) are excluded: cask context is per-package,
-	// not batch-wide, and brew already errors on absent packages.
-	_, caskAware := adapter.(caskDetector)
-	if app.yes && !caskAware {
-		remaining, skipped := filterNoopRemoves(cmd.Context(), adapter, pkgs)
-		for _, name := range skipped {
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  nothing to do: %s via %s\n", name, adapter.Name())
-		}
-		if len(remaining) == 0 {
+	if app.yes {
+		if pkgs = filterAbsentPkgs(cmd.Context(), cmd.ErrOrStderr(), adapter, pkgs); pkgs == nil {
 			return nil
 		}
-		pkgs = remaining
 	}
 
 	// Brew: --cask is batch-wide; a mixed cask/formula batch falls back to
@@ -480,20 +472,8 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 	target := fmt.Sprintf("%d package(s)", len(pkgs))
 	printStatus(errOut, tty, false, "removing", target, adapter.Name(), "")
 
-	if mixed {
-		for _, p := range pkgs {
-			ctx := manager.WithYes(cmd.Context())
-			if casks[p] {
-				ctx = manager.WithYes(manager.WithCask(cmd.Context()))
-			}
-			if err := adapter.Remove(ctx, p); err != nil {
-				return fmt.Errorf("remove failed: %w", err)
-			}
-		}
-	} else {
-		if err := br.RemoveMany(manager.WithYes(removeCtx), pkgs...); err != nil {
-			return fmt.Errorf("remove failed: %w", err)
-		}
+	if err := execBatchRemove(cmd.Context(), removeCtx, adapter, br, pkgs, mixed, casks); err != nil {
+		return err
 	}
 	removeTrackedAll(app, pkgs, adapter.Name())
 
@@ -510,6 +490,28 @@ func removeTrackedAll(app *AppContext, pkgs []string, mgr string) {
 	for _, p := range pkgs {
 		app.manifest.RemovePackage(p, mgr)
 	}
+}
+
+// execBatchRemove runs the native remove operation for a batch. A mixed
+// cask/formula batch falls back to per-package single removals; a uniform
+// batch uses the native batch invocation.
+func execBatchRemove(ctx context.Context, removeCtx context.Context, adapter manager.Adapter, br manager.BatchRemover, pkgs []string, mixed bool, casks map[string]bool) error {
+	if mixed {
+		for _, p := range pkgs {
+			pkgCtx := manager.WithYes(ctx)
+			if casks[p] {
+				pkgCtx = manager.WithYes(manager.WithCask(ctx))
+			}
+			if err := adapter.Remove(pkgCtx, p); err != nil {
+				return fmt.Errorf("remove failed: %w", err)
+			}
+		}
+		return nil
+	}
+	if err := br.RemoveMany(manager.WithYes(removeCtx), pkgs...); err != nil {
+		return fmt.Errorf("remove failed: %w", err)
+	}
+	return nil
 }
 
 // filterNoopRemoves drops packages whose removal would be a no-op (the package
@@ -530,6 +532,24 @@ func filterNoopRemoves(ctx context.Context, adapter manager.Adapter, pkgs []stri
 		remaining = append(remaining, name)
 	}
 	return remaining, skipped
+}
+
+// filterAbsentPkgs is the -y-mode wrapper around filterNoopRemoves that warns
+// about skipped packages and handles early return. It returns nil when every
+// package in the batch is a no-op (caller must check for nil).
+func filterAbsentPkgs(ctx context.Context, w io.Writer, adapter manager.Adapter, pkgs []string) []string {
+	_, caskAware := adapter.(caskDetector)
+	if caskAware {
+		return pkgs
+	}
+	remaining, skipped := filterNoopRemoves(ctx, adapter, pkgs)
+	for _, name := range skipped {
+		_, _ = fmt.Fprintf(w, "  nothing to do: %s via %s\n", name, adapter.Name())
+	}
+	if len(remaining) == 0 {
+		return nil
+	}
+	return remaining
 }
 
 func newSearchCmd() *cobra.Command {

@@ -36,6 +36,19 @@ func TestRemoveMany_GroupRejected(t *testing.T) {
 	assert.Contains(t, err.Error(), "--group supports a single package")
 }
 
+func TestRemoveMany_InteractiveSkipsFilter(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "dnf", PreviewNoop: true}}
+
+	buf, err := execCmd(t, []string{"remove", "-m", "dnf", "htop", "atop"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+
+	// Interactive (no -y): the absent-package filter must NOT run. Only the
+	// gate's batch-level "nothing to do" appears — never per-package.
+	assert.NotContains(t, output, "nothing to do: htop via dnf")
+	assert.Contains(t, output, "nothing to do: 2 package(s)")
+}
+
 func TestRemoveCmd_DnfY_SkipNoop(t *testing.T) {
 	adapters := []manager.Adapter{&manager.Mock{ManagerName: "dnf", PreviewNoop: true, InstalledPkgs: []string{"htop"}}}
 
