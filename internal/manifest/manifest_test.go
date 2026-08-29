@@ -52,6 +52,58 @@ func TestManifestAddAndRemove(t *testing.T) {
 	assert.Len(t, m.Packages, 1)
 }
 
+func TestManifestSetNote(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		packages []Package
+		target   string
+		manager  string
+		note     string
+		want     bool
+		wantNote string
+	}{
+		{
+			name:     "overwrites existing note",
+			packages: []Package{{Name: "htop", Manager: "dnf", Notes: "old reason"}},
+			target:   "htop", manager: "dnf", note: "new reason",
+			want: true, wantNote: "new reason",
+		},
+		{
+			name:     "sets note when empty",
+			packages: []Package{{Name: "htop", Manager: "dnf"}},
+			target:   "htop", manager: "dnf", note: "reason",
+			want: true, wantNote: "reason",
+		},
+		{
+			name:     "not found returns false",
+			packages: []Package{{Name: "htop", Manager: "dnf"}},
+			target:   "missing", manager: "dnf", note: "reason",
+			want: false, wantNote: "",
+		},
+		{
+			name:     "manager mismatch not found",
+			packages: []Package{{Name: "htop", Manager: "dnf"}},
+			target:   "htop", manager: "brew", note: "reason",
+			want: false, wantNote: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := &Manifest{Packages: tt.packages}
+			got := m.SetNote(tt.target, tt.manager, tt.note)
+			assert.Equal(t, tt.want, got)
+			for _, p := range m.Packages {
+				if p.Name == tt.target && p.Manager == tt.manager {
+					assert.Equal(t, tt.wantNote, p.Notes)
+				}
+			}
+		})
+	}
+}
+
 func TestManifestLoadAndSave(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

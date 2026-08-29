@@ -26,6 +26,9 @@ stamp reinstall <package> [flags]
 
   # reinstall multiple packages in one command (per-manager batch, -m required)
   stamp reinstall lazygit jq -m brew
+
+  # annotate a reinstall so you remember why later
+  stamp reinstall lazygit -m brew --note "refresh intent"
 ```
 
 ### Options
@@ -33,6 +36,7 @@ stamp reinstall <package> [flags]
 ```
   -h, --help             help for reinstall
   -m, --manager string   package manager to use (pre-existing packages only)
+  -n, --note string      annotation for this package
 ```
 
 ### Options inherited from parent commands

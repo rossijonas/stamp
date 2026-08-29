@@ -181,6 +181,18 @@ func (m *Manifest) AddPackage(pkg Package) bool {
 	return true
 }
 
+// SetNote updates the note of an existing package. Returns false when no
+// package matches name+manager.
+func (m *Manifest) SetNote(name, manager, note string) bool {
+	for i, pkg := range m.Packages {
+		if pkg.Name == name && pkg.Manager == manager {
+			m.Packages[i].Notes = note
+			return true
+		}
+	}
+	return false
+}
+
 // RemovePackage removes a package from the manifest.
 func (m *Manifest) RemovePackage(name, manager string) bool {
 	for i, pkg := range m.Packages {
