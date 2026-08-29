@@ -27,36 +27,98 @@ func (m *Flatpak) Name() string {
 }
 
 // ListInstalled returns a list of packages currently installed.
+// App-kind extensions and plugins (e.g. OBS Studio plugins) are included;
+// runtimes and runtime-kind extensions (locale, debug, GPU drivers) are
+// excluded to avoid reconcile noise.
 func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
-	// Query both user and system installations, then merge and deduplicate.
-	seen := make(map[string]struct{})
+	all := make(map[string]struct{})
+	apps := make(map[string]struct{})
+	var firstErr error
+	appsKnown := true
 
-	userOut, userErr := m.exec(ctx, "flatpak", "list", "--user", "--app", "--columns=application")
-	if userErr == nil {
-		for _, pkg := range parseLines(userOut) {
-			if pkg == "Application ID" {
-				continue
+	for _, scope := range []string{"--user", "--system"} {
+		out, err := m.exec(ctx, "flatpak", "list", scope, "--columns=application")
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
 			}
-			seen[pkg] = struct{}{}
+			continue
+		}
+		for _, id := range parseFlatpakApplicationIDs(out) {
+			all[id] = struct{}{}
+		}
+
+		out, err = m.exec(ctx, "flatpak", "list", scope, "--app", "--columns=application")
+		if err != nil {
+			appsKnown = false
+			continue
+		}
+		for _, id := range parseFlatpakApplicationIDs(out) {
+			apps[id] = struct{}{}
 		}
 	}
 
-	sysOut, sysErr := m.exec(ctx, "flatpak", "list", "--system", "--app", "--columns=application")
-	if sysErr == nil {
-		for _, pkg := range parseLines(sysOut) {
-			if pkg == "Application ID" {
-				continue
-			}
-			seen[pkg] = struct{}{}
+	if len(all) == 0 && firstErr != nil {
+		return nil, fmt.Errorf("failed to list installed packages: %w", firstErr)
+	}
+
+	// Without the --app listing app extensions cannot be isolated; fall back
+	// to the full listing (over-inclusive) rather than dropping apps.
+	if !appsKnown {
+		return slices.Collect(maps.Keys(all)), nil
+	}
+	return classifyFlatpakRefs(all, apps), nil
+}
+
+// classifyFlatpakRefs keeps app-kind refs (pure apps from the --app listing
+// plus app extensions) and drops runtimes and runtime-kind extensions.
+// flatpak refs carry no kind prefix and its filters cannot isolate app
+// extensions, so extensions are identified by their parent ref: extension IDs
+// live in their parent's namespace (<parent-id>.<name>).
+func classifyFlatpakRefs(all, apps map[string]struct{}) []string {
+	result := make([]string, 0, len(all))
+	for ref := range all {
+		if _, ok := apps[ref]; ok {
+			result = append(result, ref)
+			continue
+		}
+		if isFlatpakAppExtension(ref, all, apps) {
+			result = append(result, ref)
 		}
 	}
+	return result
+}
 
-	if userErr != nil && sysErr != nil {
-		return nil, fmt.Errorf("failed to list installed packages: %w", userErr)
+// isFlatpakAppExtension reports whether ref is an extension whose nearest
+// installed parent ref is an app. A runtime parent (or no installed parent)
+// marks the ref as runtime noise to be excluded.
+func isFlatpakAppExtension(ref string, all, apps map[string]struct{}) bool {
+	for {
+		dot := strings.LastIndex(ref, ".")
+		if dot < 0 {
+			return false
+		}
+		ref = ref[:dot]
+		if _, ok := all[ref]; ok {
+			_, isApp := apps[ref]
+			return isApp
+		}
 	}
+}
 
-	result := slices.Collect(maps.Keys(seen))
-	return result, nil
+// parseFlatpakApplicationIDs parses the output of 'flatpak list
+// --columns=application'. Lines are application or runtime IDs with a header
+// row "Application ID".
+func parseFlatpakApplicationIDs(output []byte) []string {
+	var result []string
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		id := string(bytes.TrimSpace(line))
+		if id == "" || id == "Application ID" {
+			continue
+		}
+		result = append(result, id)
+	}
+	return result
 }
 
 // Install executes the native installation command.
@@ -143,18 +205,17 @@ func (m *Flatpak) RemoveMany(ctx context.Context, pkgs ...string) error {
 }
 
 // PreviewInstall previews installing pkg.
-// flatpak install --dry-run simulates the installation without changes.
+// flatpak has no --dry-run option for install, so installed state is queried
+// via 'flatpak info' — a read-only query that never modifies system state.
 func (m *Flatpak) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
 	}
-	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, "flatpak", "install", "--dry-run", pkg)
-	if err != nil && len(bytes.TrimSpace(out)) == 0 {
-		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
+	_, err := m.exec(ctx, "flatpak", "info", pkg)
+	if err == nil {
+		return Preview{Output: "already installed via flatpak", Noop: true}, nil
 	}
-	s := string(out)
-	return Preview{Output: s, Noop: strings.Contains(s, "Nothing to do.")}, nil
+	return Preview{Output: "will install " + pkg + " via flatpak", Noop: false}, nil
 }
 
 // PreviewRemove previews removing pkg.
@@ -162,13 +223,11 @@ func (m *Flatpak) PreviewRemove(ctx context.Context, pkg string) (Preview, error
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
 	}
-	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, "flatpak", "uninstall", "--dry-run", pkg)
-	if err != nil && len(bytes.TrimSpace(out)) == 0 {
-		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
+	_, err := m.exec(ctx, "flatpak", "info", pkg)
+	if err == nil {
+		return Preview{Output: "will remove " + pkg + " via flatpak", Noop: false}, nil
 	}
-	s := string(out)
-	return Preview{Output: s, Noop: strings.Contains(s, "Nothing to uninstall") || strings.Contains(s, "No such ref") || strings.Contains(s, "is not installed")}, nil
+	return Preview{Output: "not installed via flatpak", Noop: true}, nil
 }
 
 // PreviewReinstall previews reinstalling pkg.

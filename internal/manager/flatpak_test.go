@@ -21,18 +21,6 @@ func TestFlatpak_Operations(t *testing.T) {
 		expectedRes []string
 	}{
 		{
-			name:        "list installed success",
-			operation:   "list",
-			mockOutput:  "com.spotify.Client\norg.mozilla.firefox\n",
-			expectedRes: []string{"com.spotify.Client", "org.mozilla.firefox"},
-		},
-		{
-			name:        "list installed error",
-			operation:   "list",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
 			name:      "install success",
 			operation: "install",
 			pkgName:   "com.spotify.Client",
@@ -337,10 +325,14 @@ func TestFlatpak_ListInstalledMerged(t *testing.T) {
 	manager := NewFlatpak()
 	manager.exec = func(_ context.Context, cmd string, args ...string) ([]byte, error) {
 		switch {
+		case cmd == "flatpak" && slices.Contains(args, "--user") && slices.Contains(args, "--app"):
+			return []byte("com.spotify.Client\ncom.obsproject.Studio\n"), nil
 		case cmd == "flatpak" && slices.Contains(args, "--user"):
-			return []byte("com.spotify.Client\norg.mozilla.firefox\n"), nil
+			return []byte("com.spotify.Client\ncom.obsproject.Studio\ncom.obsproject.Studio.Plugin.BackgroundRemoval\norg.gnome.Platform\n"), nil
+		case cmd == "flatpak" && slices.Contains(args, "--system") && slices.Contains(args, "--app"):
+			return []byte("org.mozilla.firefox\n"), nil
 		case cmd == "flatpak" && slices.Contains(args, "--system"):
-			return []byte("org.mozilla.firefox\norg.gimp.GIMP\n"), nil
+			return []byte("org.mozilla.firefox\norg.gnome.Platform\norg.freedesktop.Platform\n"), nil
 		default:
 			return nil, assert.AnError
 		}
@@ -348,7 +340,14 @@ func TestFlatpak_ListInstalledMerged(t *testing.T) {
 
 	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"com.spotify.Client", "org.mozilla.firefox", "org.gimp.GIMP"}, pkgs)
+	assert.ElementsMatch(t, []string{
+		"com.spotify.Client",
+		"com.obsproject.Studio",
+		"com.obsproject.Studio.Plugin.BackgroundRemoval",
+		"org.mozilla.firefox",
+	}, pkgs)
+	assert.NotContains(t, pkgs, "org.gnome.Platform")
+	assert.NotContains(t, pkgs, "org.freedesktop.Platform")
 }
 
 func TestFlatpak_ListInstalledSkipsHeader(t *testing.T) {
@@ -356,8 +355,10 @@ func TestFlatpak_ListInstalledSkipsHeader(t *testing.T) {
 	manager := NewFlatpak()
 	manager.exec = func(_ context.Context, cmd string, args ...string) ([]byte, error) {
 		switch {
-		case cmd == "flatpak" && slices.Contains(args, "--system"):
+		case cmd == "flatpak" && slices.Contains(args, "--system") && slices.Contains(args, "--app"):
 			return []byte("Application ID\ncom.github.fabiocolacio.marker\ncom.slack.Slack\n"), nil
+		case cmd == "flatpak" && slices.Contains(args, "--system"):
+			return []byte("Application ID\ncom.github.fabiocolacio.marker\ncom.slack.Slack\norg.gnome.Platform\n"), nil
 		default:
 			return []byte{}, nil
 		}
@@ -367,6 +368,107 @@ func TestFlatpak_ListInstalledSkipsHeader(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, pkgs, "Application ID")
 	assert.ElementsMatch(t, []string{"com.github.fabiocolacio.marker", "com.slack.Slack"}, pkgs)
+	assert.NotContains(t, pkgs, "org.gnome.Platform")
+}
+
+func TestClassifyFlatpakRefs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		all  []string
+		apps []string
+		want []string
+	}{
+		{
+			name: "apps and app plugins kept, runtimes and runtime extensions dropped",
+			all: []string{
+				"com.slack.Slack",
+				"org.gnome.Platform",
+				"org.freedesktop.Platform.GL.default",
+				"com.obsproject.Studio",
+				"com.obsproject.Studio.Plugin.BackgroundRemoval",
+			},
+			apps: []string{"com.slack.Slack", "com.obsproject.Studio"},
+			want: []string{
+				"com.slack.Slack",
+				"com.obsproject.Studio",
+				"com.obsproject.Studio.Plugin.BackgroundRemoval",
+			},
+		},
+		{
+			name: "deep extension chain resolved to app parent",
+			all:  []string{"com.example.App", "com.example.App.Plugin.Sub"},
+			apps: []string{"com.example.App"},
+			want: []string{"com.example.App", "com.example.App.Plugin.Sub"},
+		},
+		{
+			name: "runtime extensions dropped",
+			all:  []string{"org.gnome.Platform", "org.gnome.Platform.Locale", "org.freedesktop.Platform.GL.default"},
+			apps: nil,
+			want: nil,
+		},
+		{
+			name: "orphan extension without installed parent dropped",
+			all:  []string{"com.orphan.Plugin.X"},
+			apps: nil,
+			want: nil,
+		},
+		{
+			name: "apps sharing a prefix are not treated as extensions",
+			all:  []string{"me.proton.Mail", "me.proton.vpn"},
+			apps: []string{"me.proton.Mail", "me.proton.vpn"},
+			want: []string{"me.proton.Mail", "me.proton.vpn"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := classifyFlatpakRefs(toSet(tt.all), toSet(tt.apps))
+			assert.ElementsMatch(t, tt.want, got)
+		})
+	}
+}
+
+func toSet(items []string) map[string]struct{} {
+	m := make(map[string]struct{}, len(items))
+	for _, s := range items {
+		m[s] = struct{}{}
+	}
+	return m
+}
+
+func TestParseFlatpakApplicationIDs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		output string
+		want   []string
+	}{
+		{
+			name:   "application ids",
+			output: "com.spotify.Client\ncom.obsproject.Studio.Plugin.BackgroundRemoval\n",
+			want:   []string{"com.spotify.Client", "com.obsproject.Studio.Plugin.BackgroundRemoval"},
+		},
+		{
+			name:   "header and empty lines skipped",
+			output: "Application ID\n\ncom.slack.Slack\n\n",
+			want:   []string{"com.slack.Slack"},
+		},
+		{
+			name:   "empty output",
+			output: "",
+			want:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := parseFlatpakApplicationIDs([]byte(tt.output))
+			assert.ElementsMatch(t, tt.want, got)
+		})
+	}
 }
 
 func TestFlatpak_ListInstalledBothFail(t *testing.T) {
@@ -376,6 +478,97 @@ func TestFlatpak_ListInstalledBothFail(t *testing.T) {
 
 	_, err := manager.ListInstalled(WithYes(context.Background()))
 	require.Error(t, err)
+}
+
+func TestFlatpak_PreviewInstall(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		mockErr  error
+		wantNoop bool
+		wantOut  string
+	}{
+		{name: "already installed", mockErr: nil, wantNoop: true, wantOut: "already installed via flatpak"},
+		{name: "not installed", mockErr: assert.AnError, wantNoop: false, wantOut: "will install com.spotify.Client via flatpak"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			var args []string
+			mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+				args = a
+				return []byte(""), tt.mockErr
+			}
+
+			pv, err := mgr.PreviewInstall(WithYes(context.Background()), "com.spotify.Client")
+			require.NoError(t, err)
+			assert.Equal(t, []string{"info", "com.spotify.Client"}, args)
+			assert.NotContains(t, args, "--dry-run")
+			assert.Equal(t, tt.wantNoop, pv.Noop)
+			assert.Equal(t, tt.wantOut, pv.Output)
+		})
+	}
+}
+
+func TestFlatpak_PreviewInstallValidation(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	_, err := mgr.PreviewInstall(WithYes(context.Background()), "-invalid")
+	require.Error(t, err)
+}
+
+func TestFlatpak_PreviewRemove(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		mockErr  error
+		wantNoop bool
+		wantOut  string
+	}{
+		{name: "installed", mockErr: nil, wantNoop: false, wantOut: "will remove com.spotify.Client via flatpak"},
+		{name: "not installed", mockErr: assert.AnError, wantNoop: true, wantOut: "not installed via flatpak"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			var args []string
+			mgr.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+				args = a
+				return []byte(""), tt.mockErr
+			}
+
+			pv, err := mgr.PreviewRemove(WithYes(context.Background()), "com.spotify.Client")
+			require.NoError(t, err)
+			assert.Equal(t, []string{"info", "com.spotify.Client"}, args)
+			assert.NotContains(t, args, "--dry-run")
+			assert.Equal(t, tt.wantNoop, pv.Noop)
+			assert.Equal(t, tt.wantOut, pv.Output)
+		})
+	}
+}
+
+func TestFlatpak_PreviewRemoveValidation(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	_, err := mgr.PreviewRemove(WithYes(context.Background()), "-invalid")
+	require.Error(t, err)
+}
+
+func TestFlatpak_PreviewReinstallDelegatesToInstall(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	mgr.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		return []byte(""), nil
+	}
+
+	pv, err := mgr.PreviewReinstall(WithYes(context.Background()), "com.spotify.Client")
+	require.NoError(t, err)
+	assert.True(t, pv.Noop)
+	assert.Equal(t, "already installed via flatpak", pv.Output)
 }
 
 func TestFlatpak_CheckUpdate(t *testing.T) {

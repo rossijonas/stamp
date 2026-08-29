@@ -97,18 +97,6 @@ func TestPreview_Adapters(t *testing.T) {
 			wantArgs: []string{"install", "--dry-run", "--cask", "spotify"},
 		},
 		{
-			name:     "flatpak preview install",
-			build:    func(exec Executor) Previewer { a := NewFlatpak(); a.exec = exec; return a },
-			wantName: "flatpak",
-			wantArgs: []string{"install", "--dry-run", "com.spotify.Client"},
-		},
-		{
-			name:     "flatpak preview remove",
-			build:    func(exec Executor) Previewer { a := NewFlatpak(); a.exec = exec; return a },
-			wantName: "flatpak",
-			wantArgs: []string{"uninstall", "--dry-run", "com.spotify.Client"},
-		},
-		{
 			name:     "zypper preview install",
 			build:    func(exec Executor) Previewer { a := NewZypper(); a.exec = exec; return a },
 			wantName: "zypper",
@@ -198,12 +186,6 @@ func TestPreview_Reinstall(t *testing.T) {
 			wantArgs: []string{"-S", "--print", "htop"},
 		},
 		{
-			name:     "flatpak preview reinstall",
-			build:    func(exec Executor) Previewer { a := NewFlatpak(); a.exec = exec; return a },
-			wantName: "flatpak",
-			wantArgs: []string{"install", "--dry-run", "com.spotify.Client"},
-		},
-		{
 			name:     "zypper preview reinstall",
 			build:    func(exec Executor) Previewer { a := NewZypper(); a.exec = exec; return a },
 			wantName: "zypper",
@@ -257,8 +239,6 @@ func TestPreview_NoopDetection(t *testing.T) {
 			realOut: "The following NEW packages will be installed:\n  htop\n"},
 		{name: "brew", build: func(e Executor) Previewer { a := NewBrew(); a.exec = e; return a },
 			noopOut: "Warning: htop 3.4.1 is already installed\n", realOut: "Would install htop 3.4.1\n"},
-		{name: "flatpak", build: func(e Executor) Previewer { a := NewFlatpak(); a.exec = e; return a },
-			noopOut: "Nothing to do.\n", realOut: "Installation of com.spotify.Client\n"},
 		{name: "zypper", build: func(e Executor) Previewer { a := NewZypper(); a.exec = e; return a },
 			noopOut: "Nothing to do.\n", realOut: "The following NEW package is going to be installed:\n  htop\n"},
 		{name: "npm", build: func(e Executor) Previewer { a := NewNpm(); a.exec = e; return a },
@@ -301,7 +281,6 @@ func TestPreview_NonZeroExitStillReturnsOutput(t *testing.T) {
 		{name: "dnf", build: func(e Executor) Previewer { a := NewDNF("dnf"); a.exec = e; return a }, method: "remove"},
 		{name: "apt", build: func(e Executor) Previewer { a := NewAPT("apt"); a.exec = e; return a }, method: "install"},
 		{name: "pacman", build: func(e Executor) Previewer { a := NewPacman(); a.exec = e; return a }, method: "remove"},
-		{name: "flatpak", build: func(e Executor) Previewer { a := NewFlatpak(); a.exec = e; return a }, method: "install"},
 		{name: "zypper", build: func(e Executor) Previewer { a := NewZypper(); a.exec = e; return a }, method: "reinstall"},
 		{name: "npm", build: func(e Executor) Previewer { a := NewNpm(); a.exec = e; return a }, method: "remove"},
 	}
@@ -362,8 +341,6 @@ func TestPreview_RemoveAbsentSignals(t *testing.T) {
 			absent: "error: package 'htop' was not found\n", real: "htop 3.4.1-1\n"},
 		{name: "brew", build: func(e Executor) Previewer { a := NewBrew(); a.exec = e; return a },
 			absent: "Error: No such keg: /usr/local/Cellar/htop\n", real: "Would remove htop 3.4.1\n"},
-		{name: "flatpak", build: func(e Executor) Previewer { a := NewFlatpak(); a.exec = e; return a },
-			absent: "error: No such ref\n", real: "Uninstall com.spotify.Client\n"},
 		{name: "zypper", build: func(e Executor) Previewer { a := NewZypper(); a.exec = e; return a },
 			absent: "Nothing to do.\n", real: "The following package is going to be removed:\n  htop\n"},
 		{name: "npm", build: func(e Executor) Previewer { a := NewNpm(); a.exec = e; return a },
@@ -470,6 +447,12 @@ func TestPreview_Adapters_ValidationAndErrors(t *testing.T) {
 					_, err = a.PreviewRemove(ctx, "htop")
 				case "reinstall":
 					_, err = a.PreviewReinstall(ctx, "htop")
+				}
+				if tt.name == "flatpak" {
+					// flatpak previews derive state from 'flatpak info': an exec
+					// error means "not installed" (a no-op), never a wrapped error.
+					// Covered in flatpak_test.go.
+					return
 				}
 				require.Error(t, err)
 				if tt.name == "brew" && method == "reinstall" {
