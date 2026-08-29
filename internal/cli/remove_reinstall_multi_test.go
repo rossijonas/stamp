@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/rossijonas/stamp/internal/manager"
+	"github.com/rossijonas/stamp/internal/manifest"
 )
 
 func TestRemoveMany_RequiresManager(t *testing.T) {
@@ -33,6 +34,79 @@ func TestRemoveMany_GroupRejected(t *testing.T) {
 	_, err := execCmd(t, []string{"remove", "-m", "dnf", "htop", "atop", "--group", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "dnf"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "--group supports a single package")
+}
+
+func TestRemoveCmd_DnfY_SkipNoop(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "dnf", PreviewNoop: true, InstalledPkgs: []string{"htop"}}}
+
+	tmpDir := t.TempDir()
+	root := NewRootCmd(
+		WithAdapters(adapters),
+		WithManifestPath(tmpDir+"/manifest.toml"),
+		WithConfigPath(tmpDir+"/config.toml"),
+	)
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+`
+	require.NoError(t, os.WriteFile(tmpDir+"/manifest.toml", []byte(content), 0600))
+
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"remove", "htop", "-m", "dnf", "-y"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "nothing to do: htop via dnf")
+	assert.NotContains(t, buf.String(), "removed")
+
+	// The package must not be untracked.
+	loaded, err := manifest.Load(tmpDir + "/manifest.toml")
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 1)
+	assert.Equal(t, "htop", loaded.Packages[0].Name)
+}
+
+func TestRemoveMany_DnfY_SkipAbsent(t *testing.T) {
+	adapters := []manager.Adapter{&manager.Mock{ManagerName: "dnf", PreviewNoop: true, InstalledPkgs: []string{"htop"}}}
+
+	tmpDir := t.TempDir()
+	root := NewRootCmd(
+		WithAdapters(adapters),
+		WithManifestPath(tmpDir+"/manifest.toml"),
+		WithConfigPath(tmpDir+"/config.toml"),
+	)
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+
+[[packages]]
+name = "atop"
+manager = "dnf"
+`
+	require.NoError(t, os.WriteFile(tmpDir+"/manifest.toml", []byte(content), 0600))
+
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"remove", "-m", "dnf", "htop", "atop", "-y"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	// Both packages preview as no-op: nothing is removed, nothing is untracked.
+	assert.Contains(t, buf.String(), "nothing to do: htop via dnf")
+	assert.NotContains(t, buf.String(), "removed")
+
+	loaded, err := manifest.Load(tmpDir + "/manifest.toml")
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 2)
 }
 
 func TestReinstallMany_RequiresManager(t *testing.T) {

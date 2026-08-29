@@ -294,7 +294,8 @@ func (m *DNF) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 		if err != nil && len(bytes.TrimSpace(out)) == 0 {
 			return Preview{}, fmt.Errorf("failed to preview group install %s: %w", pkg, err)
 		}
-		return Preview{Output: string(out), Noop: strings.Contains(string(out), "Nothing to do.")}, nil
+		// An unknown group ID is a no-op: dnf errors "No match for argument".
+		return Preview{Output: string(out), Noop: dnfPreviewNoop(string(out), "Nothing to do.", "No match for argument", "does not exist")}, nil
 	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
@@ -304,7 +305,7 @@ func (m *DNF) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
 	}
-	return Preview{Output: string(out), Noop: strings.Contains(string(out), "Nothing to do.")}, nil
+	return Preview{Output: string(out), Noop: dnfPreviewNoop(string(out), "Nothing to do.")}, nil
 }
 
 // PreviewRemove previews removing pkg.
@@ -318,7 +319,7 @@ func (m *DNF) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 		if err != nil && len(bytes.TrimSpace(out)) == 0 {
 			return Preview{}, fmt.Errorf("failed to preview group remove %s: %w", pkg, err)
 		}
-		return Preview{Output: string(out), Noop: strings.Contains(string(out), "Nothing to do.")}, nil
+		return Preview{Output: string(out), Noop: dnfPreviewNoop(string(out), "Nothing to do.", "No match for argument")}, nil
 	}
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
@@ -328,8 +329,9 @@ func (m *DNF) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
 	}
-	// dnf remove of an absent package errors "No match for argument".
-	return Preview{Output: string(out), Noop: strings.Contains(string(out), "No match for argument")}, nil
+	// dnf4 errors "No match for argument"; dnf5 prints "No packages to remove
+	// for argument" and still exits 0. Both are a no-op remove.
+	return Preview{Output: string(out), Noop: dnfPreviewNoop(string(out), "No match for argument", "No packages to remove for argument")}, nil
 }
 
 // PreviewReinstall previews reinstalling pkg.
@@ -351,10 +353,21 @@ func (m *DNF) PreviewReinstall(ctx context.Context, pkg string) (Preview, error)
 	// absent package is a no-op (dnf errors "No match for argument"/"not
 	// installed"). Reinstall is never a no-op just because a version matches.
 	s := string(out)
-	return Preview{Output: s, Noop: strings.Contains(s, "No match for argument") || strings.Contains(s, "not installed")}, nil
+	return Preview{Output: s, Noop: dnfPreviewNoop(s, "No match for argument", "not installed")}, nil
 }
 
 var _ Previewer = (*DNF)(nil)
+
+// dnfPreviewNoop reports whether a preview output signals that no transaction
+// would occur. Markers cover dnf4 and dnf5 phrasing across the operations.
+func dnfPreviewNoop(output string, markers ...string) bool {
+	for _, m := range markers {
+		if strings.Contains(output, m) {
+			return true
+		}
+	}
+	return false
+}
 
 // parseDNFGroupList parses the output of 'dnf group list' and returns group names.
 // Format:
@@ -387,7 +400,12 @@ func parseDNFGroupList(output []byte) []string {
 // Search queries the native package manager for the given package name.
 func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
 	if isGroup(ctx) {
-		out, err := m.exec(ctx, m.cmd, "group", "list")
+		// dnf4 shows group IDs only with --ids; dnf5 always shows them and
+		// dropped the flag. Try --ids first, fall back to plain output.
+		out, err := m.exec(ctx, m.cmd, "group", "list", "--ids")
+		if err != nil {
+			out, err = m.exec(ctx, m.cmd, "group", "list")
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to list groups: %w", err)
 		}

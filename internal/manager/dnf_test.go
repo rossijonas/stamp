@@ -888,13 +888,35 @@ func TestDNF_GroupRemove_Error(t *testing.T) {
 
 func TestDNF_GroupSearch(t *testing.T) {
 	t.Parallel()
+	var args []string
 	m := NewDNF("dnf")
-	m.exec = mockExecutorHelper("   Development Tools\n   C Development Tools\n   Backup Client\n", nil)
-	pkgs, err := m.Search(WithGroup(WithYes(context.Background())), "Development")
+	m.exec = func(_ context.Context, _ string, a ...string) ([]byte, error) {
+		args = a
+		return []byte("   c-development\n   development-tools\n   backup-client\n"), nil
+	}
+	pkgs, err := m.Search(WithGroup(WithYes(context.Background())), "development")
 	require.NoError(t, err)
-	assert.Contains(t, pkgs, "Development Tools")
-	assert.Contains(t, pkgs, "C Development Tools")
-	assert.NotContains(t, pkgs, "Backup Client")
+	assert.Contains(t, args, "--ids", "dnf4 group IDs require --ids")
+	assert.Contains(t, pkgs, "c-development")
+	assert.Contains(t, pkgs, "development-tools")
+	assert.NotContains(t, pkgs, "backup-client")
+}
+
+func TestDNF_GroupSearch_PlainFallback(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	m := NewDNF("dnf")
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		calls++
+		if calls == 1 {
+			return nil, assert.AnError
+		}
+		return []byte("   c-development\n"), nil
+	}
+	pkgs, err := m.Search(WithGroup(WithYes(context.Background())), "dev")
+	require.NoError(t, err)
+	assert.Equal(t, 2, calls)
+	assert.Equal(t, []string{"c-development"}, pkgs)
 }
 
 func TestDNF_GroupSearch_Error(t *testing.T) {
@@ -938,4 +960,34 @@ func TestParseDNFGroupList(t *testing.T) {
 	assert.Contains(t, groups, "C Development Tools")
 	assert.Contains(t, groups, "Backup Client")
 	assert.Contains(t, groups, "LibreOffice")
+}
+
+func TestDNF_PreviewRemove_NoopMarkers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		output string
+	}{
+		{name: "dnf4 absent", output: "Error: No match for argument: htop\n"},
+		{name: "dnf5 absent", output: "No packages to remove for argument: htop\n\nNothing to do.\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := NewDNF("dnf")
+			m.exec = mockExecutorHelper(tt.output, nil)
+			pv, err := m.PreviewRemove(WithYes(context.Background()), "htop")
+			require.NoError(t, err)
+			assert.True(t, pv.Noop, "absent package remove must be a no-op")
+		})
+	}
+}
+
+func TestDNF_PreviewInstall_UnknownGroupNoop(t *testing.T) {
+	t.Parallel()
+	m := NewDNF("dnf")
+	m.exec = mockExecutorHelper("Failed to resolve the transaction: No match for argument: Editor\n", assert.AnError)
+	pv, err := m.PreviewInstall(WithGroup(WithYes(context.Background())), "Editor")
+	require.NoError(t, err)
+	assert.True(t, pv.Noop, "unknown group ID must be a no-op, not a prompt")
 }

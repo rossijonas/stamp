@@ -27,8 +27,8 @@ stamp info <package> [flags]
   # machine-readable JSON output
   stamp info htop --json
 
-  # query info about a DNF package group
-  stamp info "Development Tools" -m dnf --group
+  # query info about a DNF package group (by group ID)
+  stamp info development-tools -m dnf --group
 ```
 
 ### Options

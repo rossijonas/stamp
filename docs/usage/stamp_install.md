@@ -21,8 +21,8 @@ stamp install <package> [flags]
   # install multiple packages in one command (per-manager batch, -m required)
   stamp install htop atop btop -m dnf
 
-  # install a DNF package group (name may contain spaces)
-  stamp install "Development Tools" -m dnf --group
+  # install a DNF package group (by group ID, see 'dnf group list')
+  stamp install development-tools -m dnf --group
 
   # add a note so you remember why later
   stamp add lazygit -m brew --note "better git TUI"
@@ -31,7 +31,7 @@ stamp install <package> [flags]
 ### Options
 
 ```
-  -g, --group            install a DNF package group
+  -g, --group            install a DNF package group (by group ID)
   -h, --help             help for install
   -m, --manager string   package manager to use
   -n, --note string      annotation for this package

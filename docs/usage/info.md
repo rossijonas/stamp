@@ -64,16 +64,17 @@ stamp info htop --json
 
 ### DNF group info
 
-Use `--group` / `-g` to get info about a DNF package group:
+Use `--group` / `-g` to get info about a DNF package group. Like install
+and remove, groups are referenced by their **group ID** (see `dnf group list`):
 
 ```bash
-stamp info "Development Tools" -m dnf --group
+stamp info development-tools -m dnf --group
 ```
 
 ```text
-Development Tools via dnf:
+development-tools via dnf:
 
-Group: Development Tools
+Group: development-tools
 Description: A basic development environment.
 Mandatory Packages: gcc, gcc-c++, make, git
 ...

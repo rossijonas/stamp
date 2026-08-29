@@ -31,15 +31,17 @@ lazygit (brew)
 
 ### Search DNF package groups
 
-Use `--group` / `-g` to search DNF package groups instead of individual packages:
+Use `--group` / `-g` to search DNF package groups instead of individual
+packages. Results are **group IDs**, ready to copy into
+`stamp install <id> -m dnf --group`:
 
 ```bash
-stamp search Development -m dnf --group
+stamp search development -m dnf --group
 ```
 
 ```text
-Development Tools (dnf)
-C Development Tools (dnf)
+c-development (dnf)
+development-tools (dnf)
 ```
 
 ### No results

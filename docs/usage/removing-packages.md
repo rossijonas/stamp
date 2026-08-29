@@ -47,18 +47,19 @@ All aliases behave identically.
 
 ### DNF package groups
 
-Remove a DNF package group with `--group` / `-g`:
+Remove a DNF package group with `--group` / `-g`. Like install, groups are
+referenced by their **group ID** (see `dnf group list`), not the display name:
 
 ```bash
-stamp remove "Development Tools" -m dnf --group
+stamp remove development-tools -m dnf --group
 ```
 
 ```text
-▪ removing group Development Tools via dnf...
-✓ removed Development Tools via dnf
+▪ removing group development-tools via dnf...
+✓ removed development-tools via dnf
 ```
 
-Group removal runs `dnf group remove -y <name>` — it removes the group meta-package but not the individual packages that were installed as part of the group.
+Group removal runs `dnf group remove -y <id>` — it removes the group meta-package but not the individual packages that were installed as part of the group.
 
 ### What happens
 

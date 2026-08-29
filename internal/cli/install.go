@@ -30,8 +30,8 @@ func newInstallCmd() *cobra.Command {
   # install multiple packages in one command (per-manager batch, -m required)
   stamp install htop atop btop -m dnf
 
-  # install a DNF package group (name may contain spaces)
-  stamp install "Development Tools" -m dnf --group
+  # install a DNF package group (by group ID, see 'dnf group list')
+  stamp install development-tools -m dnf --group
 
   # add a note so you remember why later
   stamp add lazygit -m brew --note "better git TUI"`,
@@ -54,6 +54,9 @@ func newInstallCmd() *cobra.Command {
 			}
 
 			if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
+				if groupInstall {
+					return catErr(ErrUsage, "group IDs contain only a-z0-9_- (see 'dnf group list')")
+				}
 				return fmt.Errorf("invalid package name: %w", err)
 			}
 
@@ -64,7 +67,7 @@ func newInstallCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use")
 	cmd.Flags().StringVarP(&note, "note", "n", "", "annotation for this package")
-	cmd.Flags().BoolVarP(&groupInstall, "group", "g", false, "install a DNF package group")
+	cmd.Flags().BoolVarP(&groupInstall, "group", "g", false, "install a DNF package group (by group ID)")
 	return cmd
 }
 
@@ -296,8 +299,8 @@ func newRemoveCmd() *cobra.Command {
   # specify a manager explicitly
   stamp remove lazygit -m brew
 
-  # remove a DNF package group
-  stamp remove "Development Tools" -m dnf --group
+  # remove a DNF package group (by group ID)
+  stamp remove development-tools -m dnf --group
 
   # all these aliases behave the same way
   stamp uninstall htop
@@ -329,7 +332,7 @@ func newRemoveCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use")
-	cmd.Flags().BoolVarP(&groupRemove, "group", "g", false, "remove a DNF package group")
+	cmd.Flags().BoolVarP(&groupRemove, "group", "g", false, "remove a DNF package group (by group ID)")
 	return cmd
 }
 
@@ -389,6 +392,16 @@ func runSingleRemove(cmd *cobra.Command, app *AppContext, adapter manager.Adapte
 		return handleConsent(err)
 	}
 
+	// In -y mode the gate skipped the preview; pre-check so an absent package
+	// is not falsely reported as removed and untracked.
+	if app.yes {
+		pv, pErr := previewOutput(removeCtx, adapter, previewRemove, pkgName)
+		if pErr == nil && pv.Noop {
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  nothing to do: %s via %s\n", pkgName, adapter.Name())
+			return nil
+		}
+	}
+
 	errOut := cmd.ErrOrStderr()
 	tty := isOutputTerminal(errOut)
 	printStatus(errOut, tty, false, "removing", pkgName, adapter.Name(), "")
@@ -428,6 +441,22 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 	br, ok := adapter.(manager.BatchRemover)
 	if !ok {
 		return catErr(ErrUnavailable, "manager %s does not support removing multiple packages at once", adapter.Name())
+	}
+
+	// In -y mode the gate skips the per-package preview; drop not-installed
+	// packages so they are not falsely reported as removed and untracked.
+	// Cask-aware adapters (brew) are excluded: cask context is per-package,
+	// not batch-wide, and brew already errors on absent packages.
+	_, caskAware := adapter.(caskDetector)
+	if app.yes && !caskAware {
+		remaining, skipped := filterNoopRemoves(cmd.Context(), adapter, pkgs)
+		for _, name := range skipped {
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  nothing to do: %s via %s\n", name, adapter.Name())
+		}
+		if len(remaining) == 0 {
+			return nil
+		}
+		pkgs = remaining
 	}
 
 	// Brew: --cask is batch-wide; a mixed cask/formula batch falls back to
@@ -481,6 +510,26 @@ func removeTrackedAll(app *AppContext, pkgs []string, mgr string) {
 	for _, p := range pkgs {
 		app.manifest.RemovePackage(p, mgr)
 	}
+}
+
+// filterNoopRemoves drops packages whose removal would be a no-op (the package
+// is not installed) from pkgs. Returns the remaining list and the skipped
+// names. Adapters without a Previewer are left untouched. Used in -y mode,
+// where the consent gate skips the per-package preview.
+func filterNoopRemoves(ctx context.Context, adapter manager.Adapter, pkgs []string) (remaining, skipped []string) {
+	p, ok := adapter.(manager.Previewer)
+	if !ok {
+		return pkgs, nil
+	}
+	for _, name := range pkgs {
+		pv, err := p.PreviewRemove(ctx, name)
+		if err == nil && pv.Noop {
+			skipped = append(skipped, name)
+			continue
+		}
+		remaining = append(remaining, name)
+	}
+	return remaining, skipped
 }
 
 func newSearchCmd() *cobra.Command {

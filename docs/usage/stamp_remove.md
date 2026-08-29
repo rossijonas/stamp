@@ -18,8 +18,8 @@ stamp remove <package> [flags]
   # specify a manager explicitly
   stamp remove lazygit -m brew
 
-  # remove a DNF package group
-  stamp remove "Development Tools" -m dnf --group
+  # remove a DNF package group (by group ID)
+  stamp remove development-tools -m dnf --group
 
   # all these aliases behave the same way
   stamp uninstall htop
@@ -34,7 +34,7 @@ stamp remove <package> [flags]
 ### Options
 
 ```
-  -g, --group            remove a DNF package group
+  -g, --group            remove a DNF package group (by group ID)
   -h, --help             help for remove
   -m, --manager string   package manager to use
 ```

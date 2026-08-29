@@ -41,8 +41,8 @@ func newInfoCmd() *cobra.Command {
   # machine-readable JSON output
   stamp info htop --json
 
-  # query info about a DNF package group
-  stamp info "Development Tools" -m dnf --group`,
+  # query info about a DNF package group (by group ID)
+  stamp info development-tools -m dnf --group`,
 		Long: `Query detailed information about a package.
 By default, queries all available managers and outputs a summary table.
 If -m, --manager is specified, displays the native manager's full raw info block.`,
