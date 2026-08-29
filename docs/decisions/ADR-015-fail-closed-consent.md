@@ -47,7 +47,7 @@ A new optional interface `manager.Previewer` gives a read-only, side-effect-free
 | apt | `install/remove --assume-no` (implies `--simulate`) | none |
 | pacman | `-S --print` / `-R --print` | none |
 | brew | `install/uninstall --dry-run` | none |
-| flatpak | `install/uninstall --dry-run` | none |
+| flatpak | none (no `--dry-run`; preview synthesized from `flatpak info`, see ADR-016) | none |
 | zypper | `install/remove --dry-run` | none |
 | npm | `install/uninstall --dry-run -g` | none |
 

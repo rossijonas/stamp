@@ -47,7 +47,9 @@ A new `WithCombinedOutput(ctx)` executor mode uses `cmd.CombinedOutput()`, which
 
 ### 3. No-op is dry-run-owned
 
-All no-op decisions come from the **dry-run output** — the authoritative "what would happen" oracle. No-op detection does NOT consult `ListInstalled`: managers like dnf (`repoquery --userinstalled`) and brew (`leaves --installed-on-request`) return only a *subset* of installed packages, which caused remove/reinstall previews to falsely report `nothing to do` for installed packages outside that subset. The dry-run signals are per-adapter: an absent package surfaces as `No match for argument` (dnf), `is not installed` / `0 to remove` (apt), `was not found` (pacman), `No such keg` (brew), `Nothing to uninstall` / `No such ref` (flatpak), `Nothing to do.` / `not installed` (zypper). Reinstall of an *installed* package is never a no-op (it is always a real operation).
+All no-op decisions come from the **dry-run output** — the authoritative "what would happen" oracle. No-op detection does NOT consult `ListInstalled`: managers like dnf (`repoquery --userinstalled`) and brew (`leaves --installed-on-request`) return only a *subset* of installed packages, which caused remove/reinstall previews to falsely report `nothing to do` for installed packages outside that subset. The dry-run signals are per-adapter: an absent package surfaces as `No match for argument` (dnf), `is not installed` / `0 to remove` (apt), `was not found` (pacman), `No such keg` (brew), `Nothing to do.` / `not installed` (zypper). Reinstall of an *installed* package is never a no-op (it is always a real operation).
+
+Flatpak is the one adapter with **no native dry-run** (`flatpak install`/`uninstall` have no `--dry-run` option), so its previews are synthesized from a read-only `flatpak info` state query: a successful `info` means the ref is installed (`Noop: true`, "already installed via flatpak" for install, "will remove … via flatpak" for remove); an `info` error means it is absent (`Noop` inverted). No-op is still adapter-owned — the mechanism differs but the `Preview` contract is unchanged.
 
 ### 4. CLI gate behavior
 
