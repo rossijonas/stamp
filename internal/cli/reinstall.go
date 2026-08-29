@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -143,21 +144,11 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 	if err != nil {
 		return err
 	}
-	for _, p := range pkgs {
-		if err := manager.ValidatePackageForManager(adapter.Name(), p); err != nil {
-			return fmt.Errorf("invalid package name %q: %w", p, err)
-		}
+	if err := validateBatchPackages(adapter, pkgs); err != nil {
+		return err
 	}
-
-	// A batch is per-manager: if any package is already tracked under a
-	// different manager, fail fast before any confirmation or execution. The
-	// single-package path honors the recorded manager; a batch cannot.
-	for _, p := range pkgs {
-		for _, rec := range app.manifest.Packages {
-			if rec.Name == p && rec.Manager != adapter.Name() {
-				return catErr(ErrUsage, "package %s is tracked under %s, not %s; reinstall it with -m %s", p, rec.Manager, adapter.Name(), rec.Manager)
-			}
-		}
+	if err := validateBatchReinstall(adapter, pkgs, app.manifest.Packages); err != nil {
+		return err
 	}
 
 	br, ok := adapter.(manager.BatchReinstaller)
@@ -168,13 +159,7 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 	// Brew: --cask is batch-wide; a mixed cask/formula batch falls back to
 	// per-package single reinstalls.
 	casks := brewCasks(cmd.Context(), adapter, pkgs)
-	caskCount := 0
-	for _, isCask := range casks {
-		if isCask {
-			caskCount++
-		}
-	}
-	mixed := caskCount > 0 && caskCount < len(pkgs)
+	caskCount := countCasks(casks)
 
 	reinstallCtx := cmd.Context()
 	if caskCount == len(pkgs) {
@@ -193,40 +178,15 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 		_, _ = fmt.Fprintln(errOut, line)
 	}
 
-	if mixed {
-		for _, p := range pkgs {
-			ctx := manager.WithYes(cmd.Context())
-			if casks[p] {
-				ctx = manager.WithYes(manager.WithCask(cmd.Context()))
-			}
-			if err := adapter.Reinstall(ctx, p); err != nil {
-				return fmt.Errorf("reinstall failed: %w", err)
-			}
-		}
-	} else {
-		if err := br.ReinstallMany(manager.WithYes(reinstallCtx), pkgs...); err != nil {
-			return fmt.Errorf("reinstall failed: %w", err)
-		}
+	if err := execBatchReinstall(reinstallCtx, adapter, br, caskCount, casks, pkgs); err != nil {
+		return err
 	}
 
 	// Align snapshots with the current system state, mirroring the single
 	// reinstall path.
 	restoreSaveSnapshots(cmd.Context(), cmd.ErrOrStderr(), app.adapters)
 
-	// Track any packages not already in the manifest, and refresh notes for
-	// tracked ones when --note was given.
-	for _, p := range pkgs {
-		if !app.manifest.HasPackage(p, adapter.Name()) {
-			app.manifest.AddPackage(manifest.Package{
-				Name:    p,
-				Manager: adapter.Name(),
-				Notes:   note,
-				Origin:  manifest.OriginStamped,
-			})
-		} else if note != "" {
-			app.manifest.SetNote(p, adapter.Name(), note)
-		}
-	}
+	trackBatchReinstalls(app.manifest, pkgs, adapter.Name(), note)
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
@@ -235,4 +195,57 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 		_, _ = fmt.Fprintln(errOut, line)
 	}
 	return nil
+}
+
+// validateBatchReinstall fails fast when any batch package is tracked under a
+// different manager. A batch is per-manager, so a conflicting record cannot be
+// honored the way the single-package path does.
+func validateBatchReinstall(adapter manager.Adapter, pkgs []string, packages []manifest.Package) error {
+	for _, p := range pkgs {
+		for _, rec := range packages {
+			if rec.Name == p && rec.Manager != adapter.Name() {
+				return catErr(ErrUsage, "package %s is tracked under %s, not %s; reinstall it with -m %s", p, rec.Manager, adapter.Name(), rec.Manager)
+			}
+		}
+	}
+	return nil
+}
+
+// execBatchReinstall runs the native reinstall. A mixed cask/formula batch
+// falls back to per-package single reinstalls (cask stacking per package); a
+// uniform batch uses one native invocation.
+func execBatchReinstall(ctx context.Context, adapter manager.Adapter, br manager.BatchReinstaller, caskCount int, casks map[string]bool, pkgs []string) error {
+	if mixed := caskCount > 0 && caskCount < len(pkgs); mixed {
+		for _, p := range pkgs {
+			pkgCtx := manager.WithYes(ctx)
+			if casks[p] {
+				pkgCtx = manager.WithYes(manager.WithCask(ctx))
+			}
+			if err := adapter.Reinstall(pkgCtx, p); err != nil {
+				return fmt.Errorf("reinstall failed: %w", err)
+			}
+		}
+		return nil
+	}
+	if err := br.ReinstallMany(manager.WithYes(ctx), pkgs...); err != nil {
+		return fmt.Errorf("reinstall failed: %w", err)
+	}
+	return nil
+}
+
+// trackBatchReinstalls records new packages in the manifest and refreshes the
+// notes of already-tracked ones when a note was given.
+func trackBatchReinstalls(m *manifest.Manifest, pkgs []string, mgr, note string) {
+	for _, p := range pkgs {
+		if !m.HasPackage(p, mgr) {
+			m.AddPackage(manifest.Package{
+				Name:    p,
+				Manager: mgr,
+				Notes:   note,
+				Origin:  manifest.OriginStamped,
+			})
+		} else if note != "" {
+			m.SetNote(p, mgr, note)
+		}
+	}
 }
