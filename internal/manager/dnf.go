@@ -380,18 +380,23 @@ func dnfPreviewNoop(output string, markers ...string) bool {
 //	   Backup Client
 func parseDNFGroupList(output []byte) []string {
 	var result []string
-	// Group names are indented with 3+ spaces in 'dnf group list' output.
-	// Headers (e.g. "Installed Groups:") have no leading whitespace.
+	// Parses both dnf4 (indented group names) and dnf5 (space-aligned table
+	// where the first column is the group ID). Section headers are skipped
+	// (contain ":") as is the dnf5 table header (starts with "ID ").
 	for _, line := range bytes.Split(output, []byte("\n")) {
-		trimmed := bytes.TrimSpace(line)
-		if len(trimmed) == 0 {
+		s := string(bytes.TrimSpace(line))
+		if len(s) == 0 || strings.Contains(s, ":") {
 			continue
 		}
-		// Group names are indented with leading whitespace; headers are not.
-		// Heuristic: if the line has leading spaces and the trimmed content
-		// doesn't contain a colon, it's a group name.
-		if bytes.HasPrefix([]byte(line), []byte("   ")) && !bytes.Contains(trimmed, []byte(":")) {
-			result = append(result, string(trimmed))
+		if strings.HasPrefix(s, "ID ") {
+			continue
+		}
+		if bytes.HasPrefix(line, []byte("   ")) {
+			result = append(result, s)
+			continue
+		}
+		if token := strings.Fields(s); len(token) > 0 {
+			result = append(result, token[0])
 		}
 	}
 	return result

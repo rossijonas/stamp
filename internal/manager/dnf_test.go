@@ -954,12 +954,20 @@ func TestDNF_GroupInfo_Error(t *testing.T) {
 
 func TestParseDNFGroupList(t *testing.T) {
 	t.Parallel()
-	input := []byte("Installed Environment Groups:\n   Development Tools\nInstalled Groups:\n   C Development Tools\nAvailable Groups:\n   Backup Client\n   LibreOffice\n")
-	groups := parseDNFGroupList(input)
-	assert.Contains(t, groups, "Development Tools")
-	assert.Contains(t, groups, "C Development Tools")
-	assert.Contains(t, groups, "Backup Client")
-	assert.Contains(t, groups, "LibreOffice")
+	tests := []struct {
+		name, input string
+		expect      []string
+	}{
+		{"dnf4 indented", "Installed Environment Groups:\n   Development Tools\nInstalled Groups:\n   C Development Tools\nAvailable Groups:\n   Backup Client\n   LibreOffice\n", []string{"Development Tools", "C Development Tools", "Backup Client", "LibreOffice"}},
+		{"dnf5 table", "ID                          Name                                        Installed\nc-development               C Development Tools and Libraries          no\nvlc                          VideoLAN Client                            no\n", []string{"c-development", "vlc"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := parseDNFGroupList([]byte(tt.input))
+			assert.ElementsMatch(t, tt.expect, got)
+		})
+	}
 }
 
 func TestDNF_PreviewRemove_NoopMarkers(t *testing.T) {
