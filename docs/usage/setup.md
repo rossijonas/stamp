@@ -34,6 +34,11 @@ man stamp
 
 Man pages are installed to `~/.local/share/man/man1/stamp.1`. To install to a custom location, use `stamp man install --prefix /usr/local` instead.
 
+`stamp man check` and `stamp doctor` detect the installed man page via `man -w`,
+which honors `MANPATH` and the system man search path — so pages installed to a
+custom `--prefix` are found as long as that location is reachable through man.
+They fall back to the default paths if `man` is unavailable.
+
 ### Step 3: Initialize Manifest + Snapshot
 
 Creates the manifest and takes a **baseline snapshot** of all currently installed packages across every available package manager.
