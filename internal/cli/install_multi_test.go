@@ -42,6 +42,12 @@ func TestInstallMany_GroupRejected(t *testing.T) {
 	assert.Contains(t, err.Error(), "--group supports a single package")
 }
 
+func TestInstallCmd_GroupNameWithSpacesRejected(t *testing.T) {
+	_, err := execCmd(t, []string{"install", "VideoLAN Client", "-m", "dnf", "--group", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "group IDs contain only a-z0-9_-")
+}
+
 func TestInstallMany_InvalidNameAborts(t *testing.T) {
 	_, err := execCmd(t, []string{"install", "-m", "brew", "htop", "bad name", "-y"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.Error(t, err)

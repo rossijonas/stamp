@@ -85,18 +85,22 @@ stamp reinstall -m brew htop   # reinstall with specific manager
 
 ### DNF package groups
 
-Install a DNF package group with the `--group` / `-g` flag:
+Install a DNF package group with the `--group` / `-g` flag. Groups are
+referenced by their **group ID** (the first column of `dnf group list`), not
+the human-readable display name:
 
 ```bash
-stamp install "Development Tools" -m dnf --group
+stamp install development-tools -m dnf --group
 ```
 
 ```text
-▪ installing group Development Tools via dnf...
-✓ installed Development Tools via dnf
+▪ installing group development-tools via dnf...
+✓ installed development-tools via dnf
 ```
 
-Group names like "Development Tools" may contain spaces — use quotes.
+Group IDs contain only lowercase letters, digits, `-` and `_`. Display names
+like `"Development Tools"` are rejected — find the ID first with
+`stamp search -m dnf --group <query>`.
 
 ### Homebrew casks
 
