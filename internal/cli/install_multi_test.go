@@ -89,3 +89,61 @@ func TestInstallMany_BrewMixedCaskFallsBackToSingle(t *testing.T) {
 	require.Len(t, adapters.installs, 2, "mixed cask/formula batch must fall back to per-package installs")
 	assert.Equal(t, []string{"cask-app", "formula"}, adapters.installs)
 }
+
+func TestInstallCmd_FlatpakRemoteHint(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		adapter    manager.Adapter
+		wantHint   bool
+		wantSuffix string
+	}{
+		{
+			name:     "remote-first with -m flatpak",
+			args:     []string{"install", "flathub", "com.obsproject.Studio", "-m", "flatpak"},
+			adapter:  &manager.Mock{ManagerName: "flatpak"},
+			wantHint: true,
+		},
+		{
+			name:       "dotted-first batch -m flatpak",
+			args:       []string{"install", "com.foo.Bar", "com.baz.Qux", "-m", "flatpak"},
+			adapter:    &manager.Mock{ManagerName: "flatpak"},
+			wantHint:   false,
+			wantSuffix: "refusing to run without -y",
+		},
+		{
+			name:       "no -m flag remote-first",
+			args:       []string{"install", "flathub", "com.obsproject.Studio"},
+			adapter:    &manager.Mock{ManagerName: "flatpak"},
+			wantHint:   false,
+			wantSuffix: "multiple packages require --manager",
+		},
+		{
+			name:       "-m dnf undotted first",
+			args:       []string{"install", "htop", "vim", "-m", "dnf"},
+			adapter:    &manager.Mock{ManagerName: "dnf"},
+			wantHint:   false,
+			wantSuffix: "refusing to run without -y",
+		},
+		{
+			name:       "single arg -m flatpak",
+			args:       []string{"install", "flathub", "-m", "flatpak"},
+			adapter:    &manager.Mock{ManagerName: "flatpak"},
+			wantHint:   false,
+			wantSuffix: "refusing to run without -y",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := execCmd(t, tt.args, []manager.Adapter{tt.adapter})
+			require.Error(t, err)
+			if tt.wantHint {
+				assert.Contains(t, err.Error(), "flatpak install takes a remote and app ID separately")
+			} else {
+				assert.NotContains(t, err.Error(), "flatpak install takes a remote and app ID separately")
+				assert.Contains(t, err.Error(), tt.wantSuffix)
+			}
+		})
+	}
+}
