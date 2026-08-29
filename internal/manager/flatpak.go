@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const flatpakColumnsApplication = "--columns=application"
+
 // Flatpak implements the Adapter interface for Flatpak.
 type Flatpak struct {
 	exec Executor
@@ -37,7 +39,7 @@ func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
 	appsKnown := true
 
 	for _, scope := range []string{"--user", "--system"} {
-		out, err := m.exec(ctx, "flatpak", "list", scope, "--columns=application")
+		out, err := m.exec(ctx, "flatpak", "list", scope, flatpakColumnsApplication)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = err
@@ -48,7 +50,7 @@ func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
 			all[id] = struct{}{}
 		}
 
-		out, err = m.exec(ctx, "flatpak", "list", scope, "--app", "--columns=application")
+		out, err = m.exec(ctx, "flatpak", "list", scope, "--app", flatpakColumnsApplication)
 		if err != nil {
 			appsKnown = false
 			continue
@@ -244,7 +246,7 @@ func (m *Flatpak) Search(ctx context.Context, query string) ([]string, error) {
 		return nil, err
 	}
 	// Search and return application IDs
-	out, err := m.exec(ctx, "flatpak", "search", "--columns=application", query)
+	out, err := m.exec(ctx, "flatpak", "search", flatpakColumnsApplication, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for %s: %w", query, err)
 	}
