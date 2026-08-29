@@ -16,6 +16,7 @@ import (
 )
 
 func TestDoctor_TTY(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -31,6 +32,7 @@ func TestDoctor_TTY(t *testing.T) {
 }
 
 func TestDoctor_JSON(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -71,6 +73,7 @@ func TestDoctor_JSON(t *testing.T) {
 }
 
 func TestDoctor_NOCOLOR_Set(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -87,6 +90,7 @@ func TestDoctor_NOCOLOR_Set(t *testing.T) {
 }
 
 func TestDoctor_Config_Valid(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -112,6 +116,7 @@ func TestDoctor_Config_Valid(t *testing.T) {
 }
 
 func TestDoctor_Config_MissingFileDefaultsValid(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -138,6 +143,7 @@ func TestDoctor_Config_MissingFileDefaultsValid(t *testing.T) {
 }
 
 func TestDoctor_Config_InvalidMinExceedsMax(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -168,6 +174,7 @@ min_manifest_backups = 30
 }
 
 func TestDoctor_Config_InvalidJSON(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -198,6 +205,7 @@ max_manifest_backup_age_days = 30
 }
 
 func TestDoctor_SystemMissing_TTY(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -238,6 +246,7 @@ manager = "brew"
 }
 
 func TestDoctor_SystemMissing_JSON(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -278,6 +287,7 @@ manager = "brew"
 }
 
 func TestDoctor_SystemMissing_ListErrorSkipped(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -312,6 +322,7 @@ manager = "brew"
 }
 
 func TestDoctor_SystemMissing_NoneMissing(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -346,6 +357,7 @@ manager = "brew"
 }
 
 func TestDoctor_SystemMissing_ProvidesAlias(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -391,6 +403,7 @@ manager = "dnf"
 }
 
 func TestDoctor_Manifest_Healthy(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -432,6 +445,7 @@ manager = "brew"
 }
 
 func TestDoctor_Manifest_Corrupt(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -534,6 +548,7 @@ func TestDoctor_ManPage_Healthy(t *testing.T) {
 	tmpDir := t.TempDir()
 	manFile := filepath.Join(tmpDir, "stamp.1")
 
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{manFile}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -557,6 +572,7 @@ func TestDoctor_ManPage_UserLocal_Detected(t *testing.T) {
 	home := t.TempDir()
 	manPath := filepath.Join(home, ".local", "share", "man", "man1", "stamp.1")
 
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{manPath}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -579,6 +595,7 @@ func TestDoctor_ManPage_Outdated(t *testing.T) {
 	tmpDir := t.TempDir()
 	manFile := filepath.Join(tmpDir, "stamp.1")
 
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{manFile}
 	defer func() { manPageCandidates = oldCandidates }()
@@ -595,6 +612,7 @@ func TestDoctor_ManPage_Outdated(t *testing.T) {
 }
 
 func TestDoctor_ManagerFlag_Active(t *testing.T) {
+	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
 	defer func() { manPageCandidates = oldCandidates }()

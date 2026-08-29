@@ -1,9 +1,14 @@
 package cli
 
 import (
+	"bytes"
+	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -41,6 +46,44 @@ func defaultManPageCandidates() []string {
 	}
 }
 
+// manExecFunc runs a command and returns its stdout. Injectable in tests,
+// mirroring the manager.Executor pattern.
+type manExecFunc func(ctx context.Context, name string, args ...string) ([]byte, error)
+
+// manExec resolves installed man page paths via `man -w`.
+var manExec manExecFunc = defaultManExec
+
+func defaultManExec(ctx context.Context, name string, args ...string) ([]byte, error) {
+	//nolint:gosec // name/args are hardcoded ("man", "-w", "1", "stamp")
+	return exec.CommandContext(ctx, name, args...).Output()
+}
+
+// resolveInstalledManPage returns the path to the installed stamp man page.
+// It prefers `man -w 1 stamp`, which honors MANPATH and the system man search
+// path (so pages installed to a custom --prefix are found), and falls back to
+// the hardcoded candidate list when man is unavailable or finds nothing.
+func resolveInstalledManPage() string {
+	out, err := manExec(context.Background(), "man", "-w", "1", "stamp")
+	if err == nil {
+		if p := firstManPagePath(out); p != "" {
+			return p
+		}
+	}
+	return installedManPagePath()
+}
+
+// firstManPagePath returns the first .1/.1.gz path token in man -w output.
+// man-db prints paths space/newline-separated; BSD prints a single path.
+func firstManPagePath(out []byte) string {
+	for _, tok := range strings.Fields(string(out)) {
+		if strings.HasSuffix(tok, ".1") || strings.HasSuffix(tok, ".1.gz") {
+			return tok
+		}
+	}
+	return ""
+}
+
+// installedManPagePath returns the first existing hardcoded candidate path.
 func installedManPagePath() string {
 	for _, p := range manPageCandidates {
 		if _, err := os.Stat(p); err == nil {
@@ -50,14 +93,32 @@ func installedManPagePath() string {
 	return ""
 }
 
+// readManPage reads a man page, decompressing gzip-compressed pages (system
+// pages found via MANPATH are commonly .gz) before version matching.
+func readManPage(path string) ([]byte, error) {
+	//nolint:gosec // path is resolved via man -w or the candidate list
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > 2 && data[0] == 0x1f && data[1] == 0x8b {
+		gz, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = gz.Close() }()
+		return io.ReadAll(gz)
+	}
+	return data, nil
+}
+
 func checkInstalledManVersion() (*manCheckResult, string, error) {
-	path := installedManPagePath()
+	path := resolveInstalledManPage()
 	if path == "" {
 		return nil, "", nil
 	}
 
-	//nolint:gosec // path is resolved safely within candidate list
-	data, err := os.ReadFile(path)
+	data, err := readManPage(path)
 	if err != nil {
 		return nil, "", err
 	}
