@@ -25,6 +25,10 @@ stamp install spotify --manager flatpak
 stamp install lazygit -m brew
 ```
 
+Flatpak does not support the native `install <remote> <ref>` idiom —
+`flathub` is a remote name, not a package, and stamp would record it as
+a package. Use `stamp install <app-id> -m flatpak` instead.
+
 ### Install multiple packages
 
 Install several packages in one command. **Batches are per-manager only** —

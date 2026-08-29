@@ -42,6 +42,9 @@ func newInstallCmd() *cobra.Command {
 				return app.manifestErr
 			}
 
+			if len(args) > 1 && managerFlag != "" && manager.ResolveManager(managerFlag) == "flatpak" && !strings.Contains(args[0], ".") {
+				return catErr(ErrUsage, "flatpak install takes a remote and app ID separately; use: stamp install <app-id> -m flatpak")
+			}
 			if len(args) > 1 {
 				return installMany(cmd, app, args, managerFlag, note, groupInstall)
 			}
