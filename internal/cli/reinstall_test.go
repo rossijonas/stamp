@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/rossijonas/stamp/internal/manager"
+	"github.com/rossijonas/stamp/internal/manifest"
 )
 
 func TestReinstallCmd_Success(t *testing.T) {
@@ -109,6 +110,110 @@ system = "linux"
 	assert.Contains(t, buf.String(), "reinstalled htop via brew")
 }
 
+func TestReinstallCmd_PreExistingWithNote(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName:   "brew",
+		InstalledPkgs: []string{"htop"},
+	}
+	adapters := []manager.Adapter{mockBrew}
+
+	manifestContent := `version = 1
+system = "linux"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reinstall", "htop", "-y", "--note", "pre-existing tool"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "reinstalled htop via brew (note: pre-existing tool)")
+
+	loaded, err := manifest.Load(mPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 1)
+	assert.Equal(t, "htop", loaded.Packages[0].Name)
+	assert.Equal(t, "pre-existing tool", loaded.Packages[0].Notes)
+}
+
+func TestReinstallCmd_TrackedWithNote(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName: "brew",
+	}
+	adapters := []manager.Adapter{mockBrew}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+notes = "old reason"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reinstall", "htop", "-y", "--note", "new reason"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "reinstalled htop via brew (note: new reason)")
+
+	loaded, err := manifest.Load(mPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 1)
+	assert.Equal(t, "new reason", loaded.Packages[0].Notes)
+}
+
+func TestReinstallCmd_TrackedWithoutNoteKeepsExisting(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName: "brew",
+	}
+	adapters := []manager.Adapter{mockBrew}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+notes = "keep me"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reinstall", "htop", "-y"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+
+	loaded, err := manifest.Load(mPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 1)
+	assert.Equal(t, "keep me", loaded.Packages[0].Notes)
+}
+
 func TestReinstallCmd_PreExistingAmbiguous(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{ManagerName: "brew"},
@@ -131,6 +236,43 @@ func TestReinstallCmd_PreExistingAmbiguous(t *testing.T) {
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot resolve manager")
+}
+
+func TestReinstallCmd_BatchWithNote(t *testing.T) {
+	mockBrew := &manager.Mock{
+		ManagerName: "brew",
+	}
+	adapters := []manager.Adapter{mockBrew}
+
+	manifestContent := `version = 1
+system = "linux"
+
+[[packages]]
+name = "lazygit"
+manager = "brew"
+notes = "old"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"reinstall", "lazygit", "jq", "-m", "brew", "-y", "--note", "batch reason"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "reinstalled 2 package(s) via brew (note: batch reason)")
+
+	loaded, err := manifest.Load(mPath)
+	require.NoError(t, err)
+	require.Len(t, loaded.Packages, 2)
+	assert.Equal(t, "batch reason", loaded.Packages[0].Notes, "tracked pkg note overwritten")
+	assert.Equal(t, "batch reason", loaded.Packages[1].Notes, "new pkg note saved")
 }
 
 func TestReinstallCmd_ManagerNotAvailable(t *testing.T) {

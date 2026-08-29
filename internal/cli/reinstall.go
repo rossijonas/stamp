@@ -11,6 +11,7 @@ import (
 
 func newReinstallCmd() *cobra.Command {
 	var managerFlag string
+	var note string
 
 	cmd := &cobra.Command{
 		Use:   "reinstall <package>",
@@ -22,7 +23,10 @@ func newReinstallCmd() *cobra.Command {
   stamp reinstall lazygit -m brew
 
   # reinstall multiple packages in one command (per-manager batch, -m required)
-  stamp reinstall lazygit jq -m brew`,
+  stamp reinstall lazygit jq -m brew
+
+  # annotate a reinstall so you remember why later
+  stamp reinstall lazygit -m brew --note "refresh intent"`,
 		Long: `Look up the package in the manifest to find its recorded package manager,
 then execute the native reinstallation command. If the package is not
 tracked in the manifest, resolve the manager and track it.`,
@@ -34,7 +38,7 @@ tracked in the manifest, resolve the manager and track it.`,
 			}
 
 			if len(args) > 1 {
-				return reinstallMany(cmd, app, args, managerFlag)
+				return reinstallMany(cmd, app, args, managerFlag, note)
 			}
 			pkgName := args[0]
 			if err := manager.ValidatePackageName(pkgName); err != nil {
@@ -100,8 +104,12 @@ tracked in the manifest, resolve the manager and track it.`,
 				app.manifest.AddPackage(manifest.Package{
 					Name:    pkgName,
 					Manager: adapter.Name(),
+					Notes:   note,
 					Origin:  manifest.OriginStamped,
 				})
+			} else if note != "" {
+				// Tracked package: refresh its note to capture reinstall intent.
+				app.manifest.SetNote(pkgName, adapter.Name(), note)
 			}
 
 			// Save manifest
@@ -109,7 +117,7 @@ tracked in the manifest, resolve the manager and track it.`,
 				return fmt.Errorf("failed to save manifest: %w", err)
 			}
 
-			if line := statusLine(tty, true, "reinstalled", pkgName, adapter.Name(), ""); line != "" {
+			if line := statusLine(tty, true, "reinstalled", pkgName, adapter.Name(), note); line != "" {
 				_, _ = fmt.Fprintln(errOut, line)
 			}
 			return nil
@@ -117,6 +125,7 @@ tracked in the manifest, resolve the manager and track it.`,
 	}
 
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use (pre-existing packages only)")
+	cmd.Flags().StringVarP(&note, "note", "n", "", "annotation for this package")
 	return cmd
 }
 
@@ -125,7 +134,7 @@ tracked in the manifest, resolve the manager and track it.`,
 // native multi-package reinstall support participate (see
 // manager.BatchReinstaller — snap is excluded: reinstall is remove+install
 // there with no native batch form).
-func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag string) error {
+func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag, note string) error {
 	if managerFlag == "" {
 		return catErr(ErrUsage, "multiple packages require --manager")
 	}
@@ -204,21 +213,25 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 	// reinstall path.
 	restoreSaveSnapshots(cmd.Context(), cmd.ErrOrStderr(), app.adapters)
 
-	// Track any packages not already in the manifest.
+	// Track any packages not already in the manifest, and refresh notes for
+	// tracked ones when --note was given.
 	for _, p := range pkgs {
 		if !app.manifest.HasPackage(p, adapter.Name()) {
 			app.manifest.AddPackage(manifest.Package{
 				Name:    p,
 				Manager: adapter.Name(),
+				Notes:   note,
 				Origin:  manifest.OriginStamped,
 			})
+		} else if note != "" {
+			app.manifest.SetNote(p, adapter.Name(), note)
 		}
 	}
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
 
-	if line := statusLine(tty, true, "reinstalled", target, adapter.Name(), ""); line != "" {
+	if line := statusLine(tty, true, "reinstalled", target, adapter.Name(), note); line != "" {
 		_, _ = fmt.Fprintln(errOut, line)
 	}
 	return nil
