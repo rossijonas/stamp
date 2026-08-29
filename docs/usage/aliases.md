@@ -10,7 +10,7 @@ Every stamp command has aliases matching your favorite package manager's native 
 | Alias | Canonical | Origin |
 |-------|-----------|--------|
 | `stamp show <pkg>` | `stamp info <pkg>` | APT, DNF, Snap |
-| `stamp outdated` | `stamp update --check` | Brew, npm, Bun |
+| `stamp outdated` | `stamp update --check` | Brew, npm |
 | `stamp check-update` | `stamp update --check` | DNF |
 | `stamp refresh` | `stamp update` | Snap |
 | `stamp view <pkg>` | `stamp info <pkg>` | npm |
@@ -18,7 +18,7 @@ Every stamp command has aliases matching your favorite package manager's native 
 | `stamp untap <name>` | `stamp repo remove <name> -m brew` | Brew |
 | `stamp taps` | `stamp repo list -m brew` | Brew |
 | `stamp list` / `stamp ls` | `stamp list` | npm, Pipx, Uv |
-| `stamp add <pkg>` | `stamp install <pkg>` | Bun |
+| `stamp add <pkg>` | `stamp install <pkg>` | stamp-specific |
 | `stamp uninstall <pkg>` | `stamp remove <pkg>` | npm, Pipx, Cargo |
 | `stamp rm <pkg>` | `stamp remove <pkg>` | Common |
 | `stamp upgrade` | `stamp update` | Common |
@@ -37,10 +37,9 @@ Every stamp command has aliases matching your favorite package manager's native 
 | Brew | `brew tap` (list) | `stamp taps` |
 | Snap | `snap refresh` | `stamp refresh` |
 | npm | `npm view <pkg>` | `stamp view <pkg>` |
-| npm / Bun | `npm outdated` / `bun outdated` | `stamp outdated` |
-| npm / Bun | `npm update` / `bun update` | `stamp update` |
+| npm | `npm outdated` | `stamp outdated` |
+| npm | `npm update` | `stamp update` |
 | npm | `npm uninstall` | `stamp uninstall` |
-| Bun | `bun add` | `stamp add` |
 | Cargo | `cargo uninstall` | `stamp uninstall` |
 | Pipx | `pipx uninstall` | `stamp uninstall` |
 | Pipx / Uv | `pipx list` / `uv tool list` | `stamp list` |

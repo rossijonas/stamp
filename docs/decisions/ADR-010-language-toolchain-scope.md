@@ -37,7 +37,7 @@ model.
 | Python | `pipx install <tool>` / `uv tool install <tool>` | `pip install <lib>` |
 | Go | `go install <path>@latest` | `go get <path>` |
 | Rust | `cargo install <tool>` | `cargo add <dep>` |
-| JavaScript | `npm install -g <tool>` / `bun install -g <tool>` | `npm install --save <dep>` |
+| JavaScript | `npm install -g <tool>` | `npm install --save <dep>` |
 
 ### Adapter Naming Convention
 
@@ -54,7 +54,7 @@ are named after the tool, not the OS.
 | 1 | **Go** | `go` | ✓ Complete |
 | 2 | **Python** | `pipx`, `uv` | ✓ Complete |
 | 3 | **Rust** | `cargo` | ⚠ Planned |
-| 4 | **JavaScript** | `npm`, `bun` | ⚠ Planned |
+| 4 | **JavaScript** | `npm` | ⚠ Planned |
 
 ## Alternatives Considered
 
