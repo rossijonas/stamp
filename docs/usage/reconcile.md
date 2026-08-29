@@ -139,6 +139,14 @@ System snaps (`core*`, `gnome-*` runtimes, `snapd`, `gtk-common-themes`,
 `snap-store`, `firmware-updater`, `bare`) are now filtered out of the listing.
 Only user-installed apps surface in reconcile drift.
 
+### Flatpak
+
+Flatpak lists applications **and** app-kind extensions/plugins (e.g. OBS Studio
+plugins like `com.obsproject.Studio.Plugin.BackgroundRemoval`), so reconcile
+detects them when installed outside Stamp. Runtimes and runtime-kind extensions
+(locale, debug, GPU driver refs) are excluded — no `org.gnome.Platform`-style
+false positives.
+
 ## Automated Reconcile
 
 Run reconcile automatically on a schedule so you never miss drift:

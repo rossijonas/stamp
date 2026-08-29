@@ -103,6 +103,31 @@ func TestReconcile_ReliabilityNotes_OnlyForReporters(t *testing.T) {
 	assert.NotContains(t, output, "lists all installed packages")
 }
 
+func TestReconcile_FlatpakPluginDriftDetected(t *testing.T) {
+	adapters := []manager.Adapter{
+		&manager.Mock{
+			ManagerName: "flatpak",
+			InstalledPkgs: []string{
+				"com.obsproject.Studio",
+				"com.obsproject.Studio.Plugin.BackgroundRemoval",
+			},
+		},
+	}
+
+	snapDir := setupSnapshots(t, []state.Snapshot{
+		{Manager: "flatpak", Packages: []string{"com.obsproject.Studio"}},
+	})
+
+	t.Setenv("XDG_DATA_HOME", snapDir)
+
+	buf, err := execCmd(t, []string{"reconcile"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "Discovered 1 new package(s)")
+	assert.Contains(t, output, "com.obsproject.Studio.Plugin.BackgroundRemoval (flatpak)")
+	assert.Contains(t, output, "Tracked 1 package(s)")
+}
+
 func TestReconcile_DriftAndAutoTrack(t *testing.T) {
 	adapters := []manager.Adapter{
 		&manager.Mock{
