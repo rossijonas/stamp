@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -23,6 +24,8 @@ const (
 	hashPrefixLen = 12
 	// minHashPrefix is the shortest accepted content-hash prefix for diff.
 	minHashPrefix = 6
+	// errNoBackupFound is the common error message when no backup matches a target.
+	errNoBackupFound = "no backup found for %s"
 )
 
 // historyEntry is one row of `stamp manifest history`.
@@ -93,6 +96,146 @@ func currentManifestTimestamp(app *AppContext) string {
 	return "unknown"
 }
 
+// buildHistoryEntries builds the list of history entries (current + backups).
+// Warnings for unreadable backups are emitted to warn (typically cmd.ErrOrStderr).
+func buildHistoryEntries(app *AppContext, warn io.Writer) ([]historyEntry, error) {
+	currentHash, err := contentHash(app.manifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash current manifest: %w", err)
+	}
+
+	entries := []historyEntry{{
+		Timestamp: currentManifestTimestamp(app),
+		Hash:      shortHash(currentHash),
+		Current:   true,
+		Packages:  len(app.manifest.Packages),
+		Repos:     len(app.manifest.Repositories),
+	}}
+
+	backups, err := backup.List(app.manifestPath + ".*.bak")
+	if err != nil {
+		return nil, err
+	}
+	for _, b := range backups {
+		m, mErr := manifest.Load(b.Path)
+		if mErr != nil {
+			_, _ = fmt.Fprintf(warn, "warning: skipping unreadable backup %s: %v\n", b.Path, mErr)
+			continue
+		}
+		hash, hErr := contentHash(b.Path)
+		if hErr != nil {
+			_, _ = fmt.Fprintf(warn, "warning: skipping unreadable backup %s: %v\n", b.Path, hErr)
+			continue
+		}
+		entries = append(entries, historyEntry{
+			Timestamp: b.Time.Format(historyTimeLayout),
+			Hash:      shortHash(hash),
+			Unchanged: hash == currentHash,
+			Packages:  len(m.Packages),
+			Repos:     len(m.Repositories),
+		})
+	}
+	return entries, nil
+}
+
+// renderHistoryText writes the human-readable history table to w.
+func renderHistoryText(w io.Writer, entries []historyEntry) {
+	_, _ = fmt.Fprintln(w, "Available manifest backups:")
+	for _, e := range entries {
+		marker := "  "
+		if e.Current {
+			marker = "* "
+		}
+		line := fmt.Sprintf("%s%s %s", marker, e.Timestamp, e.Hash)
+		if e.Current {
+			line += fmt.Sprintf("  %d packages, %d repos  (current)", e.Packages, e.Repos)
+		} else {
+			line += fmt.Sprintf("  %d packages, %d repos", e.Packages, e.Repos)
+			if e.Unchanged {
+				line += "  (unchanged)"
+			}
+		}
+		_, _ = fmt.Fprintln(w, line)
+	}
+	if len(entries) == 1 {
+		_, _ = fmt.Fprintln(w, "No backups found. Backups are created on re-init and reconcile.")
+	}
+}
+
+// buildDiffItems converts added/removed packages and repos into diffItems.
+func buildDiffItems(addedPkgs, removedPkgs []manifest.Package, addedRepos, removedRepos []manifest.Repository) (added, removed []diffItem) {
+	added = make([]diffItem, 0, len(addedPkgs)+len(addedRepos))
+	for _, p := range addedPkgs {
+		added = append(added, diffItem{Name: p.Name, Manager: p.Manager, Origin: p.OriginEffective(), Kind: "package"})
+	}
+	for _, r := range addedRepos {
+		added = append(added, diffItem{Name: r.Name, Manager: r.Manager, Origin: r.OriginEffective(), Kind: "repo"})
+	}
+	removed = make([]diffItem, 0, len(removedPkgs)+len(removedRepos))
+	for _, p := range removedPkgs {
+		removed = append(removed, diffItem{Name: p.Name, Manager: p.Manager, Origin: p.OriginEffective(), Kind: "package"})
+	}
+	for _, r := range removedRepos {
+		removed = append(removed, diffItem{Name: r.Name, Manager: r.Manager, Origin: r.OriginEffective(), Kind: "repo"})
+	}
+	return
+}
+
+// renderDiffText writes the human-readable diff table to w.
+func renderDiffText(w io.Writer, baselineLabel string, added, removed []diffItem) {
+	_, _ = fmt.Fprintf(w, "Comparing: current vs %s\n\n", baselineLabel)
+	if len(added) == 0 && len(removed) == 0 {
+		_, _ = fmt.Fprintln(w, "no differences")
+		return
+	}
+	for _, a := range added {
+		_, _ = fmt.Fprintf(w, "+ %s (%s)\n", a.Name, a.Manager)
+	}
+	for _, r := range removed {
+		_, _ = fmt.Fprintf(w, "- %s (%s)\n", r.Name, r.Manager)
+	}
+	_, _ = fmt.Fprintf(w, "\n  %d added, %d removed\n", len(added), len(removed))
+}
+
+// matchHashPrefix finds backups whose content hash starts with the given prefix.
+func matchHashPrefix(target string, backups []backup.Entry) ([]backup.Entry, error) {
+	matched := []backup.Entry{}
+	for _, b := range backups {
+		h, err := contentHash(b.Path)
+		if err != nil {
+			continue
+		}
+		if strings.HasPrefix(h, strings.ToLower(target)) {
+			matched = append(matched, b)
+		}
+	}
+	if len(matched) == 0 {
+		return nil, catErr(ErrNoInput, errNoBackupFound, target)
+	}
+	if len(matched) > 1 {
+		labels := make([]string, 0, len(matched))
+		for _, m := range matched {
+			labels = append(labels, m.Time.Format(historyTimeLayout))
+		}
+		return nil, catErr(ErrData, "ambiguous hash %s; matches: %s", target, strings.Join(labels, ", "))
+	}
+	return matched, nil
+}
+
+// matchTimestamp finds the backup matching a parsed timestamp.
+func matchTimestamp(target string, backups []backup.Entry) (string, string, error) {
+	ts, ok := parseBackupTimestamp(target)
+	if !ok {
+		return "", "", catErr(ErrUsage, errNoBackupFound, target)
+	}
+	for _, b := range backups {
+		if b.Time.Equal(ts) {
+			return b.Path, b.Time.Format(historyTimeLayout), nil
+		}
+	}
+	return "", "", catErr(ErrNoInput, errNoBackupFound, target)
+}
+
 func newManifestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "manifest",
@@ -139,41 +282,9 @@ identical to the current manifest are marked as unchanged.`,
 				return err
 			}
 
-			currentHash, err := contentHash(app.manifestPath)
-			if err != nil {
-				return fmt.Errorf("failed to hash current manifest: %w", err)
-			}
-
-			entries := []historyEntry{{
-				Timestamp: currentManifestTimestamp(app),
-				Hash:      shortHash(currentHash),
-				Current:   true,
-				Packages:  len(app.manifest.Packages),
-				Repos:     len(app.manifest.Repositories),
-			}}
-
-			backups, err := backup.List(app.manifestPath + ".*.bak")
+			entries, err := buildHistoryEntries(app, cmd.ErrOrStderr())
 			if err != nil {
 				return err
-			}
-			for _, b := range backups {
-				m, err := manifest.Load(b.Path)
-				if err != nil {
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: skipping unreadable backup %s: %v\n", b.Path, err)
-					continue
-				}
-				hash, err := contentHash(b.Path)
-				if err != nil {
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: skipping unreadable backup %s: %v\n", b.Path, err)
-					continue
-				}
-				entries = append(entries, historyEntry{
-					Timestamp: b.Time.Format(historyTimeLayout),
-					Hash:      shortHash(hash),
-					Unchanged: hash == currentHash,
-					Packages:  len(m.Packages),
-					Repos:     len(m.Repositories),
-				})
 			}
 
 			if app.json {
@@ -185,26 +296,7 @@ identical to the current manifest are marked as unchanged.`,
 				return nil
 			}
 
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Available manifest backups:")
-			for _, e := range entries {
-				marker := "  "
-				if e.Current {
-					marker = "* "
-				}
-				line := fmt.Sprintf("%s%s %s", marker, e.Timestamp, e.Hash)
-				if e.Current {
-					line += fmt.Sprintf("  %d packages, %d repos  (current)", e.Packages, e.Repos)
-				} else {
-					line += fmt.Sprintf("  %d packages, %d repos", e.Packages, e.Repos)
-					if e.Unchanged {
-						line += "  (unchanged)"
-					}
-				}
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), line)
-			}
-			if len(entries) == 1 {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No backups found. Backups are created on re-init and reconcile.")
-			}
+			renderHistoryText(cmd.OutOrStdout(), entries)
 			return nil
 		},
 	}
@@ -266,20 +358,7 @@ stamp manifest history. Added entries are prefixed with '+', removed with '-'.`,
 			addedRepos = filterRepositories(addedRepos, managerFlag, originFlag)
 			removedRepos = filterRepositories(removedRepos, managerFlag, originFlag)
 
-			added := make([]diffItem, 0, len(addedPkgs)+len(addedRepos))
-			for _, p := range addedPkgs {
-				added = append(added, diffItem{Name: p.Name, Manager: p.Manager, Origin: p.OriginEffective(), Kind: "package"})
-			}
-			for _, r := range addedRepos {
-				added = append(added, diffItem{Name: r.Name, Manager: r.Manager, Origin: r.OriginEffective(), Kind: "repo"})
-			}
-			removed := make([]diffItem, 0, len(removedPkgs)+len(removedRepos))
-			for _, p := range removedPkgs {
-				removed = append(removed, diffItem{Name: p.Name, Manager: p.Manager, Origin: p.OriginEffective(), Kind: "package"})
-			}
-			for _, r := range removedRepos {
-				removed = append(removed, diffItem{Name: r.Name, Manager: r.Manager, Origin: r.OriginEffective(), Kind: "repo"})
-			}
+			added, removed := buildDiffItems(addedPkgs, removedPkgs, addedRepos, removedRepos)
 
 			if app.json {
 				data, err := json.MarshalIndent(diffResult{Baseline: baselineLabel, Added: added, Removed: removed}, "", "  ")
@@ -290,18 +369,7 @@ stamp manifest history. Added entries are prefixed with '+', removed with '-'.`,
 				return nil
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Comparing: current vs %s\n\n", baselineLabel)
-			if len(added) == 0 && len(removed) == 0 {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no differences")
-				return nil
-			}
-			for _, a := range added {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "+ %s (%s)\n", a.Name, a.Manager)
-			}
-			for _, r := range removed {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "- %s (%s)\n", r.Name, r.Manager)
-			}
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "\n  %d added, %d removed\n", len(added), len(removed))
+			renderDiffText(cmd.OutOrStdout(), baselineLabel, added, removed)
 			return nil
 		},
 	}
@@ -345,39 +413,14 @@ func resolveBaseline(manifestPath, target string) (path, label string, err error
 	}
 
 	if isHexHash(target) {
-		matched := []backup.Entry{}
-		for _, b := range backups {
-			h, err := contentHash(b.Path)
-			if err != nil {
-				continue
-			}
-			if strings.HasPrefix(h, strings.ToLower(target)) {
-				matched = append(matched, b)
-			}
-		}
-		if len(matched) == 0 {
-			return "", "", catErr(ErrNoInput, "no backup found for %s", target)
-		}
-		if len(matched) > 1 {
-			labels := make([]string, 0, len(matched))
-			for _, m := range matched {
-				labels = append(labels, m.Time.Format(historyTimeLayout))
-			}
-			return "", "", catErr(ErrData, "ambiguous hash %s; matches: %s", target, strings.Join(labels, ", "))
+		matched, mErr := matchHashPrefix(target, backups)
+		if mErr != nil {
+			return "", "", mErr
 		}
 		return matched[0].Path, matched[0].Time.Format(historyTimeLayout), nil
 	}
 
-	ts, ok := parseBackupTimestamp(target)
-	if !ok {
-		return "", "", catErr(ErrUsage, "no backup found for %s", target)
-	}
-	for _, b := range backups {
-		if b.Time.Equal(ts) {
-			return b.Path, b.Time.Format(historyTimeLayout), nil
-		}
-	}
-	return "", "", catErr(ErrNoInput, "no backup found for %s", target)
+	return matchTimestamp(target, backups)
 }
 
 // isHexHash reports whether s looks like a content-hash prefix: at least
