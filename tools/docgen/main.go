@@ -16,6 +16,11 @@ import (
 	"github.com/rossijonas/stamp/internal/cli"
 )
 
+const (
+	docsUsageDir = "docs/usage"
+	docsManDir   = "docs/man"
+)
+
 func main() {
 	root := cli.NewRootCmd()
 	root.DisableAutoGenTag = true
@@ -33,15 +38,15 @@ func main() {
 }
 
 func generate(root *cobra.Command, header *doc.GenManHeader) error {
-	if err := os.MkdirAll("docs/usage", 0750); err != nil {
+	if err := os.MkdirAll(docsUsageDir, 0750); err != nil {
 		return fmt.Errorf("failed to create docs/usage dir: %w", err)
 	}
-	if err := doc.GenMarkdownTree(root, "docs/usage"); err != nil {
+	if err := doc.GenMarkdownTree(root, docsUsageDir); err != nil {
 		return fmt.Errorf("failed to generate markdown: %w", err)
 	}
 
 	// Post-process: replace .md links with .html for Jekyll compatibility
-	entries, err := os.ReadDir("docs/usage")
+	entries, err := os.ReadDir(docsUsageDir)
 	if err != nil {
 		return fmt.Errorf("failed to read docs/usage: %w", err)
 	}
@@ -49,7 +54,7 @@ func generate(root *cobra.Command, header *doc.GenManHeader) error {
 		if !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
-		path := filepath.Join("docs/usage", entry.Name())
+		path := filepath.Join(docsUsageDir, entry.Name())
 		//nolint:gosec // path is from cobra docgen output (trusted source)
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -66,10 +71,10 @@ func generate(root *cobra.Command, header *doc.GenManHeader) error {
 		}
 	}
 
-	if err := os.MkdirAll("docs/man", 0750); err != nil {
+	if err := os.MkdirAll(docsManDir, 0750); err != nil {
 		return fmt.Errorf("failed to create docs/man dir: %w", err)
 	}
-	if err := doc.GenManTree(root, header, "docs/man"); err != nil {
+	if err := doc.GenManTree(root, header, docsManDir); err != nil {
 		return fmt.Errorf("failed to generate man pages: %w", err)
 	}
 
@@ -84,7 +89,7 @@ func generate(root *cobra.Command, header *doc.GenManHeader) error {
 // the .SH EXAMPLE section: strips "  # " comment prefixes and wraps command
 // lines in .EX/.EE for proper troff formatting.
 func reformatManExamples() error {
-	entries, err := os.ReadDir("docs/man")
+	entries, err := os.ReadDir(docsManDir)
 	if err != nil {
 		return fmt.Errorf("failed to read docs/man: %w", err)
 	}
@@ -96,7 +101,7 @@ func reformatManExamples() error {
 		if !strings.HasSuffix(entry.Name(), ".1") {
 			continue
 		}
-		manPath := filepath.Join("docs/man", entry.Name())
+		manPath := filepath.Join(docsManDir, entry.Name())
 		//nolint:gosec // manPath is scoped to docs/man/ directory, entry name from ReadDir
 		data, err := os.ReadFile(manPath)
 		if err != nil {

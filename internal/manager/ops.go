@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const pacmanOptionsSection = "[options]"
+
 // sudoExec runs a pre-built args slice (first element must be the binary,
 // typically from sudoCmd) with streamed IO and wraps the error with errMsg.
 func sudoExec(ctx context.Context, exec Executor, args []string, errMsg string) error {
@@ -74,11 +76,11 @@ func pacmanIgnorePkg(ctx context.Context, exec Executor) ([]string, error) {
 	inOptions := false
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "[options]" {
+		if trimmed == pacmanOptionsSection {
 			inOptions = true
 			continue
 		}
-		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != pacmanOptionsSection {
 			inOptions = false
 			continue
 		}
@@ -109,11 +111,11 @@ func pacmanHold(ctx context.Context, exec Executor, pkg string) error {
 	inOptions := false
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "[options]" {
+		if trimmed == pacmanOptionsSection {
 			inOptions = true
 			continue
 		}
-		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != pacmanOptionsSection {
 			break
 		}
 		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
@@ -135,7 +137,7 @@ func pacmanHold(ctx context.Context, exec Executor, pkg string) error {
 	}
 	if !modified {
 		for i, line := range lines {
-			if strings.TrimSpace(line) == "[options]" {
+			if strings.TrimSpace(line) == pacmanOptionsSection {
 				lines = append(lines[:i+1], append([]string{"IgnorePkg = " + pkg}, lines[i+1:]...)...)
 				modified = true
 				break
@@ -162,11 +164,11 @@ func pacmanUnhold(ctx context.Context, exec Executor, pkg string) error {
 	inOptions := false
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "[options]" {
+		if trimmed == pacmanOptionsSection {
 			inOptions = true
 			continue
 		}
-		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != "[options]" {
+		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != pacmanOptionsSection {
 			break
 		}
 		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {

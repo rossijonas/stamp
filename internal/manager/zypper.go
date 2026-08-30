@@ -13,6 +13,11 @@ type Zypper struct {
 	cmd  string
 }
 
+const (
+	zypperFlagForce  = "--force"
+	zypperFlagDryRun = "--dry-run"
+)
+
 // NewZypper creates a new Zypper adapter.
 func NewZypper() *Zypper {
 	return &Zypper{
@@ -89,7 +94,7 @@ func (m *Zypper) Reinstall(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd(m.cmd, "install", "--force", "-y", pkg)
+	args := sudoCmd(m.cmd, "install", zypperFlagForce, "-y", pkg)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
@@ -137,7 +142,7 @@ func (m *Zypper) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := validatePackages(pkgs); err != nil {
 		return err
 	}
-	args := batchArgs(sudoCmd(m.cmd, "install", "--force", "-y"), pkgs)
+	args := batchArgs(sudoCmd(m.cmd, "install", zypperFlagForce, "-y"), pkgs)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall packages: %w", err)
@@ -168,7 +173,7 @@ func (m *Zypper) PreviewInstall(ctx context.Context, pkg string) (Preview, error
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, m.cmd, "install", "--dry-run", pkg)
+	out, err := m.exec(ctx, m.cmd, "install", zypperFlagDryRun, pkg)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
 	}
@@ -182,7 +187,7 @@ func (m *Zypper) PreviewRemove(ctx context.Context, pkg string) (Preview, error)
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, m.cmd, "remove", "--dry-run", pkg)
+	out, err := m.exec(ctx, m.cmd, "remove", zypperFlagDryRun, pkg)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
 	}
@@ -198,7 +203,7 @@ func (m *Zypper) PreviewReinstall(ctx context.Context, pkg string) (Preview, err
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, m.cmd, "install", "--force", "--dry-run", pkg)
+	out, err := m.exec(ctx, m.cmd, "install", zypperFlagForce, zypperFlagDryRun, pkg)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
 	}

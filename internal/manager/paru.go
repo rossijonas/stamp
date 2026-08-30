@@ -10,6 +10,8 @@ type Paru struct {
 	exec Executor
 }
 
+const paruFlagNoConfirm = "--noconfirm"
+
 // NewParu creates a new Paru adapter.
 func NewParu() *Paru {
 	return &Paru{
@@ -39,32 +41,32 @@ func (m *Paru) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via paru.
 func (m *Paru) Install(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", "--noconfirm", pkg), "install", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", paruFlagNoConfirm, pkg), "install", pkg)
 }
 
 // Reinstall reinstalls a package via paru.
 func (m *Paru) Reinstall(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", "--noconfirm", pkg), "reinstall", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", paruFlagNoConfirm, pkg), "reinstall", pkg)
 }
 
 // Remove removes a package and its unneeded dependencies via paru.
 func (m *Paru) Remove(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("paru", "-Rs", "--noconfirm", pkg), "remove", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-Rs", paruFlagNoConfirm, pkg), "remove", pkg)
 }
 
 // InstallMany installs multiple packages in one paru invocation.
 func (m *Paru) InstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs), "install", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", paruFlagNoConfirm), pkgs), "install", pkgs)
 }
 
 // ReinstallMany reinstalls multiple packages in one paru invocation.
 func (m *Paru) ReinstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", "--noconfirm"), pkgs), "reinstall", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", paruFlagNoConfirm), pkgs), "reinstall", pkgs)
 }
 
 // RemoveMany removes multiple packages in one paru invocation.
 func (m *Paru) RemoveMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-Rs", "--noconfirm"), pkgs), "remove", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-Rs", paruFlagNoConfirm), pkgs), "remove", pkgs)
 }
 
 // Search searches for packages via paru (official repos + AUR).
@@ -106,9 +108,9 @@ func (m *Paru) Update(ctx context.Context, pkg string) error {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err
 		}
-		args = sudoCmd("paru", "-S", "--noconfirm", pkg)
+		args = sudoCmd("paru", "-S", paruFlagNoConfirm, pkg)
 	} else {
-		args = sudoCmd("paru", "-Syu", "--noconfirm")
+		args = sudoCmd("paru", "-Syu", paruFlagNoConfirm)
 	}
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
@@ -159,7 +161,7 @@ func (m *Paru) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return orphans, nil
 	}
-	args := sudoCmd("pacman", "-Rs", "--noconfirm")
+	args := sudoCmd("pacman", "-Rs", paruFlagNoConfirm)
 	args = append(args, orphans...)
 	return orphans, sudoExec(ctx, m.exec, args, "failed to remove orphans")
 }
@@ -174,7 +176,7 @@ func (m *Paru) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return nil, nil
 	}
-	return nil, sudoExec(ctx, m.exec, sudoCmd("paru", "-Sc", "--noconfirm"), "failed to clean paru cache")
+	return nil, sudoExec(ctx, m.exec, sudoCmd("paru", "-Sc", paruFlagNoConfirm), "failed to clean paru cache")
 }
 
 // Refresh syncs paru databases via paru -Sy.
