@@ -37,6 +37,7 @@ func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
 	apps := make(map[string]struct{})
 	var firstErr error
 	appsKnown := true
+	anyScopeSucceeded := false
 
 	for _, scope := range []string{"--user", "--system"} {
 		out, err := m.exec(ctx, "flatpak", "list", scope, flatpakColumnsApplication)
@@ -46,6 +47,7 @@ func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
 			}
 			continue
 		}
+		anyScopeSucceeded = true
 		for _, id := range parseFlatpakApplicationIDs(out) {
 			all[id] = struct{}{}
 		}
@@ -60,7 +62,7 @@ func (m *Flatpak) ListInstalled(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	if len(all) == 0 && firstErr != nil {
+	if !anyScopeSucceeded && firstErr != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", firstErr)
 	}
 
