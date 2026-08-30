@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"path"
 	"regexp"
@@ -15,6 +16,10 @@ import (
 )
 
 var validRepoName = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/\+\:]*$`)
+
+// repoManagerFlagDesc is the shared flag description for the -m/--manager
+// flag on repository subcommands that accept an optional manager.
+const repoManagerFlagDesc = "package manager to use (optional if the repo is tracked in the manifest)"
 
 func validateRepoName(name string) error {
 	if strings.HasPrefix(name, "-") {
@@ -67,6 +72,105 @@ func deriveRepoName(rawURL string) string {
 		base = base[:len(base)-len(".repo")]
 	}
 	return base
+}
+
+// parseRepoAddArgs parses and validates the positional arguments for
+// `repo add`. It handles the URL shorthand (single URL → derived name),
+// and returns the final name and URL with validation errors.
+func parseRepoAddArgs(args []string) (name, url string, err error) {
+	name = args[0]
+	if len(args) > 1 {
+		url = args[1]
+	}
+	// A single URL argument is shorthand: derive the name from the URL
+	// (e.g. stamp repo add <repofile-url> -m dnf).
+	if len(args) == 1 && isRepoURL(name) {
+		url = name
+		name = deriveRepoName(url)
+	}
+	if err := validateRepoName(name); err != nil {
+		if url != "" && isRepoURL(url) {
+			return "", "", catErr(ErrUsage, "cannot derive repository name from URL %q", url)
+		}
+		return "", "", err
+	}
+	if err := validateRepoURL(url); err != nil {
+		return "", "", err
+	}
+	return name, url, nil
+}
+
+// resolveAddAdapter resolves the adapter for a repo add command using
+// the explicit -m flag. The add command always requires an explicit manager.
+func resolveAddAdapter(app *AppContext, managerFlag string) (manager.Adapter, error) {
+	for _, a := range app.adapters {
+		if a.Name() == manager.ResolveManager(managerFlag) {
+			return a, nil
+		}
+	}
+	return nil, fmt.Errorf("manager %q not found (required)", managerFlag)
+}
+
+// resolveAdapterFromManifest resolves an adapter from the manifest's
+// recorded manager for a named repository. Returns nil if no match.
+func resolveAdapterFromManifest(app *AppContext, name string) manager.Adapter {
+	for _, r := range app.manifest.Repositories {
+		if r.Name != name {
+			continue
+		}
+		for _, a := range app.adapters {
+			if a.Name() == r.Manager {
+				return a
+			}
+		}
+		break
+	}
+	return nil
+}
+
+// resolveAdapterFromFlag resolves an adapter using the explicit -m flag.
+func resolveAdapterFromFlag(app *AppContext, managerFlag string) manager.Adapter {
+	for _, a := range app.adapters {
+		if a.Name() == manager.ResolveManager(managerFlag) {
+			return a
+		}
+	}
+	return nil
+}
+
+// filterReposByManager returns repos matching managerFlag, or all if empty.
+func filterReposByManager(repos []manifest.Repository, managerFlag string) []manifest.Repository {
+	if managerFlag == "" {
+		return repos
+	}
+	var filtered []manifest.Repository
+	for _, r := range repos {
+		if r.Manager == managerFlag {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
+// renderRepoListJSON writes repos as indented JSON to w.
+func renderRepoListJSON(w io.Writer, repos []manifest.Repository) error {
+	data, err := json.MarshalIndent(repos, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal repositories: %w", err)
+	}
+	_, _ = fmt.Fprintln(w, string(data))
+	return nil
+}
+
+// renderRepoListText writes the human-readable repo list to w.
+func renderRepoListText(w io.Writer, repos []manifest.Repository) {
+	for _, r := range repos {
+		line := fmt.Sprintf("%s (%s)", r.Name, r.Manager)
+		if r.URL != "" {
+			line += " " + r.URL
+		}
+		_, _ = fmt.Fprintln(w, line)
+	}
 }
 
 func newRepoCmd() *cobra.Command {
@@ -123,36 +227,15 @@ func newRepoAddCmd() *cobra.Command {
 			if app.manifestErr != nil {
 				return app.manifestErr
 			}
-			name := args[0]
-			url := ""
-			if len(args) > 1 {
-				url = args[1]
-			}
-			// A single URL argument is shorthand: derive the name from the URL
-			// (e.g. stamp repo add <repofile-url> -m dnf).
-			if len(args) == 1 && isRepoURL(name) {
-				url = name
-				name = deriveRepoName(url)
-			}
-			if err := validateRepoName(name); err != nil {
-				if url != "" && isRepoURL(url) {
-					return catErr(ErrUsage, "cannot derive repository name from URL %q", url)
-				}
-				return err
-			}
-			if err := validateRepoURL(url); err != nil {
+
+			name, url, err := parseRepoAddArgs(args)
+			if err != nil {
 				return err
 			}
 
-			var adapter manager.Adapter
-			for _, a := range app.adapters {
-				if a.Name() == manager.ResolveManager(managerFlag) {
-					adapter = a
-					break
-				}
-			}
-			if adapter == nil {
-				return fmt.Errorf("manager %q not found (required)", managerFlag)
+			adapter, err := resolveAddAdapter(app, managerFlag)
+			if err != nil {
+				return err
 			}
 
 			verb := fmt.Sprintf("Add repo %s via %s", name, managerFlag)
@@ -239,7 +322,7 @@ func newRepoRemoveCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use (optional if the repo is tracked in the manifest)")
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", repoManagerFlagDesc)
 	return cmd
 }
 
@@ -262,16 +345,7 @@ func newRepoListCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 
-			repos := app.manifest.Repositories
-			if managerFlag != "" {
-				var filtered []manifest.Repository
-				for _, r := range repos {
-					if r.Manager == managerFlag {
-						filtered = append(filtered, r)
-					}
-				}
-				repos = filtered
-			}
+			repos := filterReposByManager(app.manifest.Repositories, managerFlag)
 
 			if len(repos) == 0 {
 				if app.json {
@@ -283,21 +357,10 @@ func newRepoListCmd() *cobra.Command {
 			}
 
 			if app.json {
-				data, err := json.MarshalIndent(repos, "", "  ")
-				if err != nil {
-					return fmt.Errorf("failed to marshal repositories: %w", err)
-				}
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
-				return nil
+				return renderRepoListJSON(cmd.OutOrStdout(), repos)
 			}
 
-			for _, r := range repos {
-				line := fmt.Sprintf("%s (%s)", r.Name, r.Manager)
-				if r.URL != "" {
-					line += " " + r.URL
-				}
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), line)
-			}
+			renderRepoListText(cmd.OutOrStdout(), repos)
 			return nil
 		},
 	}
@@ -316,39 +379,20 @@ func resolveRepoAdapter(cmd *cobra.Command, name, managerFlag string) (manager.A
 		return nil, app.manifestErr
 	}
 
-	var adapter manager.Adapter
-
 	// Check the manifest first: if the repo is tracked, use its recorded
 	// manager so `-m` is optional.
 	if managerFlag == "" {
-		for _, r := range app.manifest.Repositories {
-			if r.Name != name {
-				continue
-			}
-			for _, a := range app.adapters {
-				if a.Name() == r.Manager {
-					adapter = a
-					break
-				}
-			}
-			break
+		adapter := resolveAdapterFromManifest(app, name)
+		if adapter != nil {
+			return adapter, nil
 		}
-		if adapter == nil {
-			return nil, catErr(ErrUsage, "repository %q is not tracked; specify its manager with --manager", name)
-		}
+		return nil, catErr(ErrUsage, "repository %q is not tracked; specify its manager with --manager", name)
 	}
 
 	// Fall back to the explicit flag.
+	adapter := resolveAdapterFromFlag(app, managerFlag)
 	if adapter == nil {
-		for _, a := range app.adapters {
-			if a.Name() == manager.ResolveManager(managerFlag) {
-				adapter = a
-				break
-			}
-		}
-		if adapter == nil {
-			return nil, fmt.Errorf("manager %q not found", managerFlag)
-		}
+		return nil, fmt.Errorf("manager %q not found", managerFlag)
 	}
 	return adapter, nil
 }
@@ -401,7 +445,7 @@ casks, and commands. Only brew taps can be trusted.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use (optional if the repo is tracked in the manifest)")
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", repoManagerFlagDesc)
 	return cmd
 }
 
@@ -439,6 +483,6 @@ func newRepoUntrustCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to use (optional if the repo is tracked in the manifest)")
+	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", repoManagerFlagDesc)
 	return cmd
 }
