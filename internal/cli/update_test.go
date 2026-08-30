@@ -191,8 +191,8 @@ func TestUpdateCmd_Serial(t *testing.T) {
 	buf, err := execUpdateCmd(t, []string{"update", "--serial", "-y"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "▪ updating via brew")
-	assert.Contains(t, output, "▪ updating via dnf")
+	assert.NotContains(t, output, "updating via brew")
+	assert.NotContains(t, output, "updating via dnf")
 	assert.Contains(t, output, "updated packages via brew")
 	assert.Contains(t, output, "updated packages via dnf")
 }
@@ -224,7 +224,7 @@ func TestUpdateCmd_WithUpdatesNonTerminalAborts(t *testing.T) {
 	buf, err := execUpdateCmd(t, []string{"update"}, adapters)
 	require.Error(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "Checking for updates")
+	assert.NotContains(t, output, "Checking for updates")
 	assert.Contains(t, output, "brew: htop 3.2.1 → 3.2.2")
 	assert.Contains(t, err.Error(), "non-interactive mode")
 	assert.NotContains(t, output, "updated packages via brew")
@@ -251,7 +251,7 @@ func TestUpdateCmd_CheckOnly(t *testing.T) {
 	buf, err := execUpdateCmd(t, []string{"update", "--check"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "Checking for updates")
+	assert.NotContains(t, output, "Checking for updates")
 	assert.Contains(t, output, "brew: No updates available")
 }
 
@@ -292,7 +292,7 @@ func TestUpdateCmd_CheckOnly_UpdatesAvailable(t *testing.T) {
 	buf, err := execUpdateCmd(t, []string{"update", "--check"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "Checking for updates")
+	assert.NotContains(t, output, "Checking for updates")
 	assert.Contains(t, output, "brew: htop 3.2.1 → 3.2.2")
 }
 
@@ -311,7 +311,18 @@ func TestUpdateCmd_NoUpdates(t *testing.T) {
 	buf, err := execUpdateCmd(t, []string{"update"}, adapters)
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "Checking for updates")
+	assert.NotContains(t, output, "Checking for updates")
+	assert.NotContains(t, output, "\n\n", "piped output must not contain blank lines from suppressed progress")
 	assert.Contains(t, output, "brew: No updates available")
 	assert.Contains(t, output, "All up to date")
+}
+
+func TestUpdateCheck_TTYGlyphs(t *testing.T) {
+	forceOutputTTY(t)
+	adapters := []manager.Adapter{&mockAdapter{name: "brew"}}
+	buf, err := execUpdateCmd(t, []string{"update", "--check"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "▪ Refreshing package metadata...")
+	assert.Contains(t, output, "▪ Checking for updates...")
 }

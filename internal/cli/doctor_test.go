@@ -15,7 +15,7 @@ import (
 	"github.com/rossijonas/stamp/internal/manager"
 )
 
-func TestDoctor_TTY(t *testing.T) {
+func TestDoctor_Plain(t *testing.T) {
 	stubManExec(t)
 	oldCandidates := manPageCandidates
 	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
@@ -24,11 +24,11 @@ func TestDoctor_TTY(t *testing.T) {
 	buf, err := execCmd(t, []string{"doctor"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "▪ System Diagnosis (Stamp Doctor)")
+	assert.Contains(t, output, "System Diagnosis (Stamp Doctor)")
 	assert.Contains(t, output, "Package Managers:")
 	assert.Contains(t, output, "Manifest Integrity:")
 	assert.Contains(t, output, "Path:")
-	assert.Contains(t, output, "Man Page: ✗ Not found")
+	assert.Contains(t, output, "Man Page: Not found")
 }
 
 func TestDoctor_JSON(t *testing.T) {
@@ -111,7 +111,7 @@ func TestDoctor_Config_Valid(t *testing.T) {
 	require.NoError(t, root.Execute())
 	output := buf.String()
 	assert.Contains(t, output, "Configuration:")
-	assert.Contains(t, output, "✓ Valid")
+	assert.Contains(t, output, "Valid")
 	assert.NotContains(t, output, "invalid [backup]")
 }
 
@@ -168,7 +168,7 @@ min_manifest_backups = 30
 	require.NoError(t, root.Execute())
 	output := buf.String()
 	assert.Contains(t, output, "Configuration:")
-	assert.Contains(t, output, "✗ invalid [backup] config:")
+	assert.Contains(t, output, "invalid [backup] config:")
 	assert.Contains(t, output, "min_manifest_backups (30) exceeds max_manifest_backups (10)")
 	assert.Contains(t, output, "fixing config.toml")
 }
@@ -237,7 +237,7 @@ manager = "brew"
 
 	require.NoError(t, root.Execute())
 	output := buf.String()
-	assert.Contains(t, output, "✓ Healthy (2 package(s))")
+	assert.Contains(t, output, "Healthy (2 package(s))")
 	assert.Contains(t, output, "Missing:")
 	assert.Contains(t, output, "- htop (brew)")
 	assert.Contains(t, output, "stamp restore")
@@ -513,7 +513,7 @@ func TestDoctor_Manifest_Missing_TTY(t *testing.T) {
 	err := root.Execute()
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "✗ manifest not found")
+	assert.Contains(t, output, "manifest not found")
 }
 
 func TestDoctor_Completions_NotInstalled(t *testing.T) {
@@ -642,4 +642,21 @@ func TestDoctor_ManagerFlag_NativeOutput(t *testing.T) {
 	output := buf.String()
 	assert.Contains(t, output, "brew doctor:")
 	assert.Contains(t, output, "Your system is ready to brew.")
+}
+
+func TestDoctor_TTYGlyphs(t *testing.T) {
+	forceOutputTTY(t)
+	stubManExec(t)
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	buf, err := execCmd(t, []string{"doctor"}, []manager.Adapter{&manager.Mock{ManagerName: "brew"}})
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "▪ System Diagnosis (Stamp Doctor)")
+	assert.Contains(t, output, "✗ Not Found")
+	assert.Contains(t, output, "✓ Active")
+	assert.Contains(t, output, "✓ Valid")
+	assert.Contains(t, output, "✗ Not found — run 'stamp man install'")
 }

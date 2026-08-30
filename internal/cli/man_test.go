@@ -84,7 +84,7 @@ func TestMan_Check_NotExist(t *testing.T) {
 
 	buf, err := execCmd(t, []string{"man", "check"}, []manager.Adapter{})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "✗ Man page not installed. Run 'stamp man install'")
+	assert.Contains(t, buf.String(), "Man page not installed. Run 'stamp man install'")
 }
 
 func TestMan_Check_Success(t *testing.T) {
@@ -108,7 +108,7 @@ func TestMan_Check_Success(t *testing.T) {
 
 	buf, err := execCmd(t, []string{"man", "check"}, []manager.Adapter{})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "✓ Man page is up to date")
+	assert.Contains(t, buf.String(), "Man page is up to date")
 }
 
 func TestMan_Check_Outdated(t *testing.T) {
@@ -352,4 +352,16 @@ func TestCheckInstalledManVersion_Gzip(t *testing.T) {
 	assert.Equal(t, manFile, path)
 	assert.True(t, result.matches, "gzip-compressed page version must match")
 	assert.Equal(t, Version, result.version)
+}
+
+func TestManCheck_TTYGlyphs(t *testing.T) {
+	forceOutputTTY(t)
+	stubManExec(t)
+	oldCandidates := manPageCandidates
+	manPageCandidates = []string{filepath.Join(t.TempDir(), "nonexistent.1")}
+	defer func() { manPageCandidates = oldCandidates }()
+
+	buf, err := execCmd(t, []string{"man", "check"}, []manager.Adapter{})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "✗ Man page not installed")
 }

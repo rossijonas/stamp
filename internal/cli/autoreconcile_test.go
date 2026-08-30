@@ -541,3 +541,41 @@ func TestAutoReconcile_TimerDir_UnsupportedOS(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not supported")
 }
+
+func TestAutoReconcile_TTYGlyphs(t *testing.T) {
+	forceOutputTTY(t)
+	oldOS := currentOS
+	currentOS = "linux"
+	defer func() { currentOS = oldOS }()
+
+	tmpDir := t.TempDir()
+	binPath := filepath.Join(tmpDir, "stamp")
+	//nolint:gosec // test fixture needs execute bit for EvalSymlinks
+	require.NoError(t, os.WriteFile(binPath, []byte("x"), 0755))
+
+	oldExec := osExecutable
+	osExecutable = func() (string, error) { return binPath, nil }
+	defer func() { osExecutable = oldExec }()
+
+	oldHome := os.Getenv("HOME")
+	_ = os.Setenv("HOME", tmpDir)
+	_ = os.Unsetenv("XDG_CONFIG_HOME")
+	defer func() { _ = os.Setenv("HOME", oldHome) }()
+
+	oldCmd := execCommand
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		if name == "systemctl" {
+			return exec.Command("true")
+		}
+		return oldCmd(name, args...)
+	}
+	defer func() { execCommand = oldCmd }()
+
+	root := NewRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"auto-reconcile", "on"})
+	require.NoError(t, root.Execute())
+	assert.Contains(t, buf.String(), "✓ auto-reconcile enabled (period: daily)")
+}

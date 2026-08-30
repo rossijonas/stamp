@@ -242,3 +242,15 @@ func TestSetupCmd_Reinit_Accept(t *testing.T) {
 	assert.Contains(t, output, "Setup complete")
 	assert.Contains(t, output, "existing manifest backed up")
 }
+
+func TestSetup_TTYGlyphs(t *testing.T) {
+	forceOutputTTY(t)
+	adapters := []manager.Adapter{
+		&manager.Mock{ManagerName: "brew", InstalledPkgs: []string{}},
+	}
+	buf, err := execCmd(t, []string{"setup", "--yes"}, adapters)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "▪ Stamp Setup Wizard (auto-accept)")
+	assert.Contains(t, output, "▪ Setup complete!")
+}

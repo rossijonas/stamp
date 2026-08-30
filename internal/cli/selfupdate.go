@@ -35,7 +35,9 @@ replaces the current binary atomically, and re-installs shell completions
 and man pages automatically. Use --check to query without downloading.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "▪ Self-Update")
+			errOut := cmd.ErrOrStderr()
+			tty := isOutputTerminal(errOut)
+			_, _ = fmt.Fprintln(errOut, iconLine(tty, "▪", "Self-Update"))
 
 			rel, err := fetchLatestRelease()
 			if err != nil {
@@ -135,20 +137,20 @@ and man pages automatically. Use --check to query without downloading.`,
 				return fmt.Errorf("failed to replace binary: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ✓ Updated to %s\n", rel.TagName)
+			_, _ = fmt.Fprintf(errOut, "  %s\n", iconLine(tty, "✓", fmt.Sprintf("Updated to %s", rel.TagName)))
 
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  Reinstalling shell completions...")
 			if err := runNewBinary(realExe, "completion"); err != nil {
 				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ completion install failed: %v\n", err)
 			} else {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✓ Completions updated")
+				_, _ = fmt.Fprintf(errOut, "  %s\n", iconLine(tty, "✓", "Completions updated"))
 			}
 
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  Reinstalling man pages...")
+			_, _ = fmt.Fprintln(errOut, "  Reinstalling man pages...")
 			if err := runNewBinary(realExe, "man", "install"); err != nil {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ man page install failed: %v\n", err)
+				_, _ = fmt.Fprintf(errOut, "  ⚠ man page install failed: %v\n", err)
 			} else {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "  ✓ Man pages updated")
+				_, _ = fmt.Fprintf(errOut, "  %s\n", iconLine(tty, "✓", "Man pages updated"))
 			}
 
 			return nil

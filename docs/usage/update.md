@@ -52,23 +52,13 @@ By default, running `stamp update` performs metadata refresh, then a serialized 
 Proceed with updates? [Y/n]: y
 
 ▪ sudo password:
-▪ Checking for updates...
-  apt: curl 7.88.1 → 7.88.3
-  apt: git 2.43.0 → 2.43.2
-  dnf: htop 3.2.1 → 3.2.2
-  brew: lazygit 0.40.0 → 0.41.0
-  pipx: cannot preview updates (unsupported)
-  uv: cannot preview updates (unsupported)
-
-Proceed with updates? [Y/n]: y
-
 [apt] Reading package lists... Done
 [apt] Upgrading: 2 packages
 [dnf] Upgrading: 1 package
 [brew] Upgrading: 1 package
-✓ updated packages via apt
-✓ updated packages via dnf
-✓ updated packages via brew
+updated packages via apt
+updated packages via dnf
+updated packages via brew
 ```
 
 Managers that do not support a native "list upgrades" command (like `go`, `pipx`, `uv`) will print a short notice and continue safely.
@@ -159,6 +149,6 @@ If one manager fails, others continue. The command exits with a non-zero status:
 
 ```text
 ⚠ update failed for apt: exit status 100
-✓ updated packages via brew
+updated packages via brew
 Error: one or more managers failed to update
 ```

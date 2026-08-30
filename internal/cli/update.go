@@ -55,15 +55,22 @@ func refreshMetadata(ctx context.Context, adapters []manager.Adapter, w io.Write
 }
 
 func runCheck(ctx context.Context, adapters []manager.Adapter, pkg string, w io.Writer) []checkResult {
-	_, _ = fmt.Fprintf(w, "▪ Refreshing package metadata...\n")
+	tty := isOutputTerminal(w)
+	printProgress(w, tty, "▪", "Refreshing package metadata...")
 	refreshMetadata(ctx, adapters, w)
-	_, _ = fmt.Fprintf(w, "▪ Checking for updates...\n")
+	printProgress(w, tty, "▪", "Checking for updates...")
 	var results []checkResult
 	for _, a := range adapters {
 		updates, err := a.CheckUpdate(ctx, pkg)
 		results = append(results, checkResult{Name: a.Name(), Updates: updates, Err: err})
 	}
+	renderCheckResults(w, results)
+	return results
+}
 
+// renderCheckResults prints the per-manager check outcome and reports whether
+// any manager has updates or cannot preview them.
+func renderCheckResults(w io.Writer, results []checkResult) bool {
 	hasUpdates := false
 	for _, r := range results {
 		switch {
@@ -88,36 +95,46 @@ func runCheck(ctx context.Context, adapters []manager.Adapter, pkg string, w io.
 	if !hasUpdates {
 		_, _ = fmt.Fprintln(w, "  No updates available")
 	}
-	return results
+	return hasUpdates
+}
+
+func runUpdatesSerial(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkg string) bool {
+	tty := isOutputTerminal(w)
+	var hasErr bool
+	for _, a := range adapters {
+		printProgress(w, tty, "▪", fmt.Sprintf("updating via %s...", a.Name()))
+		if !runUpdate(ctx, w, a, pkg, "") {
+			hasErr = true
+		}
+	}
+	return hasErr
+}
+
+func runUpdatesParallel(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkg string) bool {
+	var hasErr bool
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for _, a := range adapters {
+		a := a
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if !runUpdate(ctx, w, a, pkg, "["+a.Name()+"] ") {
+				mu.Lock()
+				hasErr = true
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	return hasErr
 }
 
 func runUpdates(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkg string, serial bool) bool {
-	var hasErr bool
-	var mu sync.Mutex
 	if serial {
-		for _, a := range adapters {
-			_, _ = fmt.Fprintf(w, "▪ updating via %s...\n", a.Name())
-			if !runUpdate(ctx, w, a, pkg, "") {
-				hasErr = true
-			}
-		}
-	} else {
-		var wg sync.WaitGroup
-		for _, a := range adapters {
-			a := a
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				if !runUpdate(ctx, w, a, pkg, "["+a.Name()+"] ") {
-					mu.Lock()
-					hasErr = true
-					mu.Unlock()
-				}
-			}()
-		}
-		wg.Wait()
+		return runUpdatesSerial(ctx, w, adapters, pkg)
 	}
-	return hasErr
+	return runUpdatesParallel(ctx, w, adapters, pkg)
 }
 
 func newUpdateCmd() *cobra.Command {
@@ -159,6 +176,7 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 			errOut := cmd.ErrOrStderr()
+			tty := isOutputTerminal(errOut)
 			ctx := cmd.Context()
 
 			if checkOnly && app.yes {
@@ -196,7 +214,7 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 
 			// Pre-run: sudo re-auth (caches password for all sudo commands via sudo -S)
 			if needsSudo(adapters) && isTerminal(cmd.InOrStdin()) {
-				_, _ = fmt.Fprint(errOut, "▪ sudo password: ")
+				_, _ = fmt.Fprint(errOut, iconLine(tty, "▪", "sudo password:")+" ")
 				//nolint:gosec // uintptr -> int conversion is safe on all target platforms
 				pw, err := term.ReadPassword(int(os.Stdin.Fd()))
 				_, _ = fmt.Fprintln(errOut)
@@ -236,7 +254,7 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 				shouldRun := hasUpdates || hasUnsupported
 
 				if !shouldRun && !checkFailed {
-					_, _ = fmt.Fprintf(errOut, "  ✓ All up to date\n")
+					_, _ = fmt.Fprintf(errOut, "  %s\n", iconLine(tty, "✓", "All up to date"))
 					return nil
 				}
 

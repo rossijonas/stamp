@@ -17,6 +17,25 @@ var isOutputTerminal = func(w io.Writer) bool {
 	return ok && term.IsTerminal(int(f.Fd()))
 }
 
+// iconLine returns "icon text" on TTY or plain "text" on pipe/CI.
+// Single source of truth for glyph gating per ADR-020.
+func iconLine(tty bool, icon, text string) string {
+	if tty {
+		return icon + " " + text
+	}
+	return text
+}
+
+// iconProgress returns "icon text" on TTY or "" on pipe/CI. Progress
+// lines are suppressed entirely on pipes, matching statusLine. Use
+// iconLine for header/success/error lines that keep their text.
+func iconProgress(tty bool, icon, text string) string {
+	if tty {
+		return icon + " " + text
+	}
+	return ""
+}
+
 // statusLine renders the status/progress line for install, remove, and
 // reinstall operations. When tty is true the line carries the ▪/✓ glyphs;
 // when false it is plain ASCII, safe for pipes, logs, and CI.
@@ -47,6 +66,15 @@ func statusLine(tty, done bool, verb, target, mgr, note string) string {
 // across the install/remove/reinstall command builders into one call.
 func printStatus(w io.Writer, tty, done bool, verb, target, mgr, note string) {
 	if line := statusLine(tty, done, verb, target, mgr, note); line != "" {
+		_, _ = fmt.Fprintln(w, line)
+	}
+}
+
+// printProgress emits an iconProgress line to w when non-empty. Progress
+// lines are suppressed entirely on pipes, so this guards the empty string
+// the same way printStatus does.
+func printProgress(w io.Writer, tty bool, icon, text string) {
+	if line := iconProgress(tty, icon, text); line != "" {
 		_, _ = fmt.Fprintln(w, line)
 	}
 }

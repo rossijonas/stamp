@@ -173,6 +173,7 @@ func timerDir() (string, error) {
 }
 
 func installSystemdTimer(w io.Writer, bin, period string) error {
+	tty := isOutputTerminal(w)
 	dir, err := timerDir()
 	if err != nil {
 		return err
@@ -201,11 +202,12 @@ func installSystemdTimer(w io.Writer, bin, period string) error {
 		_, _ = fmt.Fprintf(w, "warning: timer installed but activation failed: %v\n", err)
 	}
 
-	_, _ = fmt.Fprintf(w, "✓ auto-reconcile enabled (period: %s)\n", period)
+	_, _ = fmt.Fprintf(w, "%s\n", iconLine(tty, "✓", fmt.Sprintf("auto-reconcile enabled (period: %s)", period)))
 	return nil
 }
 
 func installLaunchdPlist(w io.Writer, bin, period string) error {
+	tty := isOutputTerminal(w)
 	dir, err := timerDir()
 	if err != nil {
 		return err
@@ -225,11 +227,12 @@ func installLaunchdPlist(w io.Writer, bin, period string) error {
 		return fmt.Errorf("failed to load launchd agent: %w", err)
 	}
 
-	_, _ = fmt.Fprintf(w, "✓ auto-reconcile enabled (period: %s)\n", period)
+	_, _ = fmt.Fprintf(w, "%s\n", iconLine(tty, "✓", fmt.Sprintf("auto-reconcile enabled (period: %s)", period)))
 	return nil
 }
 
 func removeSystemdTimer(w io.Writer) error {
+	tty := isOutputTerminal(w)
 	dir, err := timerDir()
 	if err != nil {
 		return err
@@ -247,11 +250,12 @@ func removeSystemdTimer(w io.Writer) error {
 	_ = os.Remove(servicePath)
 	_ = systemctl("daemon-reload")
 
-	_, _ = fmt.Fprintln(w, "✓ auto-reconcile disabled")
+	_, _ = fmt.Fprintln(w, iconLine(tty, "✓", "auto-reconcile disabled"))
 	return nil
 }
 
 func removeLaunchdPlist(w io.Writer) error {
+	tty := isOutputTerminal(w)
 	dir, err := timerDir()
 	if err != nil {
 		return err
@@ -266,7 +270,7 @@ func removeLaunchdPlist(w io.Writer) error {
 	_ = launchctl("unload", plistPath)
 	_ = os.Remove(plistPath)
 
-	_, _ = fmt.Fprintln(w, "✓ auto-reconcile disabled")
+	_, _ = fmt.Fprintln(w, iconLine(tty, "✓", "auto-reconcile disabled"))
 	return nil
 }
 
