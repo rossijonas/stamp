@@ -79,9 +79,6 @@ Go tools require the full module path and `-m go`. If the module was auto-tracke
 
 ### Error handling
 
-If the package is not in the manifest and no `-m` is provided:
-
-```text
-✕ package htop is not tracked in the manifest
-  Use --manager / -m to specify a manager, or stamp reconcile to track it first.
-```
+When the package is not in the manifest and no `-m` is provided, the remove
+command falls back to the first available package manager. Use `-m` to target
+a specific manager explicitly.

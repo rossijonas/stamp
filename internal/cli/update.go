@@ -55,9 +55,14 @@ func refreshMetadata(ctx context.Context, adapters []manager.Adapter, w io.Write
 }
 
 func runCheck(ctx context.Context, adapters []manager.Adapter, pkg string, w io.Writer) []checkResult {
-	_, _ = fmt.Fprintf(w, "▪ Refreshing package metadata...\n")
+	tty := isOutputTerminal(w)
+	if line := iconProgress(tty, "▪", "Refreshing package metadata..."); line != "" {
+		_, _ = fmt.Fprintln(w, line)
+	}
 	refreshMetadata(ctx, adapters, w)
-	_, _ = fmt.Fprintf(w, "▪ Checking for updates...\n")
+	if line := iconProgress(tty, "▪", "Checking for updates..."); line != "" {
+		_, _ = fmt.Fprintln(w, line)
+	}
 	var results []checkResult
 	for _, a := range adapters {
 		updates, err := a.CheckUpdate(ctx, pkg)
@@ -92,11 +97,14 @@ func runCheck(ctx context.Context, adapters []manager.Adapter, pkg string, w io.
 }
 
 func runUpdates(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkg string, serial bool) bool {
+	tty := isOutputTerminal(w)
 	var hasErr bool
 	var mu sync.Mutex
 	if serial {
 		for _, a := range adapters {
-			_, _ = fmt.Fprintf(w, "▪ updating via %s...\n", a.Name())
+			if line := iconProgress(tty, "▪", fmt.Sprintf("updating via %s...", a.Name())); line != "" {
+				_, _ = fmt.Fprintf(w, "%s\n", line)
+			}
 			if !runUpdate(ctx, w, a, pkg, "") {
 				hasErr = true
 			}
@@ -159,6 +167,7 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
 			errOut := cmd.ErrOrStderr()
+			tty := isOutputTerminal(errOut)
 			ctx := cmd.Context()
 
 			if checkOnly && app.yes {
@@ -196,7 +205,7 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 
 			// Pre-run: sudo re-auth (caches password for all sudo commands via sudo -S)
 			if needsSudo(adapters) && isTerminal(cmd.InOrStdin()) {
-				_, _ = fmt.Fprint(errOut, "▪ sudo password: ")
+				_, _ = fmt.Fprint(errOut, iconLine(tty, "▪", "sudo password:")+" ")
 				//nolint:gosec // uintptr -> int conversion is safe on all target platforms
 				pw, err := term.ReadPassword(int(os.Stdin.Fd()))
 				_, _ = fmt.Fprintln(errOut)
@@ -236,7 +245,7 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 				shouldRun := hasUpdates || hasUnsupported
 
 				if !shouldRun && !checkFailed {
-					_, _ = fmt.Fprintf(errOut, "  ✓ All up to date\n")
+					_, _ = fmt.Fprintf(errOut, "  %s\n", iconLine(tty, "✓", "All up to date"))
 					return nil
 				}
 

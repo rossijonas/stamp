@@ -98,39 +98,36 @@ Runs `stamp doctor` to verify the setup:
 
 Step 1 of 4: Shell Completions
   Install shell completions? [Y/n]: y
-  ✓ completion installed to ~/.local/share/bash-completion/completions/stamp
+  completion installed to ~/.local/share/bash-completion/completions/stamp
 
 Step 2 of 4: Man Pages
   Install man page? [Y/n]: y
-  ✓ installed man page(s) to ~/.local/share/man
+  installed man page(s) to ~/.local/share/man
 
 Step 3 of 4: Initialize
   Create manifest and baseline snapshot? [Y/n]: y
-  ✓ manifest initialized and system baseline snapshot taken
+  manifest initialized and system baseline snapshot taken
 
 Step 4 of 4: System Diagnosis
-  ✓ 3 managers active
-  ✓ Manifest healthy
-  ✓ UNIX compliance verified
+  <full doctor output — see `stamp doctor`>
 ```
 
 ### Full output example (auto-accept)
 
-```text
-         █▄
-        ▄██▄      ▄
-   ▄██▀█ ██ ▄▀▀█▄ ███▄███▄ ████▄
-   ▀███▄ ██ ▄█▀██ ██ ██ ██ ██ ██
-  █▄▄██▀▄██▄▀█▄██▄██ ██ ▀█▄████▀
-                           ██
-                           ▀
+> Same as interactive but without `[Y/n]` prompts. Summary below; see
+> interactive example for full step-by-step detail.
 
+```text
 ▪ Stamp Setup Wizard (auto-accept)
 
-Step 1: Shell Completions...  ✓
-Step 2: Man Pages...          ✓
-Step 3: Initialize...         ✓
-Step 4: System Diagnosis...   ✓
+Step 1 of 4: Shell Completions
+  completion installed to ~/.local/share/bash-completion/completions/stamp
+Step 2 of 4: Man Pages
+  installed man page(s) to ~/.local/share/man
+Step 3 of 4: Initialize
+  manifest initialized and system baseline snapshot taken
+Step 4 of 4: System Diagnosis
+  <full doctor output — see `stamp doctor`>
 
 ▪ Setup complete!
 ```

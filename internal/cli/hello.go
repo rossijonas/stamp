@@ -34,12 +34,13 @@ Use -y to skip all prompts for scripting.`,
 			app := appFromCtx(cmd)
 			autoAccept := app.yes
 			errOut := cmd.ErrOrStderr()
+			tty := isOutputTerminal(errOut)
 			_, _ = fmt.Fprint(errOut, stampBanner)
 
 			if autoAccept {
-				_, _ = fmt.Fprintln(errOut, "▪ Stamp Setup Wizard (auto-accept)")
+				_, _ = fmt.Fprintln(errOut, iconLine(tty, "▪", "Stamp Setup Wizard (auto-accept)"))
 			} else {
-				_, _ = fmt.Fprintln(errOut, "▪ Stamp Setup Wizard")
+				_, _ = fmt.Fprintln(errOut, iconLine(tty, "▪", "Stamp Setup Wizard"))
 			}
 			_, _ = fmt.Fprintln(errOut)
 
@@ -90,7 +91,7 @@ Use -y to skip all prompts for scripting.`,
 			runSubcommand(cmd, "doctor")
 
 			_, _ = fmt.Fprintln(errOut)
-			_, _ = fmt.Fprintln(errOut, "▪ Setup complete!")
+			_, _ = fmt.Fprintln(errOut, iconLine(tty, "▪", "Setup complete!"))
 			return nil
 		},
 	}

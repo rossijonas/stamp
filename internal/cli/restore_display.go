@@ -8,7 +8,8 @@ import (
 )
 
 func renderRestoreDryRun(w io.Writer, repos []manifest.Repository, pkgs []manifest.Package) {
-	_, _ = fmt.Fprintln(w, "▪ Dry Run (Preview):")
+	tty := isOutputTerminal(w)
+	_, _ = fmt.Fprintln(w, iconLine(tty, "▪", "Dry Run (Preview):"))
 	if len(repos) > 0 {
 		_, _ = fmt.Fprintln(w, "Repositories:")
 		for _, r := range repos {

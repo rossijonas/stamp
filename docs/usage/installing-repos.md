@@ -10,8 +10,7 @@ stamp repo add ppa:git-core/ppa -m apt
 ```
 
 ```text
-▪ adding repo ppa:git-core/ppa via apt...
-✓ added ppa:git-core/ppa via apt
+added repo ppa:git-core/ppa via apt
 ```
 
 ### Add by URL
@@ -21,8 +20,7 @@ stamp repo add flathub https://dl.flathub.org/repo/flathub.flatpakrepo -m flatpa
 ```
 
 ```text
-▪ adding repo flathub via flatpak...
-✓ added flathub via flatpak
+added repo flathub via flatpak
 ```
 
 ### Add a `.repo` file URL (DNF)
@@ -34,8 +32,7 @@ stamp repo add brave https://brave-browser-rpm-release.s3.brave.com/brave-browse
 ```
 
 ```text
-▪ adding repo brave via dnf...
-✓ added brave via dnf
+added repo brave via dnf
 ```
 
 ### Add by URL without a name
@@ -47,8 +44,7 @@ stamp repo add https://yum.enpass.io/enpass-yum.repo -m dnf
 ```
 
 ```text
-▪ adding repo enpass-yum via dnf...
-✓ added enpass-yum via dnf
+added repo enpass-yum via dnf
 ```
 
 The `--manager` / `-m` flag is **required** for all repo operations.

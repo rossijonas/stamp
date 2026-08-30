@@ -533,6 +533,25 @@ func TestDownloadFile_ReadError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSelfUpdate_TTYGlyphs(t *testing.T) {
+	forceOutputTTY(t)
+	tarballData := tarGzWithBinary(t, "stamp", []byte("new-binary-content"))
+	tarballName := assetName("v1.0.0")
+	setupSelfUpdateServer(t, "v1.0.0", tarballName, tarballData)
+
+	oldVersion := Version
+	Version = "1.0.0"
+	defer func() { Version = oldVersion }()
+
+	root := NewRootCmd(WithAdapters(nil), WithConfigPath(""), WithManifestPath(""))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"self-update", "--check"})
+	require.NoError(t, root.Execute())
+	assert.Contains(t, buf.String(), "▪ Self-Update")
+}
+
 func TestSelfUpdate_PermissionDenied(t *testing.T) {
 	tarballData := tarGzWithBinary(t, "stamp", []byte("content"))
 	tarballName := assetName("v2.0.0")

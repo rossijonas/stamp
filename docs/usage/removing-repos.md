@@ -8,8 +8,7 @@ stamp repo remove ppa:git-core/ppa -m apt
 ```
 
 ```text
-▪ removing repo ppa:git-core/ppa via apt...
-✓ removed ppa:git-core/ppa via apt
+removed repo ppa:git-core/ppa via apt
 ```
 
 The `--manager` / `-m` flag is optional: when the repository is tracked in the

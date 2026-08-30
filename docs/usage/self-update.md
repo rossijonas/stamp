@@ -10,9 +10,13 @@ stamp self-update
 ```
 
 ```text
-▪ Checking for updates...
-▪ Downloading stamp v0.31.1...
-✓ Updated to v0.31.1
+▪ Self-Update
+  Downloading stamp-v0.31.1-linux-amd64.tar.gz...
+  ✓ Updated to v0.31.1
+  Reinstalling shell completions...
+  ✓ Completions updated
+  Reinstalling man pages...
+  ✓ Man pages updated
 ```
 
 > Version numbers shown for illustration; actual values reflect the current release.
@@ -24,15 +28,17 @@ stamp self-update --check
 ```
 
 ```text
-▪ Current version: v0.31.1
-▪ Latest version:  v0.32.0
-  A new version is available. Run stamp self-update to upgrade.
+  Current version: v0.31.1
+  Latest version:  v0.32.0
+  A new version is available.
 ```
 
 When up to date:
 
 ```text
-▪ stamp is already up to date (v0.31.1)
+  Current version: v0.31.1
+  Latest version:  v0.31.1
+  Already up to date.
 ```
 
 ### Alias

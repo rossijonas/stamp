@@ -49,7 +49,7 @@ manager = "brew"
 	err := root.Execute()
 	require.NoError(t, err)
 	output := buf.String()
-	assert.Contains(t, output, "▪ Dry Run (Preview):")
+	assert.Contains(t, output, "Dry Run (Preview):")
 	assert.Contains(t, output, "Repositories:")
 	assert.Contains(t, output, "  - my-tap (brew) https://github.com/my-tap")
 	assert.Contains(t, output, "Packages:")
@@ -393,4 +393,30 @@ func TestRestore_CorruptedManifest(t *testing.T) {
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse manifest")
+}
+
+func TestRestoreDryRun_TTYGlyphs(t *testing.T) {
+	forceOutputTTY(t)
+	manifestContent := `
+[[repositories]]
+name = "my-tap"
+manager = "brew"
+url = "https://github.com/my-tap"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+`
+	tmpDir := t.TempDir()
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	require.NoError(t, os.WriteFile(mPath, []byte(manifestContent), 0600))
+
+	root := NewRootCmd(WithAdapters([]manager.Adapter{&manager.Mock{ManagerName: "brew"}}), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "--dry-run"})
+
+	require.NoError(t, root.Execute())
+	assert.Contains(t, buf.String(), "▪ Dry Run (Preview):")
 }

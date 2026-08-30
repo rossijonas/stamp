@@ -11,11 +11,11 @@ stamp reconcile                 # detects ripgrep and tracks it
 ```
 
 ```text
-▪ Drift detected:
-    Added: ripgrep (dnf)
-    Added: codehaus-casa (copr)
-▪ Tracking 1 new package and 1 new repository...
-✓ reconciled — manifest updated
+Discovered 1 new package(s):
+  - ripgrep (dnf)
+Discovered 1 new repository(ies):
+  - codehaus-casa (copr)
+Tracked 1 package(s), 1 repository(ies)
 ```
 
 ### Dry run
@@ -43,10 +43,11 @@ the new snapshot (snapshots reflect reality; the manifest holds intent). Use
 reinstall.
 
 ```text
-▪ Drift detected (dry run — no changes saved):
-    Added: ripgrep (dnf)
-    Added: codeaus-casa (copr)
-  Run stamp reconcile to track these.
+Discovered 1 new package(s):
+  - ripgrep (dnf)
+Discovered 1 new repository(ies):
+  - codehaus-casa (copr)
+Use `stamp reconcile` without --dry-run to track
 ```
 
 ### No drift
@@ -56,7 +57,7 @@ stamp reconcile
 ```
 
 ```text
-▪ No drift detected
+No drift detected
 ```
 
 ### Scoped to a manager

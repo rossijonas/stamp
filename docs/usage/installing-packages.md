@@ -187,6 +187,6 @@ Press Ctrl+C at any point (including the sudo password prompt) to abort cleanly:
 If a package is not found, Stamp prints a clear error:
 
 ```text
-✕ failed to install nonexistent-pkg: exit status 100
+failed to install nonexistent-pkg: exit status 100
 Error: install failed
 ```
