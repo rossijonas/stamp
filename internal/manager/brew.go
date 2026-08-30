@@ -257,6 +257,12 @@ func (m *Brew) PreviewInstall(ctx context.Context, pkg string) (Preview, error) 
 }
 
 // PreviewRemove previews removing pkg.
+// On brew versions where --dry-run is unsupported (e.g. Fedora's current
+// brew), the command exits non-zero and prints its usage text. The previous
+// guard ("only error when output is empty") let help text through, causing
+// Noop false-positives when the help text happened to match marker strings.
+// Any non-zero exit is now treated as a preview failure, which makes the
+// caller fall through to the real remove — the safest path.
 func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
@@ -268,7 +274,7 @@ func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 	}
 	args = append(args, pkg)
 	out, err := m.exec(ctx, "brew", args...)
-	if err != nil && len(bytes.TrimSpace(out)) == 0 {
+	if err != nil {
 		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
 	}
 	s := string(out)
