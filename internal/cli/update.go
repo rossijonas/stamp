@@ -56,19 +56,21 @@ func refreshMetadata(ctx context.Context, adapters []manager.Adapter, w io.Write
 
 func runCheck(ctx context.Context, adapters []manager.Adapter, pkg string, w io.Writer) []checkResult {
 	tty := isOutputTerminal(w)
-	if line := iconProgress(tty, "▪", "Refreshing package metadata..."); line != "" {
-		_, _ = fmt.Fprintln(w, line)
-	}
+	printProgress(w, tty, "▪", "Refreshing package metadata...")
 	refreshMetadata(ctx, adapters, w)
-	if line := iconProgress(tty, "▪", "Checking for updates..."); line != "" {
-		_, _ = fmt.Fprintln(w, line)
-	}
+	printProgress(w, tty, "▪", "Checking for updates...")
 	var results []checkResult
 	for _, a := range adapters {
 		updates, err := a.CheckUpdate(ctx, pkg)
 		results = append(results, checkResult{Name: a.Name(), Updates: updates, Err: err})
 	}
+	renderCheckResults(w, results)
+	return results
+}
 
+// renderCheckResults prints the per-manager check outcome and reports whether
+// any manager has updates or cannot preview them.
+func renderCheckResults(w io.Writer, results []checkResult) bool {
 	hasUpdates := false
 	for _, r := range results {
 		switch {
@@ -93,39 +95,46 @@ func runCheck(ctx context.Context, adapters []manager.Adapter, pkg string, w io.
 	if !hasUpdates {
 		_, _ = fmt.Fprintln(w, "  No updates available")
 	}
-	return results
+	return hasUpdates
+}
+
+func runUpdatesSerial(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkg string) bool {
+	tty := isOutputTerminal(w)
+	var hasErr bool
+	for _, a := range adapters {
+		printProgress(w, tty, "▪", fmt.Sprintf("updating via %s...", a.Name()))
+		if !runUpdate(ctx, w, a, pkg, "") {
+			hasErr = true
+		}
+	}
+	return hasErr
+}
+
+func runUpdatesParallel(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkg string) bool {
+	var hasErr bool
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for _, a := range adapters {
+		a := a
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if !runUpdate(ctx, w, a, pkg, "["+a.Name()+"] ") {
+				mu.Lock()
+				hasErr = true
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	return hasErr
 }
 
 func runUpdates(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkg string, serial bool) bool {
-	tty := isOutputTerminal(w)
-	var hasErr bool
-	var mu sync.Mutex
 	if serial {
-		for _, a := range adapters {
-			if line := iconProgress(tty, "▪", fmt.Sprintf("updating via %s...", a.Name())); line != "" {
-				_, _ = fmt.Fprintf(w, "%s\n", line)
-			}
-			if !runUpdate(ctx, w, a, pkg, "") {
-				hasErr = true
-			}
-		}
-	} else {
-		var wg sync.WaitGroup
-		for _, a := range adapters {
-			a := a
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				if !runUpdate(ctx, w, a, pkg, "["+a.Name()+"] ") {
-					mu.Lock()
-					hasErr = true
-					mu.Unlock()
-				}
-			}()
-		}
-		wg.Wait()
+		return runUpdatesSerial(ctx, w, adapters, pkg)
 	}
-	return hasErr
+	return runUpdatesParallel(ctx, w, adapters, pkg)
 }
 
 func newUpdateCmd() *cobra.Command {

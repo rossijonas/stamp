@@ -69,3 +69,12 @@ func printStatus(w io.Writer, tty, done bool, verb, target, mgr, note string) {
 		_, _ = fmt.Fprintln(w, line)
 	}
 }
+
+// printProgress emits an iconProgress line to w when non-empty. Progress
+// lines are suppressed entirely on pipes, so this guards the empty string
+// the same way printStatus does.
+func printProgress(w io.Writer, tty bool, icon, text string) {
+	if line := iconProgress(tty, icon, text); line != "" {
+		_, _ = fmt.Fprintln(w, line)
+	}
+}

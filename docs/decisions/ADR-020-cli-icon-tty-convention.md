@@ -17,7 +17,7 @@ are decoration, not data. Two problems existed before this decision:
    icons behind `isOutputTerminal` (via `statusLine`/`printStatus`), so piped
    output is plain ASCII. Every other command (`doctor`, `update`, `selfupdate`,
    `hello`, `man`, `restore`, `autoreconcile`) emits glyphs unconditionally —
-   polluting CI logs,管道 output, and日志 files with non-ASCII characters.
+   polluting CI logs, pipe output, and log files with non-ASCII characters.
 
 2. **No written convention.** ADR-007 (NO_COLOR) covers ANSI escape sequences
    only. Unicode glyphs are outside `NO_COLOR` scope, but the project lacked a
