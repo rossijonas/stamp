@@ -17,6 +17,9 @@ var aptSourcesFile = "/etc/apt/sources.list"
 // lookPath is overridable in tests to simulate missing add-apt-repository.
 var lookPath = osexec.LookPath
 
+// addAptRepoCmd is the PPA management command for Debian/Ubuntu.
+const addAptRepoCmd = "add-apt-repository"
+
 // ListRepos returns a list of third-party repositories by parsing
 // /etc/apt/sources.list and files in /etc/apt/sources.list.d/.
 func (m *APT) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
@@ -105,10 +108,10 @@ func (m *APT) AddRepo(ctx context.Context, name, url string) error {
 		return err
 	}
 	if url == "" {
-		if _, err := lookPath("add-apt-repository"); err != nil {
+		if _, err := lookPath(addAptRepoCmd); err != nil {
 			return fmt.Errorf("add-apt-repository not found: install 'software-properties-common' to use PPAs")
 		}
-		args := sudoCmd("add-apt-repository", "-y", name)
+		args := sudoCmd(addAptRepoCmd, "-y", name)
 		_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 		if err != nil {
 			return fmt.Errorf("failed to add repository %s: %w", name, err)
@@ -154,10 +157,10 @@ func (m *APT) RemoveRepo(ctx context.Context, name string) error {
 		return nil
 	}
 
-	if _, err := lookPath("add-apt-repository"); err != nil {
+	if _, err := lookPath(addAptRepoCmd); err != nil {
 		return fmt.Errorf("add-apt-repository not found: install 'software-properties-common' to remove PPAs")
 	}
-	args := sudoCmd("add-apt-repository", "-y", "--remove", name)
+	args := sudoCmd(addAptRepoCmd, "-y", "--remove", name)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to remove repository %s: %w", name, err)

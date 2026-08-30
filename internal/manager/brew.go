@@ -15,6 +15,11 @@ import (
 
 type caskKey struct{}
 
+const (
+	brewFlagCask   = "--cask"
+	brewFlagDryRun = "--dry-run"
+)
+
 // WithCask returns a context that signals cask operations for brew.
 func WithCask(ctx context.Context) context.Context {
 	return context.WithValue(ctx, caskKey{}, true)
@@ -80,7 +85,7 @@ func (m *Brew) ListInstalled(ctx context.Context) ([]string, error) {
 	formulas := parseLines(out)
 
 	// Also list installed casks and merge
-	caskOut, err := m.exec(ctx, "brew", "list", "--cask")
+	caskOut, err := m.exec(ctx, "brew", "list", brewFlagCask)
 	if err != nil {
 		// brew list --cask fails when no casks are installed — ignore
 		return formulas, nil
@@ -100,7 +105,7 @@ func (m *Brew) IsCask(ctx context.Context, pkg string) (bool, error) {
 		return false, err
 	}
 	// brew info --cask succeeds only for casks
-	_, err := m.exec(ctx, "brew", "info", "--cask", pkg)
+	_, err := m.exec(ctx, "brew", "info", brewFlagCask, pkg)
 	if err != nil {
 		if strings.Contains(err.Error(), "No available Cask") {
 			return false, nil
@@ -121,7 +126,7 @@ func (m *Brew) Install(ctx context.Context, pkg string) error {
 	}
 	args := []string{"install"}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkg)
 	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
@@ -142,7 +147,7 @@ func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
 	}
 	args := []string{"reinstall"}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkg)
 	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
@@ -163,7 +168,7 @@ func (m *Brew) Remove(ctx context.Context, pkg string) error {
 	}
 	args := []string{"uninstall"}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkg)
 	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
@@ -185,7 +190,7 @@ func (m *Brew) InstallMany(ctx context.Context, pkgs ...string) error {
 	}
 	args := []string{"install"}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkgs...)
 	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
@@ -205,7 +210,7 @@ func (m *Brew) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	}
 	args := []string{"reinstall"}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkgs...)
 	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
@@ -225,7 +230,7 @@ func (m *Brew) RemoveMany(ctx context.Context, pkgs ...string) error {
 	}
 	args := []string{"uninstall"}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkgs...)
 	_, err := m.exec(brewExecCtx(ctx), "brew", args...)
@@ -243,9 +248,9 @@ func (m *Brew) PreviewInstall(ctx context.Context, pkg string) (Preview, error) 
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	args := []string{"install", "--dry-run"}
+	args := []string{"install", brewFlagDryRun}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkg)
 	out, err := m.exec(ctx, "brew", args...)
@@ -268,9 +273,9 @@ func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	args := []string{"uninstall", "--dry-run"}
+	args := []string{"uninstall", brewFlagDryRun}
 	if isCask(ctx) {
-		args = append(args, "--cask")
+		args = append(args, brewFlagCask)
 	}
 	args = append(args, pkg)
 	out, err := m.exec(ctx, "brew", args...)
@@ -429,7 +434,7 @@ func (m *Brew) Update(ctx context.Context, pkg string) error {
 		}
 		args := []string{"upgrade", pkg}
 		if isCask(ctx) {
-			args = []string{"upgrade", "--cask", pkg}
+			args = []string{"upgrade", brewFlagCask, pkg}
 		}
 		_, err := m.exec(brewExecCtx(ctx), "brew", args...)
 		if err != nil {
@@ -446,7 +451,7 @@ func (m *Brew) Update(ctx context.Context, pkg string) error {
 		return fmt.Errorf("failed to upgrade packages: %w", err)
 	}
 	// Cask upgrade is best-effort — may fail on systems with no casks installed
-	_, _ = m.exec(brewExecCtx(ctx), "brew", "upgrade", "--cask")
+	_, _ = m.exec(brewExecCtx(ctx), "brew", "upgrade", brewFlagCask)
 	return nil
 }
 
@@ -547,7 +552,7 @@ func (m *Brew) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	}
 	args := []string{"cleanup"}
 	if dryRun {
-		args = append(args, "--dry-run")
+		args = append(args, brewFlagDryRun)
 	}
 	out, err := m.exec(ctx, "brew", args...)
 	if err != nil {
