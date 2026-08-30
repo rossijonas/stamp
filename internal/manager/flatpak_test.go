@@ -480,6 +480,21 @@ func TestFlatpak_ListInstalledBothFail(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestFlatpak_ListInstalledOneScopeFails(t *testing.T) {
+	t.Parallel()
+	manager := NewFlatpak()
+	manager.exec = func(_ context.Context, cmd string, args ...string) ([]byte, error) {
+		if cmd == "flatpak" && slices.Contains(args, "--user") {
+			return []byte(""), nil
+		}
+		return nil, assert.AnError
+	}
+
+	pkgs, err := manager.ListInstalled(WithYes(context.Background()))
+	require.NoError(t, err)
+	assert.Empty(t, pkgs)
+}
+
 func TestFlatpak_PreviewInstall(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
