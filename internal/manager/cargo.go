@@ -11,6 +11,8 @@ type Cargo struct {
 	exec Executor
 }
 
+const cargoFlagForce = "--force"
+
 // NewCargo creates a new Cargo adapter with the default system executor.
 func NewCargo() *Cargo {
 	return &Cargo{
@@ -88,7 +90,7 @@ func (m *Cargo) Reinstall(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	_, err := m.exec(WithStreamIO(ctx), "cargo", "install", "--force", pkg)
+	_, err := m.exec(WithStreamIO(ctx), "cargo", "install", cargoFlagForce, pkg)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
 	}
@@ -134,7 +136,7 @@ func (m *Cargo) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := validatePackages(pkgs); err != nil {
 		return err
 	}
-	args := append([]string{"install", "--force"}, pkgs...)
+	args := append([]string{"install", cargoFlagForce}, pkgs...)
 	_, err := m.exec(WithStreamIO(ctx), "cargo", args...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall packages: %w", err)
@@ -196,7 +198,7 @@ func (m *Cargo) Update(ctx context.Context, pkg string) error {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err
 		}
-		_, err := m.exec(WithStreamIO(ctx), "cargo", "install", "--force", pkg)
+		_, err := m.exec(WithStreamIO(ctx), "cargo", "install", cargoFlagForce, pkg)
 		if err != nil {
 			return fmt.Errorf("failed to update %s: %w", pkg, err)
 		}
@@ -209,7 +211,7 @@ func (m *Cargo) Update(ctx context.Context, pkg string) error {
 		return fmt.Errorf("failed to list installed packages for update: %w", err)
 	}
 	for _, name := range pkgs {
-		if _, err := m.exec(WithStreamIO(ctx), "cargo", "install", "--force", name); err != nil {
+		if _, err := m.exec(WithStreamIO(ctx), "cargo", "install", cargoFlagForce, name); err != nil {
 			return fmt.Errorf("failed to update %s: %w", name, err)
 		}
 	}

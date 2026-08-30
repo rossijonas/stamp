@@ -12,6 +12,8 @@ type Pacman struct {
 	exec Executor
 }
 
+const pacmanFlagNoConfirm = "--noconfirm"
+
 // NewPacman creates a new Pacman adapter.
 func NewPacman() *Pacman {
 	return &Pacman{
@@ -61,32 +63,32 @@ func (m *Pacman) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via pacman.
 func (m *Pacman) Install(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", "--noconfirm", pkg), "install", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg), "install", pkg)
 }
 
 // Reinstall reinstalls a package via pacman.
 func (m *Pacman) Reinstall(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", "--noconfirm", pkg), "reinstall", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg), "reinstall", pkg)
 }
 
 // Remove removes a package and its unneeded dependencies via pacman.
 func (m *Pacman) Remove(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("pacman", "-Rs", "--noconfirm", pkg), "remove", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("pacman", "-Rs", pacmanFlagNoConfirm, pkg), "remove", pkg)
 }
 
 // InstallMany installs multiple packages in one pacman invocation.
 func (m *Pacman) InstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", "--noconfirm"), pkgs), "install", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", pacmanFlagNoConfirm), pkgs), "install", pkgs)
 }
 
 // ReinstallMany reinstalls multiple packages in one pacman invocation.
 func (m *Pacman) ReinstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", "--noconfirm"), pkgs), "reinstall", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", pacmanFlagNoConfirm), pkgs), "reinstall", pkgs)
 }
 
 // RemoveMany removes multiple packages in one pacman invocation.
 func (m *Pacman) RemoveMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-Rs", "--noconfirm"), pkgs), "remove", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-Rs", pacmanFlagNoConfirm), pkgs), "remove", pkgs)
 }
 
 // PreviewInstall previews installing pkg.
@@ -164,9 +166,9 @@ func (m *Pacman) Update(ctx context.Context, pkg string) error {
 		if err := ValidatePackageName(pkg); err != nil {
 			return err
 		}
-		args = sudoCmd("pacman", "-S", "--noconfirm", pkg)
+		args = sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg)
 	} else {
-		args = sudoCmd("pacman", "-Syu", "--noconfirm")
+		args = sudoCmd("pacman", "-Syu", pacmanFlagNoConfirm)
 	}
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
@@ -217,7 +219,7 @@ func (m *Pacman) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) 
 	if dryRun {
 		return orphans, nil
 	}
-	args := sudoCmd("pacman", "-Rs", "--noconfirm")
+	args := sudoCmd("pacman", "-Rs", pacmanFlagNoConfirm)
 	args = append(args, orphans...)
 	return orphans, sudoExec(ctx, m.exec, args, "failed to remove orphans")
 }
@@ -232,7 +234,7 @@ func (m *Pacman) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return nil, nil
 	}
-	return nil, sudoExec(ctx, m.exec, sudoCmd("pacman", "-Sc", "--noconfirm"), "failed to clean pacman cache")
+	return nil, sudoExec(ctx, m.exec, sudoCmd("pacman", "-Sc", pacmanFlagNoConfirm), "failed to clean pacman cache")
 }
 
 // Refresh syncs pacman databases via pacman -Sy.

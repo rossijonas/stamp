@@ -15,6 +15,11 @@ func WithGroup(ctx context.Context) context.Context {
 	return context.WithValue(ctx, groupKey{}, true)
 }
 
+const (
+	dnfQFNameFmt    = "%{name}\n"
+	dnfFlagAssumeNo = "--assumeno"
+)
+
 func isGroup(ctx context.Context) bool {
 	v, _ := ctx.Value(groupKey{}).(bool)
 	return v
@@ -100,7 +105,7 @@ func (m *DNF) ReconcileReliability() ReconcileReliability {
 // from yum-utils, so it is invoked without a manager prefix.
 func (m *DNF) ListInstalled(ctx context.Context) ([]string, error) {
 	if m.cmd == "yum" {
-		out, err := m.exec(ctx, "repoquery", "--userinstalled", "--qf", "%{name}\n")
+		out, err := m.exec(ctx, "repoquery", "--userinstalled", "--qf", dnfQFNameFmt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list installed packages: %w", err)
 		}
@@ -112,7 +117,7 @@ func (m *DNF) ListInstalled(ctx context.Context) ([]string, error) {
 		return parseDNFHistoryUserInstalled(out), nil
 	}
 
-	out, err = m.exec(ctx, m.cmd, "repoquery", "--userinstalled", "--qf", "%{name}\n")
+	out, err = m.exec(ctx, m.cmd, "repoquery", "--userinstalled", "--qf", dnfQFNameFmt)
 	if err == nil {
 		return parseLines(out), nil
 	}
@@ -174,7 +179,7 @@ func (m *DNF) CheckInstalled(ctx context.Context, pkgs []string) ([]string, erro
 		return absent, nil
 	}
 
-	out, err := m.exec(ctx, bin, "repoquery", "--installed", "--qf", "%{name}\n")
+	out, err := m.exec(ctx, bin, "repoquery", "--installed", "--qf", dnfQFNameFmt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
@@ -190,7 +195,7 @@ func (m *DNF) CheckInstalled(ctx context.Context, pkgs []string) ([]string, erro
 		// Scope to installed packages: a bare --whatprovides also matches
 		// available repo providers, which would report genuinely-missing
 		// packages as present.
-		out, err := m.exec(ctx, bin, "repoquery", "--installed", "--whatprovides", p, "--qf", "%{name}\n")
+		out, err := m.exec(ctx, bin, "repoquery", "--installed", "--whatprovides", p, "--qf", dnfQFNameFmt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve provides for %s: %w", p, err)
 		}
@@ -289,7 +294,7 @@ func (m *DNF) RemoveMany(ctx context.Context, pkgs ...string) error {
 func (m *DNF) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 	ctx = WithCombinedOutput(ctx)
 	if isGroup(ctx) {
-		args := sudoCmd(m.cmd, "group", "install", "--assumeno", pkg)
+		args := sudoCmd(m.cmd, "group", "install", dnfFlagAssumeNo, pkg)
 		out, err := m.exec(ctx, args[0], args[1:]...)
 		if err != nil && len(bytes.TrimSpace(out)) == 0 {
 			return Preview{}, fmt.Errorf("failed to preview group install %s: %w", pkg, err)
@@ -300,7 +305,7 @@ func (m *DNF) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
 	}
-	args := sudoCmd(m.cmd, "install", "--assumeno", pkg)
+	args := sudoCmd(m.cmd, "install", dnfFlagAssumeNo, pkg)
 	out, err := m.exec(ctx, args[0], args[1:]...)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
@@ -314,7 +319,7 @@ func (m *DNF) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 	ctx = WithCombinedOutput(ctx)
 	if isGroup(ctx) {
 		// Groups may contain spaces, so skip package-name validation.
-		args := sudoCmd(m.cmd, "group", "remove", "--assumeno", pkg)
+		args := sudoCmd(m.cmd, "group", "remove", dnfFlagAssumeNo, pkg)
 		out, err := m.exec(ctx, args[0], args[1:]...)
 		if err != nil && len(bytes.TrimSpace(out)) == 0 {
 			return Preview{}, fmt.Errorf("failed to preview group remove %s: %w", pkg, err)
@@ -324,7 +329,7 @@ func (m *DNF) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 	if err := ValidatePackageName(pkg); err != nil {
 		return Preview{}, err
 	}
-	args := sudoCmd(m.cmd, "remove", "--assumeno", pkg)
+	args := sudoCmd(m.cmd, "remove", dnfFlagAssumeNo, pkg)
 	out, err := m.exec(ctx, args[0], args[1:]...)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
@@ -344,7 +349,7 @@ func (m *DNF) PreviewReinstall(ctx context.Context, pkg string) (Preview, error)
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	args := sudoCmd(m.cmd, "reinstall", "--assumeno", pkg)
+	args := sudoCmd(m.cmd, "reinstall", dnfFlagAssumeNo, pkg)
 	out, err := m.exec(ctx, args[0], args[1:]...)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
