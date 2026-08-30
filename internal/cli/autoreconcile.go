@@ -40,6 +40,9 @@ Persistent=true
 WantedBy=timers.target
 `
 
+// stampTimerFile is the systemd timer filename used by auto-reconcile.
+const stampTimerFile = "stamp-reconcile.timer"
+
 const launchdPlistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -190,7 +193,7 @@ func installSystemdTimer(w io.Writer, bin, period string) error {
 
 	cal := systemdCalendar(period)
 	timerContent := fmt.Sprintf(systemdTimerTemplate, cal)
-	timerPath := filepath.Join(dir, "stamp-reconcile.timer")
+	timerPath := filepath.Join(dir, stampTimerFile)
 	if err := atomicWriteFile(timerPath, []byte(timerContent), 0644); err != nil {
 		return err
 	}
@@ -198,7 +201,7 @@ func installSystemdTimer(w io.Writer, bin, period string) error {
 	if err := systemctl("daemon-reload"); err != nil {
 		return fmt.Errorf("systemd user session unavailable: %w\n  Timer files installed to %s — activate manually with: systemctl --user enable --now stamp-reconcile.timer", err, dir)
 	}
-	if err := systemctl("enable", "--now", "stamp-reconcile.timer"); err != nil {
+	if err := systemctl("enable", "--now", stampTimerFile); err != nil {
 		_, _ = fmt.Fprintf(w, "warning: timer installed but activation failed: %v\n", err)
 	}
 
@@ -237,7 +240,7 @@ func removeSystemdTimer(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	timerPath := filepath.Join(dir, "stamp-reconcile.timer")
+	timerPath := filepath.Join(dir, stampTimerFile)
 	servicePath := filepath.Join(dir, "stamp-reconcile.service")
 
 	if _, err := os.Stat(timerPath); os.IsNotExist(err) {
@@ -245,7 +248,7 @@ func removeSystemdTimer(w io.Writer) error {
 		return nil
 	}
 
-	_ = systemctl("disable", "--now", "stamp-reconcile.timer")
+	_ = systemctl("disable", "--now", stampTimerFile)
 	_ = os.Remove(timerPath)
 	_ = os.Remove(servicePath)
 	_ = systemctl("daemon-reload")

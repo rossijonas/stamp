@@ -13,6 +13,12 @@ type APT struct {
 	cmd  string
 }
 
+const (
+	aptFlagReinstall = "--reinstall"
+	aptFlagAssumeNo  = "--assume-no"
+	aptMarkCmd       = "apt-mark"
+)
+
 // NewAPT creates a new APT adapter for the given command ("apt" or "apt-get").
 func NewAPT(cmd string) *APT {
 	return &APT{
@@ -116,7 +122,7 @@ func (m *APT) Reinstall(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd(m.cmd, "install", "--reinstall", "-y", pkg)
+	args := sudoCmd(m.cmd, "install", aptFlagReinstall, "-y", pkg)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall %s: %w", pkg, err)
@@ -164,7 +170,7 @@ func (m *APT) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := validatePackages(pkgs); err != nil {
 		return err
 	}
-	args := batchArgs(sudoCmd(m.cmd, "install", "--reinstall", "-y"), pkgs)
+	args := batchArgs(sudoCmd(m.cmd, "install", aptFlagReinstall, "-y"), pkgs)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to reinstall packages: %w", err)
@@ -195,7 +201,7 @@ func (m *APT) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, m.cmd, "install", "--assume-no", pkg)
+	out, err := m.exec(ctx, m.cmd, "install", aptFlagAssumeNo, pkg)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview install %s: %w", pkg, err)
 	}
@@ -211,7 +217,7 @@ func (m *APT) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, m.cmd, "remove", "--assume-no", pkg)
+	out, err := m.exec(ctx, m.cmd, "remove", aptFlagAssumeNo, pkg)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview remove %s: %w", pkg, err)
 	}
@@ -225,7 +231,7 @@ func (m *APT) PreviewReinstall(ctx context.Context, pkg string) (Preview, error)
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
-	out, err := m.exec(ctx, m.cmd, "install", "--reinstall", "--assume-no", pkg)
+	out, err := m.exec(ctx, m.cmd, "install", aptFlagReinstall, aptFlagAssumeNo, pkg)
 	if err != nil && len(bytes.TrimSpace(out)) == 0 {
 		return Preview{}, fmt.Errorf("failed to preview reinstall %s: %w", pkg, err)
 	}
@@ -442,7 +448,7 @@ func (m *APT) Hold(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd("apt-mark", "hold", pkg)
+	args := sudoCmd(aptMarkCmd, "hold", pkg)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to hold %s: %w", pkg, err)
@@ -458,7 +464,7 @@ func (m *APT) Unhold(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	args := sudoCmd("apt-mark", "unhold", pkg)
+	args := sudoCmd(aptMarkCmd, "unhold", pkg)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to unhold %s: %w", pkg, err)
@@ -468,7 +474,7 @@ func (m *APT) Unhold(ctx context.Context, pkg string) error {
 
 // ListHeld returns held packages via apt-mark showhold.
 func (m *APT) ListHeld(ctx context.Context) ([]string, error) {
-	out, err := m.exec(ctx, "apt-mark", "showhold")
+	out, err := m.exec(ctx, aptMarkCmd, "showhold")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list held packages: %w", err)
 	}

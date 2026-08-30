@@ -10,6 +10,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// zshZfuncDir is the standard zsh function directory name.
+const zshZfuncDir = ".zfunc"
+
 func newCompletionCmd() *cobra.Command {
 	var stdout bool
 
@@ -89,7 +92,7 @@ func completionPath(shell string) string {
 	case "zsh":
 		// Check common user fpath directories in preference order
 		candidates := []string{
-			filepath.Join(home, ".zsh", ".zfunc"),
+			filepath.Join(home, ".zsh", zshZfuncDir),
 			filepath.Join(home, ".local", "share", "zsh", "site-functions"),
 		}
 		for _, dir := range candidates {
@@ -97,7 +100,7 @@ func completionPath(shell string) string {
 				return filepath.Join(dir, "_stamp")
 			}
 		}
-		return filepath.Join(home, ".zfunc", "_stamp")
+		return filepath.Join(home, zshZfuncDir, "_stamp")
 	case "fish":
 		return filepath.Join(home, ".config", "fish", "completions", "stamp.fish")
 	}
@@ -158,7 +161,7 @@ func installCompletion(cmd *cobra.Command, shell string) error {
 	destDir := filepath.Dir(path)
 	staleDirs := []string{
 		filepath.Join(home, ".zsh", "completions"),
-		filepath.Join(home, ".zfunc"),
+		filepath.Join(home, zshZfuncDir),
 		filepath.Join(home, ".oh-my-zsh", "custom", "completions"),
 	}
 	for _, dir := range staleDirs {
