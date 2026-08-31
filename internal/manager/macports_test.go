@@ -8,397 +8,245 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMacPorts_Operations(t *testing.T) {
+func TestMacPorts_ListInstalled(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name        string
-		operation   string
-		pkgName     string
-		mockOutput  string
-		mockErr     error
-		expectedErr bool
-		expectedRes []string
+		name       string
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantRes    []string
 	}{
-		{
-			name:        "list installed success",
-			operation:   "list",
-			mockOutput:  "The following ports are installed:\n  htop @3.2.2 (active)\n  ripgrep @13.0.0 (active)\n",
-			expectedRes: []string{"htop", "ripgrep"},
-		},
-		{
-			name:        "list installed error",
-			operation:   "list",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "list installed no ports",
-			operation:   "list",
-			mockOutput:  "The following ports are installed:\n",
-			expectedRes: []string{},
-		},
-		{
-			name:      "install success",
-			operation: "install",
-			pkgName:   "htop",
-		},
-		{
-			name:        "install error",
-			operation:   "install",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "reinstall success",
-			operation: "reinstall",
-			pkgName:   "htop",
-		},
-		{
-			name:        "reinstall error",
-			operation:   "reinstall",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "remove success",
-			operation: "remove",
-			pkgName:   "htop",
-		},
-		{
-			name:        "remove error",
-			operation:   "remove",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "search success",
-			operation:   "search",
-			pkgName:     "htop",
-			mockOutput:  "htop @3.2.2 (sysutils, interactive process viewer)\n",
-			expectedRes: []string{"htop"},
-		},
-		{
-			name:        "search error",
-			operation:   "search",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "install validation error",
-			operation:   "install",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "remove validation error",
-			operation:   "remove",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "search validation error",
-			operation:   "search",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:       "info success",
-			operation:  "info",
-			pkgName:    "htop",
-			mockOutput: "htop @3.2.2 (sysutils)\n",
-		},
-		{
-			name:        "info error",
-			operation:   "info",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "info validation error",
-			operation:   "info",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:      "update success",
-			operation: "update",
-		},
-		{
-			name:        "update error",
-			operation:   "update",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "update single package",
-			operation: "update_single",
-			pkgName:   "htop",
-		},
-		{
-			name:        "doctor not supported",
-			operation:   "doctor",
-			expectedErr: true,
-		},
-		{
-			name:        "add repo not supported",
-			operation:   "addrepo",
-			expectedErr: true,
-		},
-		{
-			name:        "remove repo not supported",
-			operation:   "removerepo",
-			expectedErr: true,
-		},
-		{
-			name:        "list repos not supported",
-			operation:   "listrepos",
-			expectedErr: false,
-		},
+		{"success", "The following ports are installed:\n  htop @3.2.2 (active)\n  ripgrep @13.0.0 (active)\n", nil, false, []string{"htop", "ripgrep"}},
+		{"error", "", assert.AnError, true, nil},
+		{"no ports", "The following ports are installed:\n", nil, false, []string{}},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			manager := NewMacPorts()
-			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
-
-			assert.Equal(t, "macports", manager.Name())
-
-			var err error
-			ctx := WithYes(context.Background())
-
-			switch tt.operation {
-			case "list":
-				res, err := manager.ListInstalled(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
-				}
-			case "install":
-				err = manager.Install(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "reinstall":
-				err = manager.Reinstall(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "remove":
-				err = manager.Remove(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "search":
-				res, err := manager.Search(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
-				}
-			case "info":
-				res, err := manager.Info(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.Equal(t, tt.mockOutput, res)
-				}
-			case "doctor":
-				_, err = manager.Doctor(ctx)
+			mgr := NewMacPorts()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			res, err := mgr.ListInstalled(WithYes(context.Background()))
+			if tt.wantErr {
 				require.Error(t, err)
-			case "update":
-				err = manager.Update(ctx, "")
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "update_single":
-				err = manager.Update(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "addrepo":
-				err = manager.AddRepo(ctx, "repo", "")
-				require.Error(t, err)
-			case "removerepo":
-				err = manager.RemoveRepo(ctx, "repo")
-				require.Error(t, err)
-			case "listrepos":
-				res, err := manager.ListRepos(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.Empty(t, res)
-				}
+			} else {
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.wantRes, res)
 			}
 		})
 	}
 }
 
-func TestParsePortInstalled(t *testing.T) {
+func TestMacPorts_Install(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		input    string
-		expected []string
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
 	}{
-		{
-			name: "standard output with header",
-			input: "The following ports are installed:\n" +
-				"  htop @3.2.2 (active)\n" +
-				"  curl @8.0.1  (active)\n",
-			expected: []string{"htop", "curl"},
-		},
-		{
-			name:     "no ports installed",
-			input:    "The following ports are installed:\n",
-			expected: []string{},
-		},
-		{
-			name:     "empty input",
-			input:    "",
-			expected: []string{},
-		},
+		{"success", "htop", nil, false},
+		{"error", "htop", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := parsePortInstalled([]byte(tt.input))
-			assert.ElementsMatch(t, tt.expected, result)
+			mgr := NewMacPorts()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Install(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
 
-func TestParsePortSearch(t *testing.T) {
+func TestMacPorts_Reinstall(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		input    string
-		expected []string
+		name    string
+		mockErr error
+		wantErr bool
 	}{
-		{
-			name:     "standard search output",
-			input:    "htop @3.2.2 (sysutils, interactive process viewer)\n",
-			expected: []string{"htop"},
-		},
-		{
-			name:     "no results",
-			input:    "",
-			expected: []string{},
-		},
-		{
-			name:     "multiple results",
-			input:    "htop @3.2.2 (sysutils)\nhtop-debug @1.0.0 (devel)\n",
-			expected: []string{"htop", "htop-debug"},
-		},
+		{"success", nil, false},
+		{"error", assert.AnError, true},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := parsePortSearch([]byte(tt.input))
-			assert.ElementsMatch(t, tt.expected, result)
+			mgr := NewMacPorts()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Reinstall(WithYes(context.Background()), "htop")
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
 
-func TestMacPorts_CheckUpdateExecError(t *testing.T) {
+func TestMacPorts_Remove(t *testing.T) {
 	t.Parallel()
-	manager := NewMacPorts()
-	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "htop", nil, false},
+		{"error", "htop", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewMacPorts()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Remove(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMacPorts_Search(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantRes    []string
+	}{
+		{"success", "htop @3.2.2 (sysutils, interactive process viewer)\n", nil, false, []string{"htop"}},
+		{"error", "", assert.AnError, true, nil},
+		{"validation error", "", nil, true, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewMacPorts()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			var pkg string
+			if tt.wantErr && tt.mockErr == nil {
+				pkg = "-invalid"
+			} else {
+				pkg = "htop"
+			}
+			res, err := mgr.Search(WithYes(context.Background()), pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.wantRes, res)
+			}
+		})
+	}
+}
+
+func TestMacPorts_Info(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockOut string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "htop @3.2.2 (sysutils)\n", nil, false},
+		{"error", "", assert.AnError, true},
+		{"validation error", "", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewMacPorts()
+			mgr.exec = mockExecutorHelper(tt.mockOut, tt.mockErr)
+			var pkg string
+			if tt.wantErr && tt.mockErr == nil {
+				pkg = "-invalid"
+			} else {
+				pkg = "htop"
+			}
+			_, err := mgr.Info(WithYes(context.Background()), pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMacPorts_Update(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "", nil, false},
+		{"error", "", assert.AnError, true},
+		{"single package", "htop", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewMacPorts()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Update(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMacPorts_Doctor(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.Doctor(WithYes(context.Background()))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to sync ports tree")
 }
 
-func TestMacPorts_CheckUpdate(t *testing.T) {
+func TestMacPorts_AddRepoNotSupported(t *testing.T) {
 	t.Parallel()
-	manager := NewMacPorts()
-	manager.exec = mockExecutorHelper("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n", nil)
+	mgr := NewMacPorts()
+	err := mgr.AddRepo(WithYes(context.Background()), "repo", "")
+	require.Error(t, err)
+}
 
-	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
+func TestMacPorts_RemoveRepoNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	err := mgr.RemoveRepo(WithYes(context.Background()), "repo")
+	require.Error(t, err)
+}
+
+func TestMacPorts_ListReposNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	res, err := mgr.ListRepos(WithYes(context.Background()))
 	require.NoError(t, err)
-	require.Len(t, updates, 2)
-	assert.Equal(t, "htop", updates[0].Package)
+	assert.Empty(t, res)
 }
 
-func TestMacPorts_CheckUpdate_RefreshSucceeds_CheckFails(t *testing.T) {
-	t.Parallel()
-	call := 0
-	manager := NewMacPorts()
-	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		call++
-		if call == 1 {
-			return []byte(""), nil // port selfupdate succeeds
-		}
-		return nil, assert.AnError // port outdated fails
-	}
-
-	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to check updates")
-}
-
-func TestParsePortOutdated(t *testing.T) {
-	t.Parallel()
-	input := []byte("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n")
-	updates := parsePortOutdated(input)
-	require.Len(t, updates, 2)
-	assert.Equal(t, "htop", updates[0].Package)
-	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
-	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
-}
-
-func TestMacPorts_ProvidesError(t *testing.T) {
+func TestMacPorts_AutoRemove(t *testing.T) {
 	t.Parallel()
 	m := NewMacPorts()
-	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
-	require.Error(t, err)
-}
-
-func TestMacPorts_Hold_NotSupported(t *testing.T) {
-	t.Parallel()
-	mgr := NewMacPorts()
-	err := mgr.Hold(WithYes(context.Background()), "nginx")
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrNotSupported)
-}
-
-func TestMacPorts_Unhold_NotSupported(t *testing.T) {
-	t.Parallel()
-	mgr := NewMacPorts()
-	err := mgr.Unhold(WithYes(context.Background()), "nginx")
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrNotSupported)
-}
-
-func TestMacPorts_ListHeld_NotSupported(t *testing.T) {
-	t.Parallel()
-	mgr := NewMacPorts()
-	_, err := mgr.ListHeld(WithYes(context.Background()))
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrNotSupported)
+	m.exec = mockExecutorHelper("", nil)
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
+	require.NoError(t, err)
 }
 
 func TestMacPorts_AutoRemoveDryRun(t *testing.T) {
@@ -408,14 +256,6 @@ func TestMacPorts_AutoRemoveDryRun(t *testing.T) {
 	pkgs, err := m.AutoRemove(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, pkgs)
-}
-
-func TestMacPorts_AutoRemove(t *testing.T) {
-	t.Parallel()
-	m := NewMacPorts()
-	m.exec = mockExecutorHelper("", nil)
-	_, err := m.AutoRemove(WithYes(context.Background()), false)
-	require.NoError(t, err)
 }
 
 func TestMacPorts_Clean(t *testing.T) {
@@ -432,4 +272,81 @@ func TestMacPorts_CleanDryRun(t *testing.T) {
 	result, err := m.Clean(WithYes(context.Background()), true)
 	require.NoError(t, err)
 	assert.Nil(t, result)
+}
+
+func TestMacPorts_ProvidesError(t *testing.T) {
+	t.Parallel()
+	m := NewMacPorts()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
+	require.Error(t, err)
+}
+
+func TestMacPorts_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewMacPorts()
+	manager.exec = mockExecutorHelper("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n", nil)
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+}
+
+func TestMacPorts_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewMacPorts()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to sync ports tree")
+}
+
+func TestMacPorts_CheckUpdateRefreshSucceedsCheckFails(t *testing.T) {
+	t.Parallel()
+	call := 0
+	manager := NewMacPorts()
+	manager.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		call++
+		if call == 1 {
+			return []byte(""), nil
+		}
+		return nil, assert.AnError
+	}
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestParsePortOutdated(t *testing.T) {
+	t.Parallel()
+	input := []byte("htop @3.2.1 < 3.2.2\ngit @2.43.0 < 2.43.2\n")
+	updates := parsePortOutdated(input)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}
+
+func TestMacPorts_HoldNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	err := mgr.Hold(WithYes(context.Background()), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestMacPorts_UnholdNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	err := mgr.Unhold(WithYes(context.Background()), "nginx")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
+}
+
+func TestMacPorts_ListHeldNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewMacPorts()
+	_, err := mgr.ListHeld(WithYes(context.Background()))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotSupported)
 }

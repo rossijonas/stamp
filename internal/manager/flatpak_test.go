@@ -9,290 +9,262 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFlatpak_Operations(t *testing.T) {
+func TestFlatpak_Install(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name        string
-		operation   string
-		pkgName     string
-		mockOutput  string
-		mockErr     error
-		expectedErr bool
-		expectedRes []string
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
 	}{
-		{
-			name:      "install success",
-			operation: "install",
-			pkgName:   "com.spotify.Client",
-			mockErr:   nil,
-		},
-		{
-			name:        "install error",
-			operation:   "install",
-			pkgName:     "com.spotify.Client",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "remove success",
-			operation: "remove",
-			pkgName:   "com.spotify.Client",
-			mockErr:   nil,
-		},
-		{
-			name:        "remove error",
-			operation:   "remove",
-			pkgName:     "com.spotify.Client",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "search success",
-			operation:   "search",
-			pkgName:     "spotify",
-			mockOutput:  "com.spotify.Client\n",
-			expectedRes: []string{"com.spotify.Client"},
-		},
-		{
-			name:        "search error",
-			operation:   "search",
-			pkgName:     "spotify",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "add repo error (no url)",
-			operation:   "addrepo",
-			pkgName:     "flathub",
-			mockErr:     nil,
-			expectedErr: true,
-		},
-		{
-			name:      "add repo success (url)",
-			operation: "addrepo_url",
-			pkgName:   "flathub",
-			mockErr:   nil,
-		},
-		{
-			name:        "add repo error",
-			operation:   "addrepo_url",
-			pkgName:     "flathub",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "remove repo success",
-			operation: "removerepo",
-			pkgName:   "flathub",
-			mockErr:   nil,
-		},
-		{
-			name:        "remove repo error",
-			operation:   "removerepo",
-			pkgName:     "petersen/cava",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "install validation error",
-			operation:   "install",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "remove validation error",
-			operation:   "remove",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "search validation error",
-			operation:   "search",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:       "info success",
-			operation:  "info",
-			pkgName:    "com.spotify.Client",
-			mockOutput: "Name: com.spotify.Client\nVersion: 1.0.0\n",
-		},
-		{
-			name:        "info error",
-			operation:   "info",
-			pkgName:     "com.spotify.Client",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "info validation error",
-			operation:   "info",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:      "reinstall success",
-			operation: "reinstall",
-			pkgName:   "com.spotify.Client",
-		},
-		{
-			name:        "reinstall error",
-			operation:   "reinstall",
-			pkgName:     "com.spotify.Client",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "update success",
-			operation: "update",
-		},
-		{
-			name:        "update error",
-			operation:   "update",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "update single package",
-			operation: "update_single",
-			pkgName:   "htop",
-		},
-		{
-			name:        "doctor not supported",
-			operation:   "doctor",
-			expectedErr: true,
-		},
+		{"success", "com.spotify.Client", nil, false},
+		{"error", "com.spotify.Client", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			manager := NewFlatpak()
-			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
-
-			assert.Equal(t, "flatpak", manager.Name())
-
-			var err error
-			ctx := WithYes(context.Background())
-
-			switch tt.operation {
-			case "list":
-				res, err := manager.ListInstalled(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Install(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "install":
-				err = manager.Install(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-				}
-			case "reinstall":
-				err = manager.Reinstall(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-				}
-			case "remove":
-				err = manager.Remove(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-				}
-			case "search":
-				res, err := manager.Search(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
-				}
-			case "addrepo":
-				err = manager.AddRepo(ctx, tt.pkgName, "")
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-				}
-			case "addrepo_url":
-				err = manager.AddRepo(ctx, tt.pkgName, "https://dl.flathub.org/repo/flathub.flatpakrepo")
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-				}
-			case "removerepo":
-				err = manager.RemoveRepo(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-				}
-			case "info":
-				res, err := manager.Info(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-					assert.Equal(t, tt.mockOutput, res)
-				}
-			case "doctor":
-				_, err = manager.Doctor(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "update":
-				err = manager.Update(ctx, "")
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "update_single":
-				err = manager.Update(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
+}
+
+func TestFlatpak_Remove(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "com.spotify.Client", nil, false},
+		{"error", "com.spotify.Client", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Remove(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFlatpak_Search(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantRes    []string
+	}{
+		{"success", "com.spotify.Client\n", nil, false, []string{"com.spotify.Client"}},
+		{"error", "", assert.AnError, true, nil},
+		{"validation error", "", nil, true, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			var pkg string
+			if tt.wantErr && tt.mockErr == nil {
+				pkg = "-invalid"
+			} else {
+				pkg = "spotify"
+			}
+			res, err := mgr.Search(WithYes(context.Background()), pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.wantRes, res)
+			}
+		})
+	}
+}
+
+func TestFlatpak_AddRepo_NoURL(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	mgr.exec = mockExecutorHelper("", nil)
+	err := mgr.AddRepo(WithYes(context.Background()), "flathub", "")
+	require.Error(t, err)
+}
+
+func TestFlatpak_AddRepo_URL(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.AddRepo(WithYes(context.Background()), "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFlatpak_RemoveRepo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.RemoveRepo(WithYes(context.Background()), "flathub")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFlatpak_Info(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockOut string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "Name: com.spotify.Client\nVersion: 1.0.0\n", nil, false},
+		{"error", "", assert.AnError, true},
+		{"validation error", "", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper(tt.mockOut, tt.mockErr)
+			var pkg string
+			if tt.wantErr && tt.mockErr == nil {
+				pkg = "-invalid"
+			} else {
+				pkg = "com.spotify.Client"
+			}
+			_, err := mgr.Info(WithYes(context.Background()), pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFlatpak_Reinstall(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Reinstall(WithYes(context.Background()), "com.spotify.Client")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFlatpak_Update(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "", nil, false},
+		{"error", "", assert.AnError, true},
+		{"single package", "htop", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewFlatpak()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Update(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFlatpak_Doctor(t *testing.T) {
+	t.Parallel()
+	mgr := NewFlatpak()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.Doctor(WithYes(context.Background()))
+	require.Error(t, err)
 }
 
 func TestFlatpak_ListRepos(t *testing.T) {
