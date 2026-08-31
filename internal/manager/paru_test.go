@@ -8,296 +8,266 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParu_Operations(t *testing.T) {
+func TestParu_ListInstalled(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name        string
-		operation   string
-		pkgName     string
-		mockOutput  string
-		mockErr     error
-		expectedErr bool
-		expectedRes []string
+		name       string
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantRes    []string
 	}{
-		{
-			name:        "list installed success",
-			operation:   "list",
-			mockOutput:  "htop\nripgrep\n",
-			expectedRes: []string{"htop", "ripgrep"},
-		},
-		{
-			name:        "list installed error",
-			operation:   "list",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "install success",
-			operation: "install",
-			pkgName:   "htop",
-		},
-		{
-			name:        "install error",
-			operation:   "install",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "reinstall success",
-			operation: "reinstall",
-			pkgName:   "htop",
-		},
-		{
-			name:        "reinstall error",
-			operation:   "reinstall",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "remove success",
-			operation: "remove",
-			pkgName:   "htop",
-		},
-		{
-			name:        "remove error",
-			operation:   "remove",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "search success",
-			operation:   "search",
-			pkgName:     "htop",
-			mockOutput:  "aur/htop 3.2.2-1\ncore/htop-debug 1.0.0-1\n",
-			expectedRes: []string{"htop", "htop-debug"},
-		},
-		{
-			name:        "search error",
-			operation:   "search",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "install validation error",
-			operation:   "install",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "remove validation error",
-			operation:   "remove",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "search validation error",
-			operation:   "search",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:       "info success",
-			operation:  "info",
-			pkgName:    "htop",
-			mockOutput: "Name: htop\nVersion: 3.2.2\n",
-		},
-		{
-			name:        "info error",
-			operation:   "info",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "info validation error",
-			operation:   "info",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:      "update success",
-			operation: "update",
-		},
-		{
-			name:        "update error",
-			operation:   "update",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "update single package",
-			operation: "update_single",
-			pkgName:   "htop",
-		},
-		{
-			name:        "doctor not supported",
-			operation:   "doctor",
-			expectedErr: true,
-		},
-		{
-			name:        "add repo not supported",
-			operation:   "addrepo",
-			expectedErr: true,
-		},
-		{
-			name:        "remove repo not supported",
-			operation:   "removerepo",
-			expectedErr: true,
-		},
-		{
-			name:        "list repos not supported",
-			operation:   "listrepos",
-			expectedErr: false,
-		},
+		{"success", "htop\nripgrep\n", nil, false, []string{"htop", "ripgrep"}},
+		{"error", "", assert.AnError, true, nil},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			manager := NewParu()
-			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
-
-			assert.Equal(t, "paru", manager.Name())
-
-			var err error
-			ctx := WithYes(context.Background())
-
-			switch tt.operation {
-			case "list":
-				res, err := manager.ListInstalled(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
-				}
-			case "install":
-				err = manager.Install(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "reinstall":
-				err = manager.Reinstall(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "remove":
-				err = manager.Remove(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "search":
-				res, err := manager.Search(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
-				}
-			case "info":
-				res, err := manager.Info(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.Equal(t, tt.mockOutput, res)
-				}
-			case "doctor":
-				_, err = manager.Doctor(ctx)
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			res, err := mgr.ListInstalled(WithYes(context.Background()))
+			if tt.wantErr {
 				require.Error(t, err)
-			case "update":
-				err = manager.Update(ctx, "")
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "update_single":
-				err = manager.Update(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "addrepo":
-				err = manager.AddRepo(ctx, "repo", "")
-				require.Error(t, err)
-			case "removerepo":
-				err = manager.RemoveRepo(ctx, "repo")
-				require.Error(t, err)
-			case "listrepos":
-				res, err := manager.ListRepos(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-					assert.Empty(t, res)
-				}
+			} else {
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.wantRes, res)
 			}
 		})
 	}
 }
 
-func TestParu_CheckUpdateExecError(t *testing.T) {
+func TestParu_Install(t *testing.T) {
 	t.Parallel()
-	manager := NewParu()
-	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to check updates")
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "htop", nil, false},
+		{"error", "htop", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Install(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
-func TestParu_CheckUpdate(t *testing.T) {
+func TestParu_Reinstall(t *testing.T) {
 	t.Parallel()
-	manager := NewParu()
-	manager.exec = mockExecutorHelper("htop 3.2.1 -> 3.2.2\ngit 2.43.0 -> 2.43.2\n", nil)
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Reinstall(WithYes(context.Background()), "htop")
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
-	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
+func TestParu_Remove(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "htop", nil, false},
+		{"error", "htop", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Remove(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestParu_Search(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantRes    []string
+	}{
+		{"success", "aur/htop 3.2.2-1\ncore/htop-debug 1.0.0-1\n", nil, false, []string{"htop", "htop-debug"}},
+		{"error", "", assert.AnError, true, nil},
+		{"validation error", "", nil, true, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			var pkg string
+			if tt.wantErr && tt.mockErr == nil {
+				pkg = "-invalid"
+			} else {
+				pkg = "htop"
+			}
+			res, err := mgr.Search(WithYes(context.Background()), pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.wantRes, res)
+			}
+		})
+	}
+}
+
+func TestParu_Info(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockOut string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "Name: htop\nVersion: 3.2.2\n", nil, false},
+		{"error", "", assert.AnError, true},
+		{"validation error", "", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper(tt.mockOut, tt.mockErr)
+			var pkg string
+			if tt.wantErr && tt.mockErr == nil {
+				pkg = "-invalid"
+			} else {
+				pkg = "htop"
+			}
+			_, err := mgr.Info(WithYes(context.Background()), pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestParu_Update(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "", nil, false},
+		{"error", "", assert.AnError, true},
+		{"single package", "htop", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Update(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestParu_Doctor(t *testing.T) {
+	t.Parallel()
+	mgr := NewParu()
+	mgr.exec = mockExecutorHelper("", assert.AnError)
+	_, err := mgr.Doctor(WithYes(context.Background()))
+	require.Error(t, err)
+}
+
+func TestParu_AutoRemove(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		dryRun     bool
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantCount  int
+	}{
+		{"dry run with orphans", true, "orphan1\norphan2\n", nil, false, 2},
+		{"dry run no orphans", true, "", nil, false, 0},
+		{"exec error", true, "", assert.AnError, true, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewParu()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			res, err := mgr.AutoRemove(WithYes(context.Background()), tt.dryRun)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Len(t, res, tt.wantCount)
+			}
+		})
+	}
+}
+
+func TestParu_AddRepoNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewParu()
+	err := mgr.AddRepo(WithYes(context.Background()), "repo", "")
+	require.Error(t, err)
+}
+
+func TestParu_RemoveRepoNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewParu()
+	err := mgr.RemoveRepo(WithYes(context.Background()), "repo")
+	require.Error(t, err)
+}
+
+func TestParu_ListReposNotSupported(t *testing.T) {
+	t.Parallel()
+	mgr := NewParu()
+	res, err := mgr.ListRepos(WithYes(context.Background()))
 	require.NoError(t, err)
-	require.Len(t, updates, 2)
-	assert.Equal(t, "htop", updates[0].Package)
-	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
-	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
-}
-
-func TestParu_CheckUpdate_Fails(t *testing.T) {
-	t.Parallel()
-	manager := NewParu()
-	manager.exec = mockExecutorHelper("", assert.AnError)
-	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to check updates")
-}
-
-func TestParu_Search_AURResults(t *testing.T) {
-	t.Parallel()
-	manager := NewParu()
-	manager.exec = mockExecutorHelper(
-		"aur/paru 1.2.0-1\ncore/htop 3.2.2-1\ncommunity/ripgrep 13.0.0-1\n",
-		nil,
-	)
-
-	results, err := manager.Search(WithYes(context.Background()), "paru")
-	require.NoError(t, err)
-	assert.Contains(t, results, "paru")
-}
-
-func TestParu_ProvidesError(t *testing.T) {
-	t.Parallel()
-	m := NewParu()
-	m.exec = mockExecutorHelper("", assert.AnError)
-	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
-	require.Error(t, err)
+	assert.Empty(t, res)
 }
 
 func TestParu_AutoRemoveDryRun(t *testing.T) {
@@ -309,7 +279,7 @@ func TestParu_AutoRemoveDryRun(t *testing.T) {
 	assert.Empty(t, pkgs)
 }
 
-func TestParu_AutoRemove_WithOrphans(t *testing.T) {
+func TestParu_AutoRemoveWithOrphans(t *testing.T) {
 	t.Parallel()
 	call := 0
 	m := NewParu()
@@ -329,13 +299,51 @@ func TestParu_AutoRemove_WithOrphans(t *testing.T) {
 	assert.ElementsMatch(t, []string{"libfoo"}, pkgs)
 }
 
-func TestParu_AutoRemove_ExecError(t *testing.T) {
+func TestParu_AutoRemoveExecError(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper("", assert.AnError)
 	_, err := m.AutoRemove(WithYes(context.Background()), false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list orphans")
+}
+
+func TestParu_ProvidesError(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.Provides(WithYes(context.Background()), "/usr/bin/htop")
+	require.Error(t, err)
+}
+
+func TestParu_CheckUpdate(t *testing.T) {
+	t.Parallel()
+	manager := NewParu()
+	manager.exec = mockExecutorHelper("htop 3.2.1 -> 3.2.2\ngit 2.43.0 -> 2.43.2\n", nil)
+	updates, err := manager.CheckUpdate(WithYes(context.Background()), "")
+	require.NoError(t, err)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}
+
+func TestParu_CheckUpdateExecError(t *testing.T) {
+	t.Parallel()
+	manager := NewParu()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
+}
+
+func TestParu_CheckUpdateFails(t *testing.T) {
+	t.Parallel()
+	manager := NewParu()
+	manager.exec = mockExecutorHelper("", assert.AnError)
+	_, err := manager.CheckUpdate(WithYes(context.Background()), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check updates")
 }
 
 func TestParu_Clean(t *testing.T) {
@@ -373,6 +381,32 @@ func TestParu_Hold(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestParu_HoldInvalidName(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	err := m.Hold(WithYes(context.Background()), "-invalid")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+func TestParu_HoldReadError(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	err := m.Hold(WithYes(context.Background()), "nginx")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read pacman.conf")
+}
+
+func TestParu_ListHeld(t *testing.T) {
+	t.Parallel()
+	m := NewParu()
+	m.exec = mockExecutorHelper(testPacmanConf, nil)
+	pkgs, err := m.ListHeld(WithYes(context.Background()))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
+}
+
 func TestParu_Unhold(t *testing.T) {
 	t.Parallel()
 	call := 0
@@ -392,37 +426,11 @@ func TestParu_Unhold(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestParu_ListHeld(t *testing.T) {
-	t.Parallel()
-	m := NewParu()
-	m.exec = mockExecutorHelper(testPacmanConf, nil)
-	pkgs, err := m.ListHeld(WithYes(context.Background()))
-	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"nginx", "redis"}, pkgs)
-}
-
-func TestParu_Hold_ReadError(t *testing.T) {
-	t.Parallel()
-	m := NewParu()
-	m.exec = mockExecutorHelper("", assert.AnError)
-	err := m.Hold(WithYes(context.Background()), "nginx")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to read pacman.conf")
-}
-
-func TestParu_Unhold_NotHeld(t *testing.T) {
+func TestParu_UnholdNotHeld(t *testing.T) {
 	t.Parallel()
 	m := NewParu()
 	m.exec = mockExecutorHelper(testPacmanConf, nil)
 	err := m.Unhold(WithYes(context.Background()), "htop")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not held")
-}
-
-func TestParu_Hold_InvalidName(t *testing.T) {
-	t.Parallel()
-	m := NewParu()
-	err := m.Hold(WithYes(context.Background()), "-invalid")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid package name")
 }

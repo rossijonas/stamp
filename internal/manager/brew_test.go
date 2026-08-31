@@ -9,305 +9,326 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBrew_Operations(t *testing.T) {
+func TestBrew_ListInstalled(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name        string
-		operation   string
-		pkgName     string
-		mockOutput  string
-		mockErr     error
-		expectedErr bool
-		expectedRes []string
+		name       string
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantRes    []string
 	}{
-		{
-			name:        "list installed success",
-			operation:   "list",
-			mockOutput:  "jq\nfzf\ntmux\n",
-			expectedRes: []string{"jq", "fzf", "tmux"},
-		},
-		{
-			name:        "list installed error",
-			operation:   "list",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "install success",
-			operation: "install",
-			pkgName:   "htop",
-			mockErr:   nil,
-		},
-		{
-			name:        "install error",
-			operation:   "install",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "remove success",
-			operation: "remove",
-			pkgName:   "htop",
-			mockErr:   nil,
-		},
-		{
-			name:        "remove error",
-			operation:   "remove",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "search success",
-			operation:   "search",
-			pkgName:     "htop",
-			mockOutput:  "htop\nhtop-debuginfo\n",
-			expectedRes: []string{"htop", "htop-debuginfo"},
-		},
-		{
-			name:        "search error",
-			operation:   "search",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "add repo success (copr)",
-			operation: "addrepo",
-			pkgName:   "petersen/cava",
-			mockErr:   nil,
-		},
-		{
-			name:        "add repo error",
-			operation:   "addrepo",
-			pkgName:     "petersen/cava",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "add repo success (url)",
-			operation: "addrepo_url",
-			pkgName:   "google-chrome",
-			mockErr:   nil,
-		},
-		{
-			name:        "add repo error (url)",
-			operation:   "addrepo_url",
-			pkgName:     "google-chrome",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "remove repo success",
-			operation: "removerepo",
-			pkgName:   "petersen/cava",
-			mockErr:   nil,
-		},
-		{
-			name:        "remove repo error",
-			operation:   "removerepo",
-			pkgName:     "petersen/cava",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "install validation error",
-			operation:   "install",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "remove validation error",
-			operation:   "remove",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:        "search validation error",
-			operation:   "search",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:       "info success",
-			operation:  "info",
-			pkgName:    "htop",
-			mockOutput: "Name: htop\nVersion: 3.4.1\n",
-		},
-		{
-			name:        "info error",
-			operation:   "info",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:        "info validation error",
-			operation:   "info",
-			pkgName:     "-invalid",
-			expectedErr: true,
-		},
-		{
-			name:      "reinstall success",
-			operation: "reinstall",
-			pkgName:   "htop",
-		},
-		{
-			name:        "reinstall error",
-			operation:   "reinstall",
-			pkgName:     "htop",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "update success",
-			operation: "update",
-		},
-		{
-			name:        "update error",
-			operation:   "update",
-			mockErr:     assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name:      "update single package",
-			operation: "update_single",
-			pkgName:   "htop",
-		},
-		{
-			name:       "doctor success",
-			operation:  "doctor",
-			mockOutput: "mock doctor: all good",
-		},
+		{"success", "jq\nfzf\ntmux\n", nil, false, []string{"jq", "fzf", "tmux"}},
+		{"error", "", assert.AnError, true, nil},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			manager := NewBrew()
-			manager.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			assert.Equal(t, "brew", mgr.Name())
+			res, err := mgr.ListInstalled(WithYes(context.Background()))
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.wantRes, res)
+			}
+		})
+	}
+}
 
-			assert.Equal(t, "brew", manager.Name())
+func TestBrew_Install(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "htop", nil, false},
+		{"error", "htop", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Install(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
-			var err error
-			ctx := WithYes(context.Background())
+func TestBrew_Remove(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "htop", nil, false},
+		{"error", "htop", assert.AnError, true},
+		{"validation error", "-invalid", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Remove(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
-			switch tt.operation {
-			case "list":
-				res, err := manager.ListInstalled(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
+func TestBrew_Search(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		mockOutput string
+		mockErr    error
+		wantErr    bool
+		wantRes    []string
+	}{
+		{"success", "htop\nhtop-debuginfo\n", nil, false, []string{"htop", "htop-debuginfo"}},
+		{"error", "", assert.AnError, true, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper(tt.mockOutput, tt.mockErr)
+			res, err := mgr.Search(WithYes(context.Background()), "htop")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "install":
-				err = manager.Install(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.wantRes, res)
+			}
+		})
+	}
+}
+
+func TestBrew_Search_Validation(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper("", nil)
+	_, err := mgr.Search(WithYes(context.Background()), "-invalid")
+	require.Error(t, err)
+}
+
+func TestBrew_Info(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockOut string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "Name: htop\nVersion: 3.4.1\n", nil, false},
+		{"error", "", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper(tt.mockOut, tt.mockErr)
+			_, err := mgr.Info(WithYes(context.Background()), "htop")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "reinstall":
-				err = manager.Reinstall(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBrew_Info_Validation(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper("", nil)
+	_, err := mgr.Info(WithYes(context.Background()), "-invalid")
+	require.Error(t, err)
+}
+
+func TestBrew_Reinstall(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Reinstall(WithYes(context.Background()), "htop")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "remove":
-				err = manager.Remove(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBrew_Update(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", "", nil, false},
+		{"error", "", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.Update(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "search":
-				res, err := manager.Search(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-					assert.ElementsMatch(t, tt.expectedRes, res)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBrew_Update_Single(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper("", nil)
+	err := mgr.Update(WithYes(context.Background()), "htop")
+	require.NoError(t, err)
+}
+
+func TestBrew_Doctor_Success(t *testing.T) {
+	t.Parallel()
+	mgr := NewBrew()
+	mgr.exec = mockExecutorHelper("mock doctor: all good", nil)
+	_, err := mgr.Doctor(WithYes(context.Background()))
+	require.NoError(t, err)
+}
+
+func TestBrew_AddRepo_Copr(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.AddRepo(WithYes(context.Background()), "petersen/cava", "")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "addrepo":
-				err = manager.AddRepo(ctx, tt.pkgName, "")
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBrew_AddRepo_URL(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.AddRepo(WithYes(context.Background()), "google-chrome", "http://example.com/repo")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "addrepo_url":
-				err = manager.AddRepo(ctx, tt.pkgName, "http://example.com/repo")
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBrew_RemoveRepo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", nil, false},
+		{"error", assert.AnError, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewBrew()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.RemoveRepo(WithYes(context.Background()), "petersen/cava")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.mockErr != nil {
+					require.ErrorIs(t, err, tt.mockErr)
 				}
-			case "removerepo":
-				err = manager.RemoveRepo(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-				}
-			case "info":
-				res, err := manager.Info(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-					if tt.mockErr != nil {
-						require.ErrorIs(t, err, tt.mockErr)
-					}
-				} else {
-					require.NoError(t, err)
-					assert.Equal(t, tt.mockOutput, res)
-				}
-			case "doctor":
-				_, err = manager.Doctor(ctx)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "update":
-				err = manager.Update(ctx, "")
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			case "update_single":
-				err = manager.Update(ctx, tt.pkgName)
-				if tt.expectedErr {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

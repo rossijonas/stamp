@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -400,6 +401,22 @@ func TestPreview_ReinstallNoop(t *testing.T) {
 	})
 }
 
+// previewMethodCall dispatches a preview method on the adapter.
+func previewMethodCall(ctx context.Context, a Previewer, method string, pkg string) error {
+	switch method {
+	case "install":
+		_, err := a.PreviewInstall(ctx, pkg)
+		return err
+	case "remove":
+		_, err := a.PreviewRemove(ctx, pkg)
+		return err
+	case "reinstall":
+		_, err := a.PreviewReinstall(ctx, pkg)
+		return err
+	}
+	return fmt.Errorf("unknown preview method: %s", method)
+}
+
 func TestPreview_Adapters_ValidationAndErrors(t *testing.T) {
 	previewErr := errors.New("boom")
 	tests := []struct {
@@ -423,15 +440,7 @@ func TestPreview_Adapters_ValidationAndErrors(t *testing.T) {
 					t.Fatal("executor should not be called for invalid package name")
 					return nil, nil
 				})
-				var err error
-				switch method {
-				case "install":
-					_, err = a.PreviewInstall(ctx, "-bad")
-				case "remove":
-					_, err = a.PreviewRemove(ctx, "-bad")
-				case "reinstall":
-					_, err = a.PreviewReinstall(ctx, "-bad")
-				}
+				err := previewMethodCall(ctx, a, method, "-bad")
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "invalid package name")
 			})
@@ -439,24 +448,12 @@ func TestPreview_Adapters_ValidationAndErrors(t *testing.T) {
 				a := tt.adapter(func(_ context.Context, _ string, _ ...string) ([]byte, error) {
 					return nil, previewErr
 				})
-				var err error
-				switch method {
-				case "install":
-					_, err = a.PreviewInstall(ctx, "htop")
-				case "remove":
-					_, err = a.PreviewRemove(ctx, "htop")
-				case "reinstall":
-					_, err = a.PreviewReinstall(ctx, "htop")
-				}
+				err := previewMethodCall(ctx, a, method, "htop")
 				if tt.name == "flatpak" {
-					// flatpak previews derive state from 'flatpak info': an exec
-					// error means "not installed" (a no-op), never a wrapped error.
-					// Covered in flatpak_test.go.
 					return
 				}
 				require.Error(t, err)
 				if tt.name == "brew" && method == "reinstall" {
-					// brew reinstall short-circuits: no exec, so no wrapping
 					assert.Contains(t, err.Error(), "does not support a dry-run preview")
 					return
 				}
