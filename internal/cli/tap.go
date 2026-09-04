@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 
@@ -72,6 +74,28 @@ Equivalent to "stamp repo remove <name> -m brew".`,
 	}
 }
 
+// listBrewTaps prints all Homebrew tap repositories. Returns an error
+// when the brew adapter is not available.
+func listBrewTaps(ctx context.Context, adapters []manager.Adapter, w io.Writer) error {
+	for _, a := range adapters {
+		if a.Name() == "brew" {
+			repos, err := a.ListRepos(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to list taps: %w", err)
+			}
+			if len(repos) == 0 {
+				_, _ = fmt.Fprintln(w, "no taps added")
+				return nil
+			}
+			for _, r := range repos {
+				_, _ = fmt.Fprintf(w, "%s\n", r.Name)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("brew is not available")
+}
+
 func newTapsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "taps",
@@ -86,23 +110,7 @@ Equivalent to "stamp repo list -m brew".`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
-			for _, a := range app.adapters {
-				if a.Name() == "brew" {
-					repos, err := a.ListRepos(cmd.Context())
-					if err != nil {
-						return fmt.Errorf("failed to list taps: %w", err)
-					}
-					if len(repos) == 0 {
-						_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no taps added")
-						return nil
-					}
-					for _, r := range repos {
-						_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\n", r.Name)
-					}
-					return nil
-				}
-			}
-			return fmt.Errorf("brew is not available")
+			return listBrewTaps(cmd.Context(), app.adapters, cmd.OutOrStdout())
 		},
 	}
 }

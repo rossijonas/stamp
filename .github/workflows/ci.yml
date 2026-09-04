@@ -57,6 +57,29 @@ jobs:
             exit 1
           fi
 
+      - name: Complexity gate (gocognit/gocyclo ≤15)
+        run: |
+          go install github.com/uudashr/gocognit/cmd/gocognit@v1.2.1
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
+          FILES=$(find internal/ cmd/ -name '*.go' ! -name '*_test.go')
+          if [ -n "$FILES" ]; then
+            VIOLATIONS=$(gocognit -over 15 $FILES 2>&1; gocyclo -over 15 $FILES 2>&1)
+            if [ -n "$VIOLATIONS" ]; then
+              echo "Error: complexity >15 in non-test code:"
+              echo "$VIOLATIONS"
+              exit 1
+            fi
+          fi
+
+      - name: File-size gate (≤1000 lines)
+        run: |
+          OVERSIZED=$(find internal/ cmd/ -name '*.go' -print0 | xargs -0 wc -l | awk '$1>1000 && $2!="total"')
+          if [ -n "$OVERSIZED" ]; then
+            echo "Error: files exceeding 1000 lines:"
+            echo "$OVERSIZED"
+            exit 1
+          fi
+
   lint-commits:
     name: Conventional Commits
     permissions:

@@ -157,6 +157,66 @@ func newManCmd() *cobra.Command {
 	return cmd
 }
 
+// copyManPages copies .1 files from tmpDir to manDir. Returns the count.
+func copyManPages(tmpDir, manDir string) (int, error) {
+	entries, err := os.ReadDir(tmpDir)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read generated man pages: %w", err)
+	}
+	installed := 0
+	for _, entry := range entries {
+		if filepath.Ext(entry.Name()) != ".1" {
+			continue
+		}
+		srcPath := filepath.Join(tmpDir, entry.Name())
+		dstPath := filepath.Join(manDir, entry.Name())
+		//nolint:gosec // paths are controlled by --prefix flag
+		data, err := os.ReadFile(srcPath)
+		if err != nil {
+			return 0, fmt.Errorf("failed to read %s: %w", srcPath, err)
+		}
+		//nolint:gosec // man pages must be world-readable
+		if err := os.WriteFile(dstPath, data, 0644); err != nil {
+			return 0, fmt.Errorf("failed to write %s: %w", dstPath, err)
+		}
+		installed++
+	}
+	return installed, nil
+}
+
+// installManPages generates man pages into a temp dir, copies them to manDir,
+// and reports the count.
+func installManPages(cmd *cobra.Command, prefix string) error {
+	header := &doc.GenManHeader{
+		Title:   "STAMP",
+		Section: "1",
+		Source:  fmt.Sprintf("stamp v%s", Version),
+		Manual:  "Stamp Manual",
+	}
+	if prefix == "" {
+		prefix = defaultManPrefix()
+	}
+	manDir := filepath.Join(prefix, "share", "man", "man1")
+	if err := os.MkdirAll(manDir, 0750); err != nil {
+		return fmt.Errorf("failed to create man directory %s: %w", manDir, err)
+	}
+	tmpDir, err := os.MkdirTemp("", "stamp-man-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	if err := doc.GenManTree(cmd.Root(), header, tmpDir); err != nil {
+		return fmt.Errorf("failed to generate man pages: %w", err)
+	}
+	installed, err := copyManPages(tmpDir, manDir)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "installed %d man page(s) to %s\n", installed, manDir)
+	return nil
+}
+
 func newManInstallCmd() *cobra.Command {
 	var prefix string
 
@@ -170,66 +230,62 @@ func newManInstallCmd() *cobra.Command {
   stamp man install --prefix /usr/local`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			header := &doc.GenManHeader{
-				Title:   "STAMP",
-				Section: "1",
-				Source:  fmt.Sprintf("stamp v%s", Version),
-				Manual:  "Stamp Manual",
-			}
-
-			if prefix == "" {
-				prefix = defaultManPrefix()
-			}
-
-			manDir := filepath.Join(prefix, "share", "man", "man1")
-			if err := os.MkdirAll(manDir, 0750); err != nil {
-				return fmt.Errorf("failed to create man directory %s: %w", manDir, err)
-			}
-
-			// Generate all man pages into a temp directory
-			tmpDir, err := os.MkdirTemp("", "stamp-man-*")
-			if err != nil {
-				return fmt.Errorf("failed to create temp dir: %w", err)
-			}
-			defer func() { _ = os.RemoveAll(tmpDir) }()
-
-			if err := doc.GenManTree(cmd.Root(), header, tmpDir); err != nil {
-				return fmt.Errorf("failed to generate man pages: %w", err)
-			}
-
-			// Copy each .1 file to target directory
-			entries, err := os.ReadDir(tmpDir)
-			if err != nil {
-				return fmt.Errorf("failed to read generated man pages: %w", err)
-			}
-
-			installed := 0
-			for _, entry := range entries {
-				if filepath.Ext(entry.Name()) != ".1" {
-					continue
-				}
-				srcPath := filepath.Join(tmpDir, entry.Name())
-				dstPath := filepath.Join(manDir, entry.Name())
-
-				//nolint:gosec // paths are controlled by --prefix flag
-				data, err := os.ReadFile(srcPath)
-				if err != nil {
-					return fmt.Errorf("failed to read %s: %w", srcPath, err)
-				}
-				//nolint:gosec // man pages must be world-readable
-				if err := os.WriteFile(dstPath, data, 0644); err != nil {
-					return fmt.Errorf("failed to write %s: %w", dstPath, err)
-				}
-				installed++
-			}
-
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "installed %d man page(s) to %s\n", installed, manDir)
-			return nil
+			return installManPages(cmd, prefix)
 		},
 	}
 
 	cmd.Flags().StringVar(&prefix, "prefix", "", "install prefix (default: ~/.local)")
 	return cmd
+}
+
+// runManCheck checks the installed man page version and reports the result.
+func runManCheck(cmd *cobra.Command) error {
+	app := appFromCtx(cmd)
+	tty := isOutputTerminal(cmd.ErrOrStderr())
+
+	status, installedPath, err := checkInstalledManVersion()
+
+	if app != nil && app.json {
+		type jsonReport struct {
+			Installed     bool   `json:"installed"`
+			ManVersion    string `json:"man_version,omitempty"`
+			BinaryVersion string `json:"binary_version"`
+			Match         bool   `json:"match"`
+			Error         string `json:"error,omitempty"`
+		}
+		report := jsonReport{BinaryVersion: Version}
+		switch {
+		case err != nil:
+			report.Error = err.Error()
+		case installedPath == "":
+			report.Error = "not found"
+		default:
+			report.Installed = true
+			report.ManVersion = status.version
+			report.Match = status.matches
+		}
+		data, marshalErr := json.MarshalIndent(report, "", "  ")
+		if marshalErr != nil {
+			return marshalErr
+		}
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
+		return nil
+	}
+
+	if err != nil {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", iconLine(tty, "✗", fmt.Sprintf("Error checking man page: %v", err)))
+		return nil
+	}
+	if installedPath == "" {
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), iconLine(tty, "✗", "Man page not installed. Run 'stamp man install' to install."))
+		return nil
+	}
+	if status.matches {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", iconLine(tty, "✓", fmt.Sprintf("Man page is up to date (%s)", status.version)))
+	} else {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠ Man page is outdated (installed %s, current v%s). Run 'stamp man install' to update.\n", status.version, Version)
+	}
+	return nil
 }
 
 func newManCheckCmd() *cobra.Command {
@@ -243,56 +299,7 @@ func newManCheckCmd() *cobra.Command {
   stamp man check --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			app := appFromCtx(cmd)
-			tty := isOutputTerminal(cmd.ErrOrStderr())
-
-			status, installedPath, err := checkInstalledManVersion()
-			if app != nil && app.json {
-				type jsonReport struct {
-					Installed     bool   `json:"installed"`
-					ManVersion    string `json:"man_version,omitempty"`
-					BinaryVersion string `json:"binary_version"`
-					Match         bool   `json:"match"`
-					Error         string `json:"error,omitempty"`
-				}
-				report := jsonReport{
-					BinaryVersion: Version,
-				}
-				switch {
-				case err != nil:
-					report.Error = err.Error()
-				case installedPath == "":
-					report.Error = "not found"
-				default:
-					report.Installed = true
-					report.ManVersion = status.version
-					report.Match = status.matches
-				}
-				data, err := json.MarshalIndent(report, "", "  ")
-				if err != nil {
-					return err
-				}
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
-				return nil
-			}
-
-			if err != nil {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", iconLine(tty, "✗", fmt.Sprintf("Error checking man page: %v", err)))
-				return nil
-			}
-
-			if installedPath == "" {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), iconLine(tty, "✗", "Man page not installed. Run 'stamp man install' to install."))
-				return nil
-			}
-
-			if status.matches {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", iconLine(tty, "✓", fmt.Sprintf("Man page is up to date (%s)", status.version)))
-			} else {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "⚠ Man page is outdated (installed %s, current v%s). Run 'stamp man install' to update.\n", status.version, Version)
-			}
-
-			return nil
+			return runManCheck(cmd)
 		},
 	}
 	return cmd

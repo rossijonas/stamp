@@ -107,13 +107,29 @@ func completionPath(shell string) string {
 	return ""
 }
 
-func installCompletion(cmd *cobra.Command, shell string) error {
-	path := completionPath(shell)
-	if path == "" {
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: auto-install not supported for %s, use --stdout\n", shell)
-		return writeCompletion(cmd, shell, cmd.OutOrStdout())
+// removeStaleCompletions deletes completion files from common directories
+// that are not the target directory.
+func removeStaleCompletions(w io.Writer, home, destDir string) {
+	staleDirs := []string{
+		filepath.Join(home, ".zsh", "completions"),
+		filepath.Join(home, zshZfuncDir),
+		filepath.Join(home, ".oh-my-zsh", "custom", "completions"),
 	}
+	for _, d := range staleDirs {
+		if d == destDir {
+			continue
+		}
+		stalePath := filepath.Join(d, "_stamp")
+		if fi, err := os.Stat(stalePath); err == nil && !fi.IsDir() {
+			_ = os.Remove(stalePath)
+			_, _ = fmt.Fprintf(w, "  removed stale completion from %s\n", stalePath)
+		}
+	}
+}
 
+// generateCompletion writes the shell completion to path via a temp file for
+// atomic write. It also cleans up stale completions from other common dirs.
+func generateCompletion(cmd *cobra.Command, shell, path string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create completion directory %s: %w", dir, err)
@@ -156,24 +172,8 @@ func installCompletion(cmd *cobra.Command, shell string) error {
 		return fmt.Errorf("failed to install completion to %s: %w", path, err)
 	}
 
-	// Remove stale completions from other common directories (not the target)
 	home, _ := os.UserHomeDir()
-	destDir := filepath.Dir(path)
-	staleDirs := []string{
-		filepath.Join(home, ".zsh", "completions"),
-		filepath.Join(home, zshZfuncDir),
-		filepath.Join(home, ".oh-my-zsh", "custom", "completions"),
-	}
-	for _, dir := range staleDirs {
-		if dir == destDir {
-			continue
-		}
-		stalePath := filepath.Join(dir, "_stamp")
-		if fi, err := os.Stat(stalePath); err == nil && !fi.IsDir() {
-			_ = os.Remove(stalePath)
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  removed stale completion from %s\n", stalePath)
-		}
-	}
+	removeStaleCompletions(cmd.ErrOrStderr(), home, filepath.Dir(path))
 
 	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "completion installed to %s\n", path)
 
@@ -184,6 +184,15 @@ func installCompletion(cmd *cobra.Command, shell string) error {
 	}
 
 	return nil
+}
+
+func installCompletion(cmd *cobra.Command, shell string) error {
+	path := completionPath(shell)
+	if path == "" {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: auto-install not supported for %s, use --stdout\n", shell)
+		return writeCompletion(cmd, shell, cmd.OutOrStdout())
+	}
+	return generateCompletion(cmd, shell, path)
 }
 
 func stripZshCompdef(path string) error {
