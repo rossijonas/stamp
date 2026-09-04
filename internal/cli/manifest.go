@@ -303,6 +303,55 @@ identical to the current manifest are marked as unchanged.`,
 	return cmd
 }
 
+// runManifestDiff resolves a backup, diffs the manifests, and renders the
+// result as JSON or human-readable text.
+func runManifestDiff(cmd *cobra.Command, args []string, managerFlag, originFlag string) error {
+	app := appFromCtx(cmd)
+	if app.manifestErr != nil {
+		return app.manifestErr
+	}
+	if err := requireManifest(app); err != nil {
+		return err
+	}
+	if err := validateOriginFlag(originFlag); err != nil {
+		return err
+	}
+
+	target := ""
+	if len(args) == 1 {
+		target = args[0]
+	}
+
+	baselinePath, baselineLabel, err := resolveBaseline(app.manifestPath, target)
+	if err != nil {
+		return err
+	}
+	baseline, err := manifest.Load(baselinePath)
+	if err != nil {
+		return catErr(ErrData, "failed to parse backup at %s: %w", baselinePath, err)
+	}
+
+	addedPkgs, removedPkgs, addedRepos, removedRepos := diffManifests(app.manifest, baseline)
+	addedPkgs = filterPackages(addedPkgs, managerFlag, originFlag)
+	removedPkgs = filterPackages(removedPkgs, managerFlag, originFlag)
+	addedRepos = filterRepositories(addedRepos, managerFlag, originFlag)
+	removedRepos = filterRepositories(removedRepos, managerFlag, originFlag)
+
+	added, removed := buildDiffItems(addedPkgs, removedPkgs, addedRepos, removedRepos)
+
+	if app.json {
+		data, err := json.MarshalIndent(diffResult{Baseline: baselineLabel, Added: added, Removed: removed}, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal manifest diff: %w", err)
+		}
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
+		return nil
+	}
+
+	renderDiffText(cmd.OutOrStdout(), baselineLabel, added, removed)
+	return nil
+}
+
 func newManifestDiffCmd() *cobra.Command {
 	var (
 		managerFlag string
@@ -327,50 +376,7 @@ Defaults to the most recent backup. The argument may be a backup timestamp
 stamp manifest history. Added entries are prefixed with '+', removed with '-'.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			app := appFromCtx(cmd)
-			if app.manifestErr != nil {
-				return app.manifestErr
-			}
-			if err := requireManifest(app); err != nil {
-				return err
-			}
-			if err := validateOriginFlag(originFlag); err != nil {
-				return err
-			}
-
-			target := ""
-			if len(args) == 1 {
-				target = args[0]
-			}
-
-			baselinePath, baselineLabel, err := resolveBaseline(app.manifestPath, target)
-			if err != nil {
-				return err
-			}
-			baseline, err := manifest.Load(baselinePath)
-			if err != nil {
-				return catErr(ErrData, "failed to parse backup at %s: %w", baselinePath, err)
-			}
-
-			addedPkgs, removedPkgs, addedRepos, removedRepos := diffManifests(app.manifest, baseline)
-			addedPkgs = filterPackages(addedPkgs, managerFlag, originFlag)
-			removedPkgs = filterPackages(removedPkgs, managerFlag, originFlag)
-			addedRepos = filterRepositories(addedRepos, managerFlag, originFlag)
-			removedRepos = filterRepositories(removedRepos, managerFlag, originFlag)
-
-			added, removed := buildDiffItems(addedPkgs, removedPkgs, addedRepos, removedRepos)
-
-			if app.json {
-				data, err := json.MarshalIndent(diffResult{Baseline: baselineLabel, Added: added, Removed: removed}, "", "  ")
-				if err != nil {
-					return fmt.Errorf("failed to marshal manifest diff: %w", err)
-				}
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
-				return nil
-			}
-
-			renderDiffText(cmd.OutOrStdout(), baselineLabel, added, removed)
-			return nil
+			return runManifestDiff(cmd, args, managerFlag, originFlag)
 		},
 	}
 

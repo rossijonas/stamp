@@ -122,26 +122,18 @@ func confirmDestructive(ctx context.Context, w io.Writer, in io.Reader, yes bool
 // output, then asks a single combined prompt. If every package previews as a
 // no-op, the batch stops cleanly with errStopClean. A non-terminal input
 // without -y returns errNonInteractive (fail closed for pipelines/CI).
-func confirmDestructiveMany(ctx context.Context, w io.Writer, in io.Reader, yes bool,
-	adapter manager.Adapter, mode previewMode, verb string, pkgs []string) error {
-	if yes {
-		return nil
-	}
-
-	if mode != previewRemove {
-		if err := adapter.Refresh(ctx); err != nil {
-			_, _ = fmt.Fprintf(w, "  ⚠ %s: refresh failed: %v\n", adapter.Name(), err)
-		}
-	}
-
-	allNoop := true
+// renderPreviewOutcomes iterates over packages, renders each preview, and
+// returns true when at least one package is not a no-op. An interrupted
+// context (SIGINT) is reported to w and returns errStopClean.
+func renderPreviewOutcomes(ctx context.Context, w io.Writer, adapter manager.Adapter, mode previewMode, pkgs []string) (allNoop bool, err error) {
+	allNoop = true
 	for _, p := range pkgs {
 		pv, previewErr := previewOutput(ctx, adapter, mode, p)
 
 		// Interrupted (SIGINT) during refresh/preview: abort without prompting.
 		if ctx.Err() != nil {
 			_, _ = fmt.Fprintln(w, "aborted")
-			return errStopClean
+			return false, errStopClean
 		}
 
 		switch {
@@ -158,6 +150,25 @@ func confirmDestructiveMany(ctx context.Context, w io.Writer, in io.Reader, yes 
 				_, _ = fmt.Fprintln(w, pv.Output)
 			}
 		}
+	}
+	return allNoop, nil
+}
+
+func confirmDestructiveMany(ctx context.Context, w io.Writer, in io.Reader, yes bool,
+	adapter manager.Adapter, mode previewMode, verb string, pkgs []string) error {
+	if yes {
+		return nil
+	}
+
+	if mode != previewRemove {
+		if err := adapter.Refresh(ctx); err != nil {
+			_, _ = fmt.Fprintf(w, "  ⚠ %s: refresh failed: %v\n", adapter.Name(), err)
+		}
+	}
+
+	allNoop, err := renderPreviewOutcomes(ctx, w, adapter, mode, pkgs)
+	if err != nil {
+		return err
 	}
 
 	if allNoop {

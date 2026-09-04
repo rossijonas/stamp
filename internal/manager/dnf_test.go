@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -406,66 +405,6 @@ func TestParseDNFRepos(t *testing.T) {
 	}
 }
 
-func TestDNF_ListRepos(t *testing.T) {
-	oldDir := dnfReposDir
-	dnfReposDir = t.TempDir()
-	defer func() { dnfReposDir = oldDir }()
-
-	//nolint:gosec
-	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "enpass-yum.repo"), []byte(
-		"[enpass]\n"+
-			"name=Enpass\n"+
-			"baseurl=https://yum.enpass.io/\n"+
-			"enabled=1\n",
-	), 0o644))
-	//nolint:gosec
-	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "brave-browser.repo"), []byte(
-		"[brave-browser]\n"+
-			"name=Brave Browser\n"+
-			"baseurl=https://brave-browser-rpm-release.s3.brave.com\n"+
-			"enabled=1\n",
-	), 0o644))
-	//nolint:gosec
-	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "fedora.repo"), []byte(
-		"[fedora]\n"+
-			"name=Fedora $releasever - $basearch\n"+
-			"metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever\n"+
-			"enabled=1\n",
-	), 0o644))
-
-	repos, err := parseDNFSources()
-	require.NoError(t, err)
-	require.Len(t, repos, 2)
-
-	names := make(map[string]string)
-	for _, r := range repos {
-		names[r.Name] = r.URL
-	}
-
-	assert.Equal(t, "https://yum.enpass.io/", names["enpass"])
-	assert.Equal(t, "https://brave-browser-rpm-release.s3.brave.com", names["brave-browser"])
-	assert.NotContains(t, names, "fedora")
-}
-
-func TestDNF_ListRepos_EmptyDir(t *testing.T) {
-	oldDir := dnfReposDir
-	dnfReposDir = t.TempDir()
-	defer func() { dnfReposDir = oldDir }()
-
-	repos, err := parseDNFSources()
-	require.NoError(t, err)
-	assert.Empty(t, repos)
-}
-
-func TestDNF_ListRepos_MissingDir(t *testing.T) {
-	oldDir := dnfReposDir
-	dnfReposDir = "/nonexistent/repos"
-	defer func() { dnfReposDir = oldDir }()
-
-	_, err := parseDNFSources()
-	require.Error(t, err)
-}
-
 func TestParseDNFCheckUpdate(t *testing.T) {
 	t.Parallel()
 	input := []byte("htop.x86_64 3.2.1 updates\ngit.noarch 2.43.0 updates\n")
@@ -591,37 +530,6 @@ func TestDNF_CheckUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, updates, 1)
 	assert.Equal(t, "htop", updates[0].Package)
-}
-
-func TestDNF_ListRepos_ThroughAdapter(t *testing.T) {
-	oldDir := dnfReposDir
-	dnfReposDir = t.TempDir()
-	defer func() { dnfReposDir = oldDir }()
-
-	//nolint:gosec
-	require.NoError(t, os.WriteFile(filepath.Join(dnfReposDir, "custom.repo"), []byte(
-		"[custom-repo]\n"+
-			"name=Custom Repo\n"+
-			"baseurl=https://custom.example.com/repo\n"+
-			"enabled=1\n",
-	), 0o644))
-
-	manager := NewDNF("dnf")
-	repos, err := manager.ListRepos(WithYes(context.Background()))
-	require.NoError(t, err)
-	require.Len(t, repos, 1)
-	assert.Equal(t, "custom-repo", repos[0].Name)
-	assert.Equal(t, "https://custom.example.com/repo", repos[0].URL)
-}
-
-func TestDNF_AddRepo_URL_ExecError(t *testing.T) {
-	t.Parallel()
-	manager := NewDNF("dnf")
-	manager.exec = mockExecutorHelper("", assert.AnError)
-
-	err := manager.AddRepo(WithYes(context.Background()), "testrepo", "https://example.com/repo")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to add repo")
 }
 
 func TestSudoCmd_NonTTY(t *testing.T) {

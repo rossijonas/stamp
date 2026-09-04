@@ -75,11 +75,24 @@ tasks:
     cmds:
       - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
+  check:complexity:
+    desc: "Enforces gocognit/gocyclo ≤15 on non-test production code"
+    cmds:
+      - go run github.com/uudashr/gocognit/cmd/gocognit@latest -over 15 $(find internal/ cmd/ -name '*.go' ! -name '*_test.go')
+      - go run github.com/fzipp/gocyclo/cmd/gocyclo@latest -over 15 $(find internal/ cmd/ -name '*.go' ! -name '*_test.go')
+
+  check:files:
+    desc: "Enforces 1000-line file cap on .go files"
+    cmds:
+      - "find internal/ cmd/ -name '*.go' -print0 | xargs -0 wc -l | awk '$1>1000 && $2!=\"total\" {print \"Error: \"$2\" exceeds 1000 lines (\"$1\")\"; exit 1}'"
+
   check:
     desc: "Runs all quality gates (run this before PR)"
     cmds:
       - task: verify
       - task: lint
+      - task: check:complexity
+      - task: check:files
       - task: test
       - task: security
 

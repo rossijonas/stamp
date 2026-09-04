@@ -119,6 +119,39 @@ func runSingleInstall(cmd *cobra.Command, app *AppContext, adapter manager.Adapt
 // installMany installs multiple packages in a single native invocation.
 // Requires -m so every package goes to the same manager; only managers with
 // native multi-package support participate (see manager.BatchInstaller).
+// brewBatchContext computes the cask map, detects mixed cask/formula batches,
+// and returns the install context with cask flag set when all packages are casks.
+func brewBatchContext(cmd *cobra.Command, adapter manager.Adapter, pkgs []string) (installCtx context.Context, mixed bool, casks map[string]bool) {
+	casks = brewCasks(cmd.Context(), adapter, pkgs)
+	caskCount := countCasks(casks)
+	mixed = caskCount > 0 && caskCount < len(pkgs)
+	installCtx = cmd.Context()
+	if caskCount == len(pkgs) {
+		installCtx = manager.WithCask(cmd.Context())
+	}
+	return
+}
+
+// execBatchInstall runs the native install via batch or per-package (mixed cask).
+func execBatchInstall(ctx context.Context, adapter manager.Adapter, bi manager.BatchInstaller, mixed bool, casks map[string]bool, pkgs []string) error {
+	if mixed {
+		for _, p := range pkgs {
+			pkgCtx := manager.WithYes(ctx)
+			if casks[p] {
+				pkgCtx = manager.WithYes(manager.WithCask(ctx))
+			}
+			if err := adapter.Install(pkgCtx, p); err != nil {
+				return fmt.Errorf("install failed: %w", err)
+			}
+		}
+		return nil
+	}
+	if err := bi.InstallMany(manager.WithYes(ctx), pkgs...); err != nil {
+		return fmt.Errorf("install failed: %w", err)
+	}
+	return nil
+}
+
 func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag, note string, groupInstall bool) error {
 	if managerFlag == "" {
 		return catErr(ErrUsage, "multiple packages require --manager")
@@ -140,16 +173,7 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 		return catErr(ErrUnavailable, "manager %s does not support installing multiple packages at once", adapter.Name())
 	}
 
-	// Brew: --cask is batch-wide, so a mixed cask/formula batch falls back to
-	// per-package single installs. A uniform batch uses one command.
-	casks := brewCasks(cmd.Context(), adapter, pkgs)
-	caskCount := countCasks(casks)
-	mixed := caskCount > 0 && caskCount < len(pkgs)
-
-	installCtx := cmd.Context()
-	if caskCount == len(pkgs) {
-		installCtx = manager.WithCask(cmd.Context())
-	}
+	installCtx, mixed, casks := brewBatchContext(cmd, adapter, pkgs)
 
 	if err := confirmDestructiveMany(installCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
 		adapter, previewInstall, "Install", pkgs); err != nil {
@@ -161,20 +185,8 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 	target := fmt.Sprintf("%d package(s)", len(pkgs))
 	printStatus(errOut, tty, false, "installing", target, adapter.Name(), "")
 
-	if mixed {
-		for _, p := range pkgs {
-			ctx := manager.WithYes(cmd.Context())
-			if casks[p] {
-				ctx = manager.WithYes(manager.WithCask(cmd.Context()))
-			}
-			if err := adapter.Install(ctx, p); err != nil {
-				return fmt.Errorf("install failed: %w", err)
-			}
-		}
-	} else {
-		if err := bi.InstallMany(manager.WithYes(installCtx), pkgs...); err != nil {
-			return fmt.Errorf("install failed: %w", err)
-		}
+	if err := execBatchInstall(installCtx, adapter, bi, mixed, casks, pkgs); err != nil {
+		return err
 	}
 	addTrackedAll(app, pkgs, adapter.Name(), note)
 

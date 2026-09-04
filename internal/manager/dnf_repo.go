@@ -296,6 +296,30 @@ func validateRepoFileContent(content []byte) error {
 	return nil
 }
 
+// writeRepoFile writes content to a temp file and sudo-moves it into dnfReposDir.
+func writeRepoFile(ctx context.Context, exec Executor, name, content string) error {
+	tmpFile, err := os.CreateTemp("", fmt.Sprintf("stamp-%s-*.repo", name))
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	if _, err := tmpFile.WriteString(content); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("failed to write repo file: %w", err)
+	}
+	_ = tmpFile.Close()
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	destPath := filepath.Join(dnfReposDir, filepath.Base(name)+".repo")
+	args := sudoCmd("mv", tmpPath, destPath)
+	_, err = exec(WithStreamIO(ctx), args[0], args[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to add repo %s: %w", name, err)
+	}
+	return nil
+}
+
 // AddRepo enables a third-party repository.
 func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 	if err := requireConsent(ctx); err != nil {
@@ -315,26 +339,7 @@ func (m *DNF) AddRepo(ctx context.Context, name, url string) error {
 		} else {
 			content = fmt.Sprintf("[%s]\nname=%s\nbaseurl=%s\nenabled=1\ngpgcheck=0\n", name, name, url)
 		}
-		tmpFile, err := os.CreateTemp("", fmt.Sprintf("stamp-%s-*.repo", name))
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		tmpPath := tmpFile.Name()
-		if _, err := tmpFile.WriteString(content); err != nil {
-			_ = tmpFile.Close()
-			_ = os.Remove(tmpPath)
-			return fmt.Errorf("failed to write repo file: %w", err)
-		}
-		_ = tmpFile.Close()
-		defer func() { _ = os.Remove(tmpPath) }()
-
-		destPath := filepath.Join(dnfReposDir, filepath.Base(name)+".repo")
-		args := sudoCmd("mv", tmpPath, destPath)
-		_, err = m.exec(WithStreamIO(ctx), args[0], args[1:]...)
-		if err != nil {
-			return fmt.Errorf("failed to add repo %s: %w", name, err)
-		}
-		return nil
+		return writeRepoFile(ctx, m.exec, name, content)
 	}
 	args := sudoCmd(m.cmd, "copr", "enable", "-y", name)
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)

@@ -317,6 +317,31 @@ func parseSnapRevisions(output []byte) map[string]string {
 	return result
 }
 
+// snapInactive tracks an inactive snap revision by name and revision number.
+type snapInactive struct {
+	name string
+	rev  string
+}
+
+// inactiveSnapRevisions returns the inactive snap revisions from allLines,
+// excluding any that are still active per activeRevs.
+func inactiveSnapRevisions(activeRevs map[string]string, allLines []string) []snapInactive {
+	var out []snapInactive
+	for _, line := range allLines {
+		fields := strings.Fields(line)
+		if len(fields) < 3 || fields[0] == "Name" {
+			continue
+		}
+		name := fields[0]
+		rev := fields[2]
+		if activeRevs[name] == rev {
+			continue
+		}
+		out = append(out, snapInactive{name: name, rev: rev})
+	}
+	return out
+}
+
 // Clean removes old snap revisions to free disk space.
 // Keeps active revisions; removes all inactive (old) revisions.
 func (m *Snap) Clean(ctx context.Context, dryRun bool) ([]string, error) {
@@ -335,40 +360,24 @@ func (m *Snap) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all snap revisions: %w", err)
 	}
-	allLines := parseLines(allOut)
 
-	var removed []string
-	for _, line := range allLines {
-		fields := strings.Fields(line)
-		if len(fields) < 3 || fields[0] == "Name" {
-			continue
-		}
-		name := fields[0]
-		rev := fields[2]
-		if activeRevs[name] == rev {
-			continue
-		}
-		removed = append(removed, fmt.Sprintf("%s rev %s", name, rev))
-	}
+	inactive := inactiveSnapRevisions(activeRevs, parseLines(allOut))
 
 	if dryRun {
+		removed := make([]string, 0, len(inactive))
+		for _, r := range inactive {
+			removed = append(removed, fmt.Sprintf("%s rev %s", r.name, r.rev))
+		}
 		return removed, nil
 	}
 
-	for _, line := range allLines {
-		fields := strings.Fields(line)
-		if len(fields) < 3 || fields[0] == "Name" {
-			continue
-		}
-		name := fields[0]
-		rev := fields[2]
-		if activeRevs[name] == rev {
-			continue
-		}
-		args := sudoCmd("snap", "remove", name, "--revision", rev)
+	removed := make([]string, 0, len(inactive))
+	for _, r := range inactive {
+		args := sudoCmd("snap", "remove", r.name, "--revision", r.rev)
 		if _, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...); err != nil {
-			return nil, fmt.Errorf("failed to remove snap %s revision %s: %w", name, rev, err)
+			return nil, fmt.Errorf("failed to remove snap %s revision %s: %w", r.name, r.rev, err)
 		}
+		removed = append(removed, fmt.Sprintf("%s rev %s", r.name, r.rev))
 	}
 	return removed, nil
 }
