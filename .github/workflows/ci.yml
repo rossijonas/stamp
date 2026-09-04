@@ -59,8 +59,8 @@ jobs:
 
       - name: Complexity gate (gocognit/gocyclo ≤15)
         run: |
-          go install github.com/uudashr/gocognit/cmd/gocognit@latest
-          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          go install github.com/uudashr/gocognit/cmd/gocognit@v1.2.1
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
           FILES=$(find internal/ cmd/ -name '*.go' ! -name '*_test.go')
           if [ -n "$FILES" ]; then
             VIOLATIONS=$(gocognit -over 15 $FILES 2>&1; gocyclo -over 15 $FILES 2>&1)
