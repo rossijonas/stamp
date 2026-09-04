@@ -96,18 +96,10 @@ func pacmanIgnorePkg(ctx context.Context, exec Executor) ([]string, error) {
 	return nil, nil
 }
 
-func pacmanHold(ctx context.Context, exec Executor, pkg string) error {
-	if err := requireConsent(ctx); err != nil {
-		return err
-	}
-	if err := ValidatePackageName(pkg); err != nil {
-		return err
-	}
-	lines, err := pacmanConfRead(ctx, exec)
-	if err != nil {
-		return err
-	}
-	modified := false
+// ignorePkgLine returns the index of the IgnorePkg line within the [options]
+// section and the index of its '='. found is false when no valid IgnorePkg line
+// appears before the next section. Both hold and unhold share this scan.
+func ignorePkgLine(lines []string) (idx, eqIdx int, found bool) {
 	inOptions := false
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -123,31 +115,42 @@ func pacmanHold(ctx context.Context, exec Executor, pkg string) error {
 			if eqIdx < 0 {
 				continue
 			}
-			value := strings.TrimSpace(trimmed[eqIdx+1:])
-			pkgs := strings.Fields(value)
-			for _, p := range pkgs {
-				if p == pkg {
-					return nil
-				}
-			}
-			lines[i] = line + " " + pkg
-			modified = true
-			break
+			return i, eqIdx, true
 		}
 	}
-	if !modified {
-		for i, line := range lines {
-			if strings.TrimSpace(line) == pacmanOptionsSection {
-				lines = append(lines[:i+1], append([]string{"IgnorePkg = " + pkg}, lines[i+1:]...)...)
-				modified = true
-				break
+	return 0, 0, false
+}
+
+func pacmanHold(ctx context.Context, exec Executor, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	if err := ValidatePackageName(pkg); err != nil {
+		return err
+	}
+	lines, err := pacmanConfRead(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	if idx, eqIdx, ok := ignorePkgLine(lines); ok {
+		value := strings.TrimSpace(lines[idx][eqIdx+1:])
+		for _, p := range strings.Fields(value) {
+			if p == pkg {
+				return nil
 			}
 		}
+		lines[idx] = lines[idx] + " " + pkg
+		return pacmanConfWrite(ctx, exec, lines)
 	}
-	if !modified {
-		return fmt.Errorf("could not find [options] section in pacman.conf")
+
+	for i, line := range lines {
+		if strings.TrimSpace(line) == pacmanOptionsSection {
+			lines = append(lines[:i+1], append([]string{"IgnorePkg = " + pkg}, lines[i+1:]...)...)
+			return pacmanConfWrite(ctx, exec, lines)
+		}
 	}
-	return pacmanConfWrite(ctx, exec, lines)
+	return fmt.Errorf("could not find [options] section in pacman.conf")
 }
 
 func pacmanUnhold(ctx context.Context, exec Executor, pkg string) error {
@@ -161,43 +164,31 @@ func pacmanUnhold(ctx context.Context, exec Executor, pkg string) error {
 	if err != nil {
 		return err
 	}
-	inOptions := false
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == pacmanOptionsSection {
-			inOptions = true
-			continue
-		}
-		if inOptions && strings.HasPrefix(trimmed, "[") && trimmed != pacmanOptionsSection {
-			break
-		}
-		if inOptions && strings.HasPrefix(trimmed, "IgnorePkg") {
-			eqIdx := strings.Index(trimmed, "=")
-			if eqIdx < 0 {
-				continue
-			}
-			before := strings.TrimSpace(trimmed[:eqIdx])
-			value := strings.TrimSpace(trimmed[eqIdx+1:])
-			pkgs := strings.Fields(value)
-			newPkgs := make([]string, 0, len(pkgs))
-			found := false
-			for _, p := range pkgs {
-				if p == pkg {
-					found = true
-				} else {
-					newPkgs = append(newPkgs, p)
-				}
-			}
-			if !found {
-				return fmt.Errorf("package %s is not held", pkg)
-			}
-			if len(newPkgs) == 0 {
-				lines[i] = before + " ="
-			} else {
-				lines[i] = before + " = " + strings.Join(newPkgs, " ")
-			}
-			return pacmanConfWrite(ctx, exec, lines)
+
+	idx, eqIdx, ok := ignorePkgLine(lines)
+	if !ok {
+		return fmt.Errorf("package %s is not held", pkg)
+	}
+	trimmed := strings.TrimSpace(lines[idx])
+	before := strings.TrimSpace(trimmed[:eqIdx])
+	value := strings.TrimSpace(trimmed[eqIdx+1:])
+	pkgs := strings.Fields(value)
+	newPkgs := make([]string, 0, len(pkgs))
+	found := false
+	for _, p := range pkgs {
+		if p == pkg {
+			found = true
+		} else {
+			newPkgs = append(newPkgs, p)
 		}
 	}
-	return fmt.Errorf("package %s is not held", pkg)
+	if !found {
+		return fmt.Errorf("package %s is not held", pkg)
+	}
+	if len(newPkgs) == 0 {
+		lines[idx] = before + " ="
+	} else {
+		lines[idx] = before + " = " + strings.Join(newPkgs, " ")
+	}
+	return pacmanConfWrite(ctx, exec, lines)
 }

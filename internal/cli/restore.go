@@ -4,9 +4,24 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"github.com/rossijonas/stamp/internal/manifest"
 )
+
+// confirmRestore gates the restore on user consent. Non-interactive runs
+// without -y abort (fail closed); interrupted runs abort cleanly.
+func confirmRestore(cmd *cobra.Command, app *AppContext) error {
+	if app.yes {
+		return nil
+	}
+	if cmd.Context().Err() != nil {
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
+		return nil
+	}
+	if err := consentPrompt(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(),
+		"Restore tracked repositories and packages? [y/N]: "); err != nil {
+		return handleConsent(err)
+	}
+	return nil
+}
 
 func newRestoreCmd() *cobra.Command {
 	var dryRun bool
@@ -36,26 +51,8 @@ then installs all tracked packages concurrently across package managers.`,
 				return app.manifestErr
 			}
 
-			repos := app.manifest.Repositories
-			pkgs := app.manifest.Packages
-
-			if managerFlag != "" {
-				var filteredRepos []manifest.Repository
-				for _, r := range repos {
-					if r.Manager == managerFlag {
-						filteredRepos = append(filteredRepos, r)
-					}
-				}
-				repos = filteredRepos
-
-				var filteredPkgs []manifest.Package
-				for _, p := range pkgs {
-					if p.Manager == managerFlag {
-						filteredPkgs = append(filteredPkgs, p)
-					}
-				}
-				pkgs = filteredPkgs
-			}
+			repos := filterRepositories(app.manifest.Repositories, managerFlag, "")
+			pkgs := filterPackages(app.manifest.Packages, managerFlag, "")
 
 			if len(pkgs) == 0 && len(repos) == 0 {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Nothing to restore")
@@ -67,18 +64,8 @@ then installs all tracked packages concurrently across package managers.`,
 				return nil
 			}
 
-			// Confirmation gate: prompts unless -y is passed. Non-interactive
-			// runs without -y abort (fail closed, non-zero exit). Interrupted
-			// runs abort too.
-			if !app.yes {
-				if cmd.Context().Err() != nil {
-					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
-					return nil
-				}
-				if err := consentPrompt(cmd.Context(), cmd.ErrOrStderr(), cmd.InOrStdin(),
-					"Restore tracked repositories and packages? [y/N]: "); err != nil {
-					return handleConsent(err)
-				}
+			if err := confirmRestore(cmd, app); err != nil {
+				return err
 			}
 
 			restoreRepositories(cmd.Context(), cmd.ErrOrStderr(), app.adapters, repos)

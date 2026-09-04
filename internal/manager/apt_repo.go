@@ -38,68 +38,106 @@ func parseAPTSources() ([]RepositoryInfo, error) {
 
 	var repos []RepositoryInfo
 
-	parseFile := func(path string) {
-		//nolint:gosec // path is a controlled path to /etc/apt/sources*
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return
-		}
-		lines := strings.Split(string(data), "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			fields := strings.Fields(line)
-			if len(fields) < 2 {
-				continue
-			}
-			if fields[0] != "deb" && fields[0] != "deb-src" {
-				continue
-			}
-			urlIdx := 1
-			for urlIdx < len(fields) && strings.HasPrefix(fields[urlIdx], "[") {
-				urlIdx++
-			}
-			if urlIdx >= len(fields) {
-				continue
-			}
-			repoURL := fields[urlIdx]
-			parsed, err := url.Parse(repoURL)
-			if err != nil {
-				continue
-			}
-			if systemDomains[parsed.Host] {
-				continue
-			}
-			name := parsed.Host + parsed.Path
-			name = strings.TrimSuffix(name, "/")
-			name = strings.TrimPrefix(name, "www.")
-
-			found := false
-			for _, r := range repos {
-				if r.URL == repoURL {
-					found = true
-					break
-				}
-			}
-			if !found {
-				repos = append(repos, RepositoryInfo{Name: name, URL: repoURL})
-			}
-		}
+	addFile := func(path string) {
+		repos = appendUniqueRepos(repos, parseAPTFile(path, systemDomains))
 	}
 
-	parseFile(aptSourcesFile)
+	addFile(aptSourcesFile)
 
 	if entries, err := os.ReadDir(aptSourcesDir); err == nil {
 		for _, entry := range entries {
 			if filepath.Ext(entry.Name()) == ".list" {
-				parseFile(filepath.Join(aptSourcesDir, entry.Name()))
+				addFile(filepath.Join(aptSourcesDir, entry.Name()))
 			}
 		}
 	}
 
 	return repos, nil
+}
+
+// parseAPTFile reads a single APT source file and returns its non-system
+// repositories. Unreadable files yield no repos.
+func parseAPTFile(path string, systemDomains map[string]bool) []RepositoryInfo {
+	//nolint:gosec // path is a controlled path to /etc/apt/sources*
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+
+	var repos []RepositoryInfo
+	for _, line := range strings.Split(string(data), "\n") {
+		if repo, ok := parseAPTLine(line, systemDomains); ok {
+			repos = append(repos, repo)
+		}
+	}
+	return repos
+}
+
+// parseAPTLine converts one line of an APT source file into a repository, or
+// returns ok=false when the line is not a non-system deb source entry.
+func parseAPTLine(line string, systemDomains map[string]bool) (RepositoryInfo, bool) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return RepositoryInfo{}, false
+	}
+	fields := strings.Fields(line)
+	if len(fields) < 2 {
+		return RepositoryInfo{}, false
+	}
+	if fields[0] != "deb" && fields[0] != "deb-src" {
+		return RepositoryInfo{}, false
+	}
+	repoURL, ok := aptLineURL(fields)
+	if !ok {
+		return RepositoryInfo{}, false
+	}
+	parsed, err := url.Parse(repoURL)
+	if err != nil {
+		return RepositoryInfo{}, false
+	}
+	if systemDomains[parsed.Host] {
+		return RepositoryInfo{}, false
+	}
+	return RepositoryInfo{Name: repoName(parsed), URL: repoURL}, true
+}
+
+// aptLineURL returns the repository URL from a parsed "deb" source line,
+// skipping leading option flags such as [arch=amd64].
+func aptLineURL(fields []string) (string, bool) {
+	urlIdx := 1
+	for urlIdx < len(fields) && strings.HasPrefix(fields[urlIdx], "[") {
+		urlIdx++
+	}
+	if urlIdx >= len(fields) {
+		return "", false
+	}
+	return fields[urlIdx], true
+}
+
+// repoName derives a repository display name from a parsed URL, stripping a
+// trailing slash and a leading www. prefix.
+func repoName(parsed *url.URL) string {
+	name := parsed.Host + parsed.Path
+	name = strings.TrimSuffix(name, "/")
+	name = strings.TrimPrefix(name, "www.")
+	return name
+}
+
+// appendUniqueRepos appends repos whose URL is not already present.
+func appendUniqueRepos(repos []RepositoryInfo, newRepos []RepositoryInfo) []RepositoryInfo {
+	for _, nr := range newRepos {
+		found := false
+		for _, r := range repos {
+			if r.URL == nr.URL {
+				found = true
+				break
+			}
+		}
+		if !found {
+			repos = append(repos, nr)
+		}
+	}
+	return repos
 }
 
 // AddRepo enables a third-party repository.

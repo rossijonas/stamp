@@ -10,6 +10,85 @@ import (
 	"github.com/rossijonas/stamp/internal/manifest"
 )
 
+// hasRecordedManager reports whether the package is tracked in the manifest.
+func hasRecordedManager(packages []manifest.Package, pkgName string) bool {
+	for _, p := range packages {
+		if p.Name == pkgName {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveReinstallAdapter finds the adapter for a single reinstall. Packages
+// tracked in the manifest use their recorded manager; pre-existing packages
+// go through the 3-tier resolver.
+func resolveReinstallAdapter(app *AppContext, pkgName, managerFlag string) (adapter manager.Adapter, err error) {
+	var recordedManager string
+	for _, p := range app.manifest.Packages {
+		if p.Name == pkgName {
+			recordedManager = p.Manager
+			break
+		}
+	}
+
+	if recordedManager != "" {
+		for _, a := range app.adapters {
+			if a.Name() == recordedManager {
+				return a, nil
+			}
+		}
+		return nil, catErr(ErrUnavailable, "manager %q is not available on this system", recordedManager)
+	}
+
+	resolver := NewResolver(app.adapters, app.config)
+	resolved, err := resolver.Resolve(pkgName, managerFlag)
+	if err != nil {
+		return nil, fmt.Errorf("cannot resolve manager for %q: %w", pkgName, err)
+	}
+	return resolved, nil
+}
+
+// executeSingleReinstall runs the native reinstall, refreshes snapshots, and
+// records the package (or its note) in the manifest.
+func executeSingleReinstall(cmd *cobra.Command, app *AppContext, adapter manager.Adapter, pkgName, note string, isPreExisting bool) error {
+	errOut := cmd.ErrOrStderr()
+	tty := isOutputTerminal(errOut)
+	if line := statusLine(tty, false, "reinstalling", pkgName, adapter.Name(), ""); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
+
+	if err := adapter.Reinstall(manager.WithYes(cmd.Context()), pkgName); err != nil {
+		return fmt.Errorf("reinstall failed: %w", err)
+	}
+
+	// Save snapshots to align baseline
+	restoreSaveSnapshots(cmd.Context(), errOut, app.adapters)
+
+	// Add to manifest if pre-existing
+	if isPreExisting {
+		app.manifest.AddPackage(manifest.Package{
+			Name:    pkgName,
+			Manager: adapter.Name(),
+			Notes:   note,
+			Origin:  manifest.OriginStamped,
+		})
+	} else if note != "" {
+		// Tracked package: refresh its note to capture reinstall intent.
+		app.manifest.SetNote(pkgName, adapter.Name(), note)
+	}
+
+	// Save manifest
+	if err := app.saveManifest(); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+
+	if line := statusLine(tty, true, "reinstalled", pkgName, adapter.Name(), note); line != "" {
+		_, _ = fmt.Fprintln(errOut, line)
+	}
+	return nil
+}
+
 func newReinstallCmd() *cobra.Command {
 	var managerFlag string
 	var note string
@@ -46,38 +125,11 @@ tracked in the manifest, resolve the manager and track it.`,
 				return fmt.Errorf("invalid package name: %w", err)
 			}
 
-			// Look up in manifest
-			var recordedManager string
-			for _, p := range app.manifest.Packages {
-				if p.Name == pkgName {
-					recordedManager = p.Manager
-					break
-				}
+			adapter, err := resolveReinstallAdapter(app, pkgName, managerFlag)
+			if err != nil {
+				return err
 			}
-
-			var adapter manager.Adapter
-			isPreExisting := recordedManager == ""
-
-			if !isPreExisting {
-				// Manifest-tracked: find adapter by recorded manager
-				for _, a := range app.adapters {
-					if a.Name() == recordedManager {
-						adapter = a
-						break
-					}
-				}
-				if adapter == nil {
-					return catErr(ErrUnavailable, "manager %q is not available on this system", recordedManager)
-				}
-			} else {
-				// Pre-existing: resolve via 3-tier engine
-				resolver := NewResolver(app.adapters, app.config)
-				resolved, err := resolver.Resolve(pkgName, managerFlag)
-				if err != nil {
-					return fmt.Errorf("cannot resolve manager for %q: %w", pkgName, err)
-				}
-				adapter = resolved
-			}
+			isPreExisting := !hasRecordedManager(app.manifest.Packages, pkgName)
 
 			// Confirmation gate: prompts unless -y is passed. Non-interactive
 			// runs without -y abort (fail closed, non-zero exit).
@@ -86,42 +138,7 @@ tracked in the manifest, resolve the manager and track it.`,
 				return handleConsent(err)
 			}
 
-			errOut := cmd.ErrOrStderr()
-			tty := isOutputTerminal(errOut)
-			if line := statusLine(tty, false, "reinstalling", pkgName, adapter.Name(), ""); line != "" {
-				_, _ = fmt.Fprintln(errOut, line)
-			}
-
-			// Execute native reinstall
-			if err := adapter.Reinstall(manager.WithYes(cmd.Context()), pkgName); err != nil {
-				return fmt.Errorf("reinstall failed: %w", err)
-			}
-
-			// Save snapshots to align baseline
-			restoreSaveSnapshots(cmd.Context(), cmd.ErrOrStderr(), app.adapters)
-
-			// Add to manifest if pre-existing
-			if isPreExisting {
-				app.manifest.AddPackage(manifest.Package{
-					Name:    pkgName,
-					Manager: adapter.Name(),
-					Notes:   note,
-					Origin:  manifest.OriginStamped,
-				})
-			} else if note != "" {
-				// Tracked package: refresh its note to capture reinstall intent.
-				app.manifest.SetNote(pkgName, adapter.Name(), note)
-			}
-
-			// Save manifest
-			if err := app.saveManifest(); err != nil {
-				return fmt.Errorf("failed to save manifest: %w", err)
-			}
-
-			if line := statusLine(tty, true, "reinstalled", pkgName, adapter.Name(), note); line != "" {
-				_, _ = fmt.Fprintln(errOut, line)
-			}
-			return nil
+			return executeSingleReinstall(cmd, app, adapter, pkgName, note, isPreExisting)
 		},
 	}
 

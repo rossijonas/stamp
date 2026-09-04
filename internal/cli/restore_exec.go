@@ -42,6 +42,40 @@ func restoreRepositories(ctx context.Context, w io.Writer, adapters []manager.Ad
 	}
 }
 
+// installRestorePackage installs one package, wrapping the context with cask or
+// group flags when the manifest entry declares them.
+func installRestorePackage(ctx context.Context, w io.Writer, a manager.Adapter, pName string, matches []manifest.Package) error {
+	installCtx := ctx
+	for _, p := range matches {
+		if p.Name == pName && p.Manager == a.Name() {
+			if p.Cask {
+				installCtx = manager.WithCask(ctx)
+			}
+			if p.Group {
+				installCtx = manager.WithGroup(ctx)
+			}
+			break
+		}
+	}
+	if err := a.Install(manager.WithYes(installCtx), pName); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(w, "  installed %s via %s\n", pName, a.Name())
+	return nil
+}
+
+// restorePackageGroup installs one manager's packages concurrently, collecting
+// any errors.
+func restorePackageGroup(ctx context.Context, w io.Writer, a manager.Adapter, names []string, matches []manifest.Package, errMu *sync.Mutex, errors *[]restoreError) {
+	for _, pName := range names {
+		if err := installRestorePackage(ctx, w, a, pName, matches); err != nil {
+			errMu.Lock()
+			*errors = append(*errors, restoreError{Manager: a.Name(), Pkg: pName, Err: err})
+			errMu.Unlock()
+		}
+	}
+}
+
 func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkgs []manifest.Package) []restoreError {
 	if len(pkgs) == 0 {
 		return nil
@@ -71,30 +105,10 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 		}
 
 		wg.Add(1)
-		go func(a manager.Adapter, names []string, pkgs []manifest.Package) {
+		go func(a manager.Adapter, names []string) {
 			defer wg.Done()
-			for _, pName := range names {
-				installCtx := ctx
-				for _, p := range pkgs {
-					if p.Name == pName && p.Manager == a.Name() {
-						if p.Cask {
-							installCtx = manager.WithCask(ctx)
-						}
-						if p.Group {
-							installCtx = manager.WithGroup(ctx)
-						}
-						break
-					}
-				}
-				if err := a.Install(manager.WithYes(installCtx), pName); err != nil {
-					errMu.Lock()
-					errors = append(errors, restoreError{Manager: a.Name(), Pkg: pName, Err: err})
-					errMu.Unlock()
-				} else {
-					_, _ = fmt.Fprintf(w, "  installed %s via %s\n", pName, a.Name())
-				}
-			}
-		}(adapter, pNames, pkgs)
+			restorePackageGroup(ctx, w, a, names, pkgs, &errMu, &errors)
+		}(adapter, pNames)
 	}
 
 	wg.Wait()

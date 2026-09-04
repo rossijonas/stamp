@@ -1,13 +1,35 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
 )
+
+// collectProvidesResults queries every target adapter for the file, skipping
+// managers that do not support provides and warning on other failures.
+func collectProvidesResults(ctx context.Context, w io.Writer, targets []manager.Adapter, query string) []string {
+	var results []string
+	for _, a := range targets {
+		out, err := a.Provides(ctx, query)
+		if err != nil {
+			if errors.Is(err, manager.ErrNotSupported) {
+				continue
+			}
+			_, _ = fmt.Fprintf(w, "warning: %s provides failed: %v\n", a.Name(), err)
+			continue
+		}
+		for _, line := range out {
+			results = append(results, fmt.Sprintf("%s (%s)", line, a.Name()))
+		}
+	}
+	return results
+}
 
 func newProvidesCmd() *cobra.Command {
 	var managerFlag string
@@ -32,36 +54,12 @@ Scoped to a single manager with the --manager flag.`,
 			app := appFromCtx(cmd)
 			query := args[0]
 
-			targets := app.adapters
-			if managerFlag != "" {
-				resolved := manager.ResolveManager(managerFlag)
-				var found bool
-				for _, a := range targets {
-					if a.Name() == resolved {
-						targets = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("manager %q not available", managerFlag)
-				}
+			targets, err := resolveManagerTarget(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
 
-			var results []string
-			for _, a := range targets {
-				out, err := a.Provides(cmd.Context(), query)
-				if err != nil {
-					if errors.Is(err, manager.ErrNotSupported) {
-						continue
-					}
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s provides failed: %v\n", a.Name(), err)
-					continue
-				}
-				for _, line := range out {
-					results = append(results, fmt.Sprintf("%s (%s)", line, a.Name()))
-				}
-			}
+			results := collectProvidesResults(cmd.Context(), cmd.ErrOrStderr(), targets, query)
 
 			if len(results) == 0 {
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "no packages provide "+query)

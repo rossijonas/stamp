@@ -1,13 +1,49 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
 )
+
+// renderCleanResult prints one adapter's clean outcome. It reports whether
+// any work is pending or was performed.
+func renderCleanResult(w io.Writer, adapterName string, result []string, dryRun bool) bool {
+	if dryRun {
+		if len(result) == 0 {
+			_, _ = fmt.Fprintf(w, "  %s: nothing to clean\n", adapterName)
+			return false
+		}
+		_, _ = fmt.Fprintf(w, "  %s: would clean %d item(s)\n", adapterName, len(result))
+		return true
+	}
+	if len(result) == 0 {
+		_, _ = fmt.Fprintf(w, "  %s: cleaned\n", adapterName)
+	} else {
+		_, _ = fmt.Fprintf(w, "  %s: cleaned %d item(s)\n", adapterName, len(result))
+	}
+	return true
+}
+
+// runCleanAdapter runs Clean for one adapter and reports whether work is
+// pending or was performed. Unsupported managers are skipped; other failures
+// surface as warnings on stderr.
+func runCleanAdapter(ctx context.Context, w io.Writer, a manager.Adapter, dryRun bool) (hasWork bool) {
+	result, err := a.Clean(manager.WithYes(ctx), dryRun)
+	if err != nil {
+		if errors.Is(err, manager.ErrNotSupported) {
+			return false
+		}
+		_, _ = fmt.Fprintf(w, "warning: %s clean failed: %v\n", a.Name(), err)
+		return false
+	}
+	return renderCleanResult(w, a.Name(), result, dryRun)
+}
 
 func newCleanCmd() *cobra.Command {
 	var managerFlag string
@@ -33,20 +69,9 @@ Scoped to a single manager with the --manager flag.`,
 			app := appFromCtx(cmd)
 			errOut := cmd.ErrOrStderr()
 
-			targets := app.adapters
-			if managerFlag != "" {
-				resolved := manager.ResolveManager(managerFlag)
-				var found bool
-				for _, a := range targets {
-					if a.Name() == resolved {
-						targets = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("manager %q not available", managerFlag)
-				}
+			targets, err := resolveManagerTarget(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
 
 			hasWork := false
@@ -57,29 +82,8 @@ Scoped to a single manager with the --manager flag.`,
 				}
 			}
 			for _, a := range targets {
-				result, err := a.Clean(manager.WithYes(cmd.Context()), dryRun)
-				if err != nil {
-					if errors.Is(err, manager.ErrNotSupported) {
-						continue
-					}
-					_, _ = fmt.Fprintf(errOut, "warning: %s clean failed: %v\n", a.Name(), err)
-					continue
-				}
-
-				if dryRun {
-					if len(result) == 0 {
-						_, _ = fmt.Fprintf(errOut, "  %s: nothing to clean\n", a.Name())
-					} else {
-						hasWork = true
-						_, _ = fmt.Fprintf(errOut, "  %s: would clean %d item(s)\n", a.Name(), len(result))
-					}
-				} else {
+				if runCleanAdapter(cmd.Context(), errOut, a, dryRun) {
 					hasWork = true
-					if len(result) == 0 {
-						_, _ = fmt.Fprintf(errOut, "  %s: cleaned\n", a.Name())
-					} else {
-						_, _ = fmt.Fprintf(errOut, "  %s: cleaned %d item(s)\n", a.Name(), len(result))
-					}
 				}
 			}
 

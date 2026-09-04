@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 
@@ -22,6 +24,144 @@ type infoReportItem struct {
 type infoReport struct {
 	Package string           `json:"package"`
 	Results []infoReportItem `json:"results"`
+}
+
+// infoRawResult is one adapter's info lookup outcome during collection.
+type infoRawResult struct {
+	manager string
+	found   bool
+	info    string
+}
+
+// resolveInfoTargets narrows adapters to a single manager when managerFlag is
+// set, returning the plain "not found (required)" error so the exit code stays 1.
+func resolveInfoTargets(adapters []manager.Adapter, managerFlag string) ([]manager.Adapter, error) {
+	if managerFlag == "" {
+		return adapters, nil
+	}
+	for _, a := range adapters {
+		if a.Name() == manager.ResolveManager(managerFlag) {
+			return []manager.Adapter{a}, nil
+		}
+	}
+	return nil, fmt.Errorf("manager %q not found (required)", managerFlag)
+}
+
+// collectInfoResults queries every target adapter for package info. Adapters
+// that error are recorded as not-found without surfacing the error.
+func collectInfoResults(ctx context.Context, targets []manager.Adapter, pkg string, groupInfo bool) []infoRawResult {
+	results := make([]infoRawResult, 0, len(targets))
+	for _, a := range targets {
+		infoCtx := ctx
+		if groupInfo {
+			infoCtx = manager.WithGroup(infoCtx)
+		}
+		info, err := a.Info(infoCtx, pkg)
+		if err != nil {
+			results = append(results, infoRawResult{manager: a.Name(), found: false})
+		} else {
+			results = append(results, infoRawResult{manager: a.Name(), found: true, info: info})
+		}
+	}
+	return results
+}
+
+// anyInfoFound reports whether any adapter resolved the package.
+func anyInfoFound(results []infoRawResult) bool {
+	for _, r := range results {
+		if r.found {
+			return true
+		}
+	}
+	return false
+}
+
+// extractVersion pulls a version out of a manager's raw info block. It first
+// looks for a "version:" line, then falls back to brew-style "==> pkg: ...".
+func extractVersion(info string) string {
+	lines := strings.Split(info, "\n")
+	for _, l := range lines {
+		lLower := strings.ToLower(l)
+		if strings.HasPrefix(lLower, "version") || strings.Contains(lLower, "version:") {
+			parts := strings.Split(l, ":")
+			if len(parts) > 1 {
+				return "v" + strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	for _, l := range lines {
+		if m := brewDescriptorRegex.FindStringSubmatch(l); m != nil {
+			return m[1]
+		}
+	}
+	return "available"
+}
+
+// renderInfoJSON writes the info report as indented JSON to w.
+func renderInfoJSON(w io.Writer, pkg string, results []infoRawResult) error {
+	report := infoReport{Package: pkg}
+	for _, r := range results {
+		report.Results = append(report.Results, infoReportItem{
+			Manager: r.manager,
+			Found:   r.found,
+			Info:    r.info,
+		})
+	}
+	data, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal info report: %w", err)
+	}
+	_, _ = fmt.Fprintln(w, string(data))
+	return nil
+}
+
+// renderInfoText writes the human-readable info summary. With managerFlag set
+// and the package found, the native raw block is printed; otherwise a summary
+// table across all managers is shown.
+func renderInfoText(w io.Writer, pkg string, results []infoRawResult, managerFlag string) {
+	if !anyInfoFound(results) {
+		_, _ = fmt.Fprintf(w, "%s: not found in any package manager\n", pkg)
+		return
+	}
+
+	if managerFlag != "" {
+		for _, r := range results {
+			if r.found {
+				_, _ = fmt.Fprintf(w, "%s via %s:\n\n%s\n", pkg, r.manager, r.info)
+				return
+			}
+		}
+	}
+
+	_, _ = fmt.Fprintf(w, "%s:\n", pkg)
+	for _, r := range results {
+		if r.found {
+			_, _ = fmt.Fprintf(w, "  %-10s %s\n", r.manager+":", extractVersion(r.info))
+		} else {
+			_, _ = fmt.Fprintf(w, "  %-10s %s\n", r.manager+":", "not available")
+		}
+	}
+}
+
+// validateInfoArgs validates the package name and the --group/--manager flag
+// combination for stamp info.
+func validateInfoArgs(pkgName, managerFlag string, groupInfo bool, targets []manager.Adapter) error {
+	if !groupInfo {
+		if err := manager.ValidatePackageName(pkgName); err != nil {
+			return fmt.Errorf("invalid package name: %w", err)
+		}
+	}
+	if groupInfo {
+		if managerFlag == "" {
+			return fmt.Errorf("--group requires --manager <name>")
+		}
+		for _, a := range targets {
+			if a.Name() != "dnf" && a.Name() != "yum" {
+				return fmt.Errorf("--group is only supported for dnf")
+			}
+		}
+	}
+	return nil
 }
 
 func newInfoCmd() *cobra.Command {
@@ -54,137 +194,24 @@ If -m, --manager is specified, displays the native manager's full raw info block
 			}
 
 			pkgName := args[0]
-			if !groupInfo {
-				if err := manager.ValidatePackageName(pkgName); err != nil {
-					return fmt.Errorf("invalid package name: %w", err)
-				}
+			targets, err := resolveInfoTargets(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
-
-			targets := app.adapters
-			if managerFlag != "" {
-				var found manager.Adapter
-				for _, a := range app.adapters {
-					if a.Name() == manager.ResolveManager(managerFlag) {
-						found = a
-						break
-					}
-				}
-				if found == nil {
-					return fmt.Errorf("manager %q not found (required)", managerFlag)
-				}
-				targets = []manager.Adapter{found}
+			if err := validateInfoArgs(pkgName, managerFlag, groupInfo, targets); err != nil {
+				return err
 			}
-
-			if groupInfo {
-				if managerFlag == "" {
-					return fmt.Errorf("--group requires --manager <name>")
-				}
-				for _, a := range targets {
-					if a.Name() != "dnf" && a.Name() != "yum" {
-						return fmt.Errorf("--group is only supported for dnf")
-					}
-				}
-			}
-
 			if len(targets) == 0 {
 				return catErr(ErrUnavailable, "no package managers available")
 			}
 
-			type rawResult struct {
-				manager string
-				found   bool
-				info    string
-			}
-			var results []rawResult
-
-			for _, a := range targets {
-				infoCtx := cmd.Context()
-				if groupInfo {
-					infoCtx = manager.WithGroup(infoCtx)
-				}
-				info, err := a.Info(infoCtx, pkgName)
-				if err != nil {
-					results = append(results, rawResult{manager: a.Name(), found: false})
-				} else {
-					results = append(results, rawResult{manager: a.Name(), found: true, info: info})
-				}
-			}
-
-			// Validate if package was found anywhere
-			anyFound := false
-			for _, r := range results {
-				if r.found {
-					anyFound = true
-					break
-				}
-			}
+			results := collectInfoResults(cmd.Context(), targets, pkgName, groupInfo)
 
 			if app.json {
-				report := infoReport{
-					Package: pkgName,
-				}
-				for _, r := range results {
-					report.Results = append(report.Results, infoReportItem{
-						Manager: r.manager,
-						Found:   r.found,
-						Info:    r.info,
-					})
-				}
-				data, err := json.MarshalIndent(report, "", "  ")
-				if err != nil {
-					return fmt.Errorf("failed to marshal info report: %w", err)
-				}
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
-				return nil
+				return renderInfoJSON(cmd.OutOrStdout(), pkgName, results)
 			}
 
-			if !anyFound {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s: not found in any package manager\n", pkgName)
-				return nil
-			}
-
-			// If managerFlag is specified and package was found, print raw block
-			if managerFlag != "" {
-				for _, r := range results {
-					if r.found {
-						_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s via %s:\n\n%s\n", pkgName, r.manager, r.info)
-						return nil
-					}
-				}
-			}
-
-			// Multi-manager TTY Table-like Output
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", pkgName)
-			for _, r := range results {
-				if r.found {
-					// Extract version from first few lines of raw info if possible, or print standard string
-					lines := strings.Split(r.info, "\n")
-					version := "available"
-					for _, l := range lines {
-						lLower := strings.ToLower(l)
-						if strings.HasPrefix(lLower, "version") || strings.Contains(lLower, "version:") {
-							parts := strings.Split(l, ":")
-							if len(parts) > 1 {
-								version = "v" + strings.TrimSpace(parts[1])
-								break
-							}
-						}
-					}
-					// Fallback for brew-style output: "==> htop: stable 3.4.1 (bottled), HEAD"
-					if version == "available" {
-						for _, l := range lines {
-							if m := brewDescriptorRegex.FindStringSubmatch(l); m != nil {
-								version = m[1]
-								break
-							}
-						}
-					}
-					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  %-10s %s\n", r.manager+":", version)
-				} else {
-					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  %-10s %s\n", r.manager+":", "not available")
-				}
-			}
-
+			renderInfoText(cmd.OutOrStdout(), pkgName, results, managerFlag)
 			return nil
 		},
 	}
