@@ -137,6 +137,111 @@ func runUpdates(ctx context.Context, w io.Writer, adapters []manager.Adapter, pk
 	return runUpdatesParallel(ctx, w, adapters, pkg)
 }
 
+// promptSudoPassword re-authenticates sudo when needed, caching the password
+// for all subsequent sudo commands. Returns a cleanup func or nil.
+func promptSudoPassword(cmd *cobra.Command, adapters []manager.Adapter, errOut io.Writer, tty bool) (cleanup func()) {
+	if !needsSudo(adapters) || !isTerminal(cmd.InOrStdin()) {
+		return nil
+	}
+	_, _ = fmt.Fprint(errOut, iconLine(tty, "▪", "sudo password:")+" ")
+	//nolint:gosec // uintptr -> int conversion is safe on all target platforms
+	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
+	_, _ = fmt.Fprintln(errOut)
+	if err != nil {
+		// Non-interactive environment — sudo -n will fail fast if password needed
+		_, _ = fmt.Fprintf(errOut, "  warning: cannot read password in non-interactive mode: %v\n", err)
+		return nil
+	}
+	manager.SetSudoPassword(pw)
+	return manager.ClearSudoPassword
+}
+
+// runCheckPhase runs the check phase and decides whether to proceed. It
+// returns true when updates should run, false when the command should stop.
+func runCheckPhase(cmd *cobra.Command, adapters []manager.Adapter, packageFlag string, checkOnly bool, errOut io.Writer) (proceed bool, err error) {
+	results := runCheck(cmd.Context(), adapters, packageFlag, errOut)
+	if checkOnly {
+		return false, nil
+	}
+
+	hasUpdates := false
+	hasUnsupported := false
+	checkFailed := false
+	for _, r := range results {
+		if len(r.Updates) > 0 {
+			hasUpdates = true
+		}
+		if errors.Is(r.Err, manager.ErrCheckUnsupported) {
+			hasUnsupported = true
+		}
+		if r.Err != nil && !errors.Is(r.Err, manager.ErrCheckUnsupported) {
+			checkFailed = true
+		}
+	}
+
+	if !hasUpdates && !hasUnsupported && !checkFailed {
+		tty := isOutputTerminal(errOut)
+		_, _ = fmt.Fprintf(errOut, "  %s\n", iconLine(tty, "✓", "All up to date"))
+		return false, nil
+	}
+
+	// Prompt (fail closed: non-interactive without -y exits
+	// non-zero; an interrupted run aborts cleanly).
+	if cmd.Context().Err() != nil {
+		_, _ = fmt.Fprintln(errOut, "aborted")
+		return false, nil
+	}
+	if err := consentPrompt(cmd.Context(), errOut, cmd.InOrStdin(), "Proceed with updates? [y/N]: "); err != nil {
+		return false, handleConsent(err)
+	}
+	return true, nil
+}
+
+// validateUpdateArgs checks the --check/--yes and --package/--manager flag
+// combinations and validates the package name against the manager.
+func validateUpdateArgs(app *AppContext, checkOnly bool, managerFlag, packageFlag string, adapters []manager.Adapter) error {
+	if checkOnly && app.yes {
+		return fmt.Errorf("--check and --yes are mutually exclusive")
+	}
+	if packageFlag != "" {
+		if managerFlag == "" {
+			return catErr(ErrUsage, "specify --manager to update a specific package")
+		}
+		if err := manager.ValidatePackageForManager(adapters[0].Name(), packageFlag); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// executeUpdate runs the check phase (unless -y) and then the update phase.
+func executeUpdate(cmd *cobra.Command, app *AppContext, adapters []manager.Adapter, packageFlag string, checkOnly, serial bool) error {
+	errOut := cmd.ErrOrStderr()
+	tty := isOutputTerminal(errOut)
+	ctx := cmd.Context()
+
+	if cleanup := promptSudoPassword(cmd, adapters, errOut, tty); cleanup != nil {
+		defer cleanup()
+	}
+
+	// Check phase (skipped when -y)
+	if !app.yes {
+		proceed, err := runCheckPhase(cmd, adapters, packageFlag, checkOnly, errOut)
+		if err != nil {
+			return err
+		}
+		if !proceed {
+			return nil
+		}
+	}
+
+	// Run phase
+	if runUpdates(ctx, errOut, adapters, packageFlag, serial) {
+		return fmt.Errorf("one or more managers failed to update")
+	}
+	return nil
+}
+
 func newUpdateCmd() *cobra.Command {
 	var managerFlag, packageFlag string
 	var serial, checkOnly bool
@@ -175,105 +280,21 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)
-			errOut := cmd.ErrOrStderr()
-			tty := isOutputTerminal(errOut)
-			ctx := cmd.Context()
 
-			if checkOnly && app.yes {
-				return fmt.Errorf("--check and --yes are mutually exclusive")
+			adapters, err := resolveManagerTarget(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
 
-			adapters := app.adapters
-			if managerFlag != "" {
-				resolved := manager.ResolveManager(managerFlag)
-				var found bool
-				for _, a := range adapters {
-					if a.Name() == resolved {
-						adapters = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("manager %q not available", managerFlag)
-				}
-			}
-
-			if packageFlag != "" {
-				if managerFlag == "" {
-					return catErr(ErrUsage, "specify --manager to update a specific package")
-				}
-				if err := manager.ValidatePackageForManager(adapters[0].Name(), packageFlag); err != nil {
-					return err
-				}
+			if err := validateUpdateArgs(app, checkOnly, managerFlag, packageFlag, adapters); err != nil {
+				return err
 			}
 
 			if len(adapters) == 0 {
 				return catErr(ErrUnavailable, "no package managers available")
 			}
 
-			// Pre-run: sudo re-auth (caches password for all sudo commands via sudo -S)
-			if needsSudo(adapters) && isTerminal(cmd.InOrStdin()) {
-				_, _ = fmt.Fprint(errOut, iconLine(tty, "▪", "sudo password:")+" ")
-				//nolint:gosec // uintptr -> int conversion is safe on all target platforms
-				pw, err := term.ReadPassword(int(os.Stdin.Fd()))
-				_, _ = fmt.Fprintln(errOut)
-				if err != nil {
-					// Non-interactive environment — sudo -n will fail fast if password needed
-					_, _ = fmt.Fprintf(errOut, "  warning: cannot read password in non-interactive mode: %v\n", err)
-				} else {
-					manager.SetSudoPassword(pw)
-					defer manager.ClearSudoPassword()
-				}
-			}
-
-			// Check phase (skipped when -y)
-			if !app.yes {
-				results := runCheck(ctx, adapters, packageFlag, errOut)
-
-				if checkOnly {
-					return nil
-				}
-
-				// Decide whether to run
-				hasUpdates := false
-				hasUnsupported := false
-				checkFailed := false
-				for _, r := range results {
-					if len(r.Updates) > 0 {
-						hasUpdates = true
-					}
-					if errors.Is(r.Err, manager.ErrCheckUnsupported) {
-						hasUnsupported = true
-					}
-					if r.Err != nil && !errors.Is(r.Err, manager.ErrCheckUnsupported) {
-						checkFailed = true
-					}
-				}
-
-				shouldRun := hasUpdates || hasUnsupported
-
-				if !shouldRun && !checkFailed {
-					_, _ = fmt.Fprintf(errOut, "  %s\n", iconLine(tty, "✓", "All up to date"))
-					return nil
-				}
-
-				// Prompt (fail closed: non-interactive without -y exits
-				// non-zero; an interrupted run aborts cleanly).
-				if ctx.Err() != nil {
-					_, _ = fmt.Fprintln(errOut, "aborted")
-					return nil
-				}
-				if err := consentPrompt(ctx, errOut, cmd.InOrStdin(), "Proceed with updates? [y/N]: "); err != nil {
-					return handleConsent(err)
-				}
-			}
-
-			// Run phase
-			if runUpdates(ctx, errOut, adapters, packageFlag, serial) {
-				return fmt.Errorf("one or more managers failed to update")
-			}
-			return nil
+			return executeUpdate(cmd, app, adapters, packageFlag, checkOnly, serial)
 		},
 	}
 

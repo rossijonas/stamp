@@ -16,6 +16,61 @@ func alreadyInitialized(manifestPath string) bool {
 	return err == nil
 }
 
+// runSetupCompletions offers shell completion installation.
+func runSetupCompletions(cmd *cobra.Command, autoAccept bool, errOut io.Writer) {
+	_, _ = fmt.Fprintln(errOut, "Step 1 of 4: Shell Completions")
+	if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), "  Install shell completions? [Y/n]: ", true) {
+		runCompletion(cmd)
+	} else {
+		_, _ = fmt.Fprintln(errOut, "  Run 'stamp completion' later")
+	}
+	_, _ = fmt.Fprintln(errOut)
+}
+
+// runSetupManPages offers man page installation.
+func runSetupManPages(cmd *cobra.Command, autoAccept bool, errOut io.Writer) {
+	_, _ = fmt.Fprintln(errOut, "Step 2 of 4: Man Pages")
+	if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), "  Install man pages? [Y/n]: ", true) {
+		runSubcommand(cmd, "man", "install")
+	} else {
+		_, _ = fmt.Fprintln(errOut, "  Run 'stamp man install' later")
+	}
+	_, _ = fmt.Fprintln(errOut)
+}
+
+// runSetupInit offers manifest initialization (or re-initialization).
+func runSetupInit(cmd *cobra.Command, app *AppContext, autoAccept bool, errOut io.Writer) {
+	_, _ = fmt.Fprintln(errOut, "Step 3 of 4: Initialize")
+	isInit := alreadyInitialized(app.manifestPath)
+	if isInit {
+		_, _ = fmt.Fprintln(errOut, "  ⚠ Stamp is already initialized on this system.")
+		_, _ = fmt.Fprintln(errOut, "  This will re-write manifest.toml and baseline snapshots.")
+	}
+	promptText := "  Create manifest and baseline snapshot? [Y/n]: "
+	promptDefault := true
+	if isInit {
+		promptText = "  Re-initialize (backup old configuration)? [y/N]: "
+		promptDefault = false
+	}
+	if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), promptText, promptDefault) {
+		if isInit {
+			runSubcommand(cmd, "init", "--yes")
+		} else {
+			runSubcommand(cmd, "init")
+		}
+	} else {
+		_, _ = fmt.Fprintln(errOut, "  ⚠ stamp requires initialization to work properly")
+	}
+	_, _ = fmt.Fprintln(errOut)
+}
+
+// runSetupDoctor runs the final system diagnosis step.
+func runSetupDoctor(cmd *cobra.Command, errOut io.Writer) {
+	_, _ = fmt.Fprintln(errOut, "Step 4 of 4: System Diagnosis")
+	runSubcommand(cmd, "doctor")
+	_, _ = fmt.Fprintln(errOut)
+}
+
 func newHelloCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "setup",
@@ -44,53 +99,11 @@ Use -y to skip all prompts for scripting.`,
 			}
 			_, _ = fmt.Fprintln(errOut)
 
-			// Step 1: Shell Completions
-			_, _ = fmt.Fprintln(errOut, "Step 1 of 4: Shell Completions")
-			if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), "  Install shell completions? [Y/n]: ", true) {
-				runCompletion(cmd)
-			} else {
-				_, _ = fmt.Fprintln(errOut, "  Run 'stamp completion' later")
-			}
-			_, _ = fmt.Fprintln(errOut)
+			runSetupCompletions(cmd, autoAccept, errOut)
+			runSetupManPages(cmd, autoAccept, errOut)
+			runSetupInit(cmd, app, autoAccept, errOut)
+			runSetupDoctor(cmd, errOut)
 
-			// Step 2: Man Pages
-			_, _ = fmt.Fprintln(errOut, "Step 2 of 4: Man Pages")
-			if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), "  Install man pages? [Y/n]: ", true) {
-				runSubcommand(cmd, "man", "install")
-			} else {
-				_, _ = fmt.Fprintln(errOut, "  Run 'stamp man install' later")
-			}
-			_, _ = fmt.Fprintln(errOut)
-
-			// Step 3: Init
-			_, _ = fmt.Fprintln(errOut, "Step 3 of 4: Initialize")
-			isInit := alreadyInitialized(app.manifestPath)
-			if isInit {
-				_, _ = fmt.Fprintln(errOut, "  ⚠ Stamp is already initialized on this system.")
-				_, _ = fmt.Fprintln(errOut, "  This will re-write manifest.toml and baseline snapshots.")
-			}
-			promptText := "  Create manifest and baseline snapshot? [Y/n]: "
-			promptDefault := true
-			if isInit {
-				promptText = "  Re-initialize (backup old configuration)? [y/N]: "
-				promptDefault = false
-			}
-			if autoAccept || promptYesNo(cmd.Context(), errOut, cmd.InOrStdin(), promptText, promptDefault) {
-				if isInit {
-					runSubcommand(cmd, "init", "--yes")
-				} else {
-					runSubcommand(cmd, "init")
-				}
-			} else {
-				_, _ = fmt.Fprintln(errOut, "  ⚠ stamp requires initialization to work properly")
-			}
-			_, _ = fmt.Fprintln(errOut)
-
-			// Step 4: Doctor
-			_, _ = fmt.Fprintln(errOut, "Step 4 of 4: System Diagnosis")
-			runSubcommand(cmd, "doctor")
-
-			_, _ = fmt.Fprintln(errOut)
 			_, _ = fmt.Fprintln(errOut, iconLine(tty, "▪", "Setup complete!"))
 			return nil
 		},

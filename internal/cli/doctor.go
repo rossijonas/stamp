@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -132,6 +133,72 @@ func buildManifestReport(path string, manifestErr error, manifest *manifest.Mani
 	return ms
 }
 
+// buildDoctorReport assembles the full system diagnosis report.
+func buildDoctorReport(ctx context.Context, app *AppContext) *doctorReport {
+	managers := buildManagersReport(app.adapters)
+	ms := buildManifestReport(app.manifestPath, app.manifestErr, app.manifest)
+	if ms.Valid {
+		ms.Missing = missingFromSystem(ctx, app.adapters, app.manifest)
+	}
+	cs := configStatus{Path: app.configPath}
+	if err := app.config.Backup.Validate(); err != nil {
+		cs.Error = err.Error()
+	} else {
+		cs.Valid = true
+	}
+
+	var mpInstalled bool
+	var mpPath string
+	var mpVersion string
+	var mpMatches bool
+	status, mp, _ := checkInstalledManVersion()
+	if mp != "" {
+		mpInstalled = true
+		mpPath = mp
+		mpVersion = status.version
+		mpMatches = status.matches
+	}
+
+	comps := checkCompletionStatus()
+
+	return &doctorReport{
+		System:          runtime.GOOS,
+		Version:         Version,
+		PackageManagers: managers,
+		Manifest:        ms,
+		Config:          cs,
+		NoColor:         app.noColor,
+		ManPage: manPageStatus{
+			Installed: mpInstalled,
+			Path:      mpPath,
+			Version:   mpVersion,
+			Matches:   mpMatches,
+		},
+		Completions: comps,
+	}
+}
+
+// runManagerDoctor runs a single manager's native doctor diagnostics and
+// prints the result. Returns an error when the manager is unavailable.
+func runManagerDoctor(cmd *cobra.Command, adapters []manager.Adapter, managerFlag string) error {
+	var adapter manager.Adapter
+	for _, a := range adapters {
+		if a.Name() == manager.ResolveManager(managerFlag) {
+			adapter = a
+			break
+		}
+	}
+	if adapter == nil {
+		return catErr(ErrUnavailable, "manager %q not available on this system", managerFlag)
+	}
+	result, err := adapter.Doctor(cmd.Context())
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s doctor:\n\n%s\n", managerFlag, result)
+	return nil
+}
+
 func newDoctorCmd() *cobra.Command {
 	var managerFlag string
 
@@ -156,65 +223,10 @@ Reports which managers are installed and whether the manifest is valid.`,
 			}
 
 			if managerFlag != "" {
-				var adapter manager.Adapter
-				for _, a := range app.adapters {
-					if a.Name() == manager.ResolveManager(managerFlag) {
-						adapter = a
-						break
-					}
-				}
-				if adapter == nil {
-					return catErr(ErrUnavailable, "manager %q not available on this system", managerFlag)
-				}
-				result, err := adapter.Doctor(cmd.Context())
-				if err != nil {
-					return err
-				}
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s doctor:\n\n%s\n", managerFlag, result)
-				return nil
+				return runManagerDoctor(cmd, app.adapters, managerFlag)
 			}
 
-			managers := buildManagersReport(app.adapters)
-			ms := buildManifestReport(app.manifestPath, app.manifestErr, app.manifest)
-			if ms.Valid {
-				ms.Missing = missingFromSystem(cmd.Context(), app.adapters, app.manifest)
-			}
-			cs := configStatus{Path: app.configPath}
-			if err := app.config.Backup.Validate(); err != nil {
-				cs.Error = err.Error()
-			} else {
-				cs.Valid = true
-			}
-
-			var mpInstalled bool
-			var mpPath string
-			var mpVersion string
-			var mpMatches bool
-			status, mp, _ := checkInstalledManVersion()
-			if mp != "" {
-				mpInstalled = true
-				mpPath = mp
-				mpVersion = status.version
-				mpMatches = status.matches
-			}
-
-			comps := checkCompletionStatus()
-
-			report := doctorReport{
-				System:          runtime.GOOS,
-				Version:         Version,
-				PackageManagers: managers,
-				Manifest:        ms,
-				Config:          cs,
-				NoColor:         app.noColor,
-				ManPage: manPageStatus{
-					Installed: mpInstalled,
-					Path:      mpPath,
-					Version:   mpVersion,
-					Matches:   mpMatches,
-				},
-				Completions: comps,
-			}
+			report := buildDoctorReport(cmd.Context(), app)
 
 			if app.json {
 				data, err := json.MarshalIndent(report, "", "  ")
@@ -225,7 +237,7 @@ Reports which managers are installed and whether the manifest is valid.`,
 				return nil
 			}
 
-			renderDoctorTTY(cmd.OutOrStdout(), &report, app.noColor)
+			renderDoctorTTY(cmd.OutOrStdout(), report, app.noColor)
 			return nil
 		},
 	}

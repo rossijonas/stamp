@@ -153,52 +153,85 @@ func parseDNFSources() ([]RepositoryInfo, error) {
 		if filepath.Ext(entry.Name()) != ".repo" {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dnfReposDir, entry.Name()))
+		fileRepos, err := parseRepoFile(filepath.Join(dnfReposDir, entry.Name()))
 		if err != nil {
 			continue
 		}
-		lines := strings.Split(string(data), "\n")
+		repos = append(repos, fileRepos...)
+	}
+	return repos, nil
+}
 
-		var currentID string
-		var currentURL string
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			if strings.HasPrefix(line, "[") {
-				if currentID != "" && !isSystemRepo(currentID) {
-					repos = append(repos, RepositoryInfo{Name: currentID, URL: currentURL})
-				}
-				end := strings.IndexByte(line, ']')
-				if end > 1 {
-					currentID = line[1:end]
-				} else {
-					currentID = ""
-				}
-				currentURL = ""
-				continue
-			}
-			eq := strings.IndexByte(line, '=')
-			if eq < 0 {
-				continue
-			}
-			key := strings.TrimSpace(line[:eq])
-			val := strings.TrimSpace(line[eq+1:])
-			switch {
-			case key == "baseurl":
-				currentURL = val
-			case currentURL == "" && key == "metalink":
-				currentURL = val
-			case currentURL == "" && key == "mirrorlist":
-				currentURL = val
-			}
-		}
+// parseRepoFile reads a single .repo file and extracts its custom/third-party
+// repository identifiers, filtering out known system repos.
+func parseRepoFile(path string) ([]RepositoryInfo, error) {
+	//nolint:gosec // path is a controlled path under dnfReposDir (e.g. /etc/yum.repos.d)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return parseRepoContent(data), nil
+}
+
+// parseRepoContent walks the lines of a .repo file, tracking the current
+// section (repository ID) and its base URL. Each section is flushed when the
+// next section header is seen or the file ends, unless it is a system repo.
+func parseRepoContent(data []byte) []RepositoryInfo {
+	lines := strings.Split(string(data), "\n")
+
+	var repos []RepositoryInfo
+	var currentID string
+	var currentURL string
+	flush := func() {
 		if currentID != "" && !isSystemRepo(currentID) {
 			repos = append(repos, RepositoryInfo{Name: currentID, URL: currentURL})
 		}
 	}
-	return repos, nil
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasPrefix(line, "[") {
+			flush()
+			currentID, currentURL = repoSectionID(line)
+			continue
+		}
+		currentURL = repoLineURL(line, currentURL)
+	}
+	flush()
+	return repos
+}
+
+// repoSectionID extracts the repository ID from a "[section]" header line.
+// The returned URL is empty because a fresh section starts with no base URL.
+func repoSectionID(line string) (id, url string) {
+	end := strings.IndexByte(line, ']')
+	if end > 1 {
+		return line[1:end], ""
+	}
+	return "", ""
+}
+
+// repoLineURL updates the running base URL from a key=value line. The first
+// baseurl always wins; metalink and mirrorlist only fill an empty URL.
+func repoLineURL(line, currentURL string) string {
+	eq := strings.IndexByte(line, '=')
+	if eq < 0 {
+		return currentURL
+	}
+	key := strings.TrimSpace(line[:eq])
+	val := strings.TrimSpace(line[eq+1:])
+	switch {
+	case key == "baseurl":
+		return val
+	case currentURL == "" && key == "metalink":
+		return val
+	case currentURL == "" && key == "mirrorlist":
+		return val
+	}
+	return currentURL
 }
 
 // parseDNFRepos parses the output of 'dnf repolist' and extracts

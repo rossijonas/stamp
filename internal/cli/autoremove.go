@@ -1,13 +1,67 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
 )
+
+// resolveManagerTarget narrows adapters to a single manager when managerFlag
+// is set, returning the plain "not available" error so the exit code stays 1.
+func resolveManagerTarget(adapters []manager.Adapter, managerFlag string) ([]manager.Adapter, error) {
+	if managerFlag == "" {
+		return adapters, nil
+	}
+	resolved := manager.ResolveManager(managerFlag)
+	for _, a := range adapters {
+		if a.Name() == resolved {
+			return []manager.Adapter{a}, nil
+		}
+	}
+	return nil, fmt.Errorf("manager %q not available", managerFlag)
+}
+
+// renderAutoremoveResult prints one adapter's autoremove outcome. It reports
+// whether any work is pending or was performed.
+func renderAutoremoveResult(w io.Writer, adapterName string, pkgs []string, dryRun bool) bool {
+	if dryRun {
+		if len(pkgs) == 0 {
+			_, _ = fmt.Fprintf(w, "  %s: no orphaned packages\n", adapterName)
+			return false
+		}
+		_, _ = fmt.Fprintf(w, "  %s: would remove %d package(s)\n", adapterName, len(pkgs))
+		for _, p := range pkgs {
+			_, _ = fmt.Fprintf(w, "    - %s\n", p)
+		}
+		return true
+	}
+	if len(pkgs) == 0 {
+		_, _ = fmt.Fprintf(w, "  %s: cleaned\n", adapterName)
+	} else {
+		_, _ = fmt.Fprintf(w, "  %s: removed %d package(s)\n", adapterName, len(pkgs))
+	}
+	return true
+}
+
+// runAutoremoveAdapter runs AutoRemove for one adapter and reports whether
+// work is pending or was performed. Unsupported managers are skipped; other
+// failures surface as warnings on stderr.
+func runAutoremoveAdapter(ctx context.Context, w io.Writer, a manager.Adapter, dryRun bool) (hasWork bool) {
+	pkgs, err := a.AutoRemove(manager.WithYes(ctx), dryRun)
+	if err != nil {
+		if errors.Is(err, manager.ErrNotSupported) {
+			return false
+		}
+		_, _ = fmt.Fprintf(w, "warning: %s autoremove failed: %v\n", a.Name(), err)
+		return false
+	}
+	return renderAutoremoveResult(w, a.Name(), pkgs, dryRun)
+}
 
 func newAutoremoveCmd() *cobra.Command {
 	var managerFlag string
@@ -33,20 +87,9 @@ Scoped to a single manager with the --manager flag.`,
 			app := appFromCtx(cmd)
 			errOut := cmd.ErrOrStderr()
 
-			targets := app.adapters
-			if managerFlag != "" {
-				resolved := manager.ResolveManager(managerFlag)
-				var found bool
-				for _, a := range targets {
-					if a.Name() == resolved {
-						targets = []manager.Adapter{a}
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("manager %q not available", managerFlag)
-				}
+			targets, err := resolveManagerTarget(app.adapters, managerFlag)
+			if err != nil {
+				return err
 			}
 
 			hasWork := false
@@ -57,32 +100,8 @@ Scoped to a single manager with the --manager flag.`,
 				}
 			}
 			for _, a := range targets {
-				pkgs, err := a.AutoRemove(manager.WithYes(cmd.Context()), dryRun)
-				if err != nil {
-					if errors.Is(err, manager.ErrNotSupported) {
-						continue
-					}
-					_, _ = fmt.Fprintf(errOut, "warning: %s autoremove failed: %v\n", a.Name(), err)
-					continue
-				}
-
-				if dryRun {
-					if len(pkgs) == 0 {
-						_, _ = fmt.Fprintf(errOut, "  %s: no orphaned packages\n", a.Name())
-					} else {
-						hasWork = true
-						_, _ = fmt.Fprintf(errOut, "  %s: would remove %d package(s)\n", a.Name(), len(pkgs))
-						for _, p := range pkgs {
-							_, _ = fmt.Fprintf(errOut, "    - %s\n", p)
-						}
-					}
-				} else {
+				if runAutoremoveAdapter(cmd.Context(), errOut, a, dryRun) {
 					hasWork = true
-					if len(pkgs) == 0 {
-						_, _ = fmt.Fprintf(errOut, "  %s: cleaned\n", a.Name())
-					} else {
-						_, _ = fmt.Fprintf(errOut, "  %s: removed %d package(s)\n", a.Name(), len(pkgs))
-					}
 				}
 			}
 
