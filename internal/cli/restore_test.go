@@ -93,7 +93,7 @@ manager = "brew"
 	assert.Contains(t, output, "Phase 1: Restoring Repositories...")
 	assert.Contains(t, output, "  restored repository my-tap via brew")
 	assert.Contains(t, output, "Phase 2: Restoring Packages...")
-	assert.Contains(t, output, "  installed htop via brew")
+	assert.Contains(t, output, "  restored 1 package(s) via brew")
 	assert.Contains(t, output, "Restore completed successfully")
 
 	assert.Contains(t, mockBrew.TrackedRepos, "my-tap")
@@ -290,7 +290,7 @@ manager = "dnf"
 	output := buf.String()
 
 	assert.Contains(t, output, "restored repository my-tap via brew")
-	assert.Contains(t, output, "installed htop via brew")
+	assert.Contains(t, output, "restored 1 package(s) via brew")
 	assert.NotContains(t, output, "fedora-copr")
 	assert.NotContains(t, output, "tmux")
 
@@ -365,7 +365,7 @@ manager = "dnf"
 	require.Error(t, err)
 	output := buf.String()
 
-	assert.Contains(t, output, "  installed tmux via dnf")
+	assert.Contains(t, output, "  restored 1 package(s) via dnf")
 	assert.Contains(t, output, "Some packages failed to restore")
 	assert.Contains(t, output, "htop (brew)")
 	assert.Contains(t, err.Error(), "failed to restore 1 package(s)")

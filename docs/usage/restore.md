@@ -14,13 +14,16 @@ stamp restore -y
 Phase 1: Restoring Repositories...
   restored repository flathub via flatpak
 Phase 2: Restoring Packages...
-  installed htop via dnf
-  installed lazygit via brew
-  installed spotify via flatpak
+  restored 1 package(s) via dnf
+  restored 1 package(s) via brew
+  restored 1 package(s) via flatpak
 Restore completed successfully
 
-Restore respects package metadata: Homebrew casks are installed with `--cask`
-and DNF groups are installed with `--group` automatically.
+Stamp batches packages per manager for faster restores (one native
+invocation per manager instead of one per package). On batch failure,
+packages are retried individually with per-package error attribution.
+Homebrew casks are installed with --cask and DNF groups with --group
+automatically.
 ```
 
 ### Dry run
@@ -45,4 +48,4 @@ Packages:
 Stamp restores in two phases:
 
 1. **Phase 1 (Sequential):** All repositories are added one by one (order matters for dependencies)
-2. **Phase 2 (Concurrent):** All packages are installed in parallel across all managers
+2. **Phase 2 (Concurrent):** All packages are installed in parallel across all managers, batched per manager for efficiency
