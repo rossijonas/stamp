@@ -1,0 +1,10 @@
+version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "apt"
+
+[[packages]]
+name = "tree"
+manager = "apt"

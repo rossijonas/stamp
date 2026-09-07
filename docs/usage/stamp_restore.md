@@ -8,8 +8,10 @@ Restore all tracked repositories and packages from the manifest
 ### Synopsis
 
 Read the manifest and restore your system state.
-It first adds all tracked repositories sequentially,
-then installs all tracked packages concurrently across package managers.
+It first adds all tracked repositories sequentially, then installs all
+tracked packages across package managers concurrently, batched per
+manager into a single native invocation (falling back to per-package
+installs for managers without batch support).
 
 ```
 stamp restore [flags]

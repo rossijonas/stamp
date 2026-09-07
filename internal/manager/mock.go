@@ -17,6 +17,7 @@ type Mock struct {
 	ListErr             error
 	ListReposErr        error
 	InstallErr          error
+	InstallFunc         func(ctx context.Context, pkg string) error
 	ReinstallErr        error
 	RemoveErr           error
 	SearchErr           error
@@ -48,6 +49,17 @@ type Mock struct {
 	PreviewReinstallErr error
 	PreviewResult       string
 	PreviewNoop         bool
+
+	// InstallMany recording fields
+	InstallManyErr   error
+	InstallManyCalls int
+	LastBatchCask    bool
+	LastBatchGroup   bool
+
+	// Install recording fields
+	InstallCalls      []string
+	InstallCaskCalls  []bool
+	InstallGroupCalls []bool
 }
 
 // Name returns the package manager identifier.
@@ -90,7 +102,11 @@ func (m *Mock) Install(ctx context.Context, pkg string) error {
 	if err := ValidatePackageName(pkg); err != nil {
 		return err
 	}
-	if m.InstallErr != nil {
+	if m.InstallFunc != nil {
+		if err := m.InstallFunc(ctx, pkg); err != nil {
+			return err
+		}
+	} else if m.InstallErr != nil {
 		return m.InstallErr
 	}
 	for _, p := range m.InstalledPkgs {
@@ -99,6 +115,9 @@ func (m *Mock) Install(ctx context.Context, pkg string) error {
 		}
 	}
 	m.InstalledPkgs = append(m.InstalledPkgs, pkg)
+	m.InstallCalls = append(m.InstallCalls, pkg)
+	m.InstallCaskCalls = append(m.InstallCaskCalls, isCask(ctx))
+	m.InstallGroupCalls = append(m.InstallGroupCalls, isGroup(ctx))
 	return nil
 }
 
@@ -146,6 +165,12 @@ func (m *Mock) Remove(ctx context.Context, pkg string) error {
 
 // InstallMany installs multiple packages via the mock.
 func (m *Mock) InstallMany(ctx context.Context, pkgs ...string) error {
+	m.InstallManyCalls++
+	m.LastBatchCask = isCask(ctx)
+	m.LastBatchGroup = isGroup(ctx)
+	if m.InstallManyErr != nil {
+		return m.InstallManyErr
+	}
 	for _, p := range pkgs {
 		if err := m.Install(ctx, p); err != nil {
 			return err

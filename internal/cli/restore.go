@@ -42,8 +42,10 @@ func newRestoreCmd() *cobra.Command {
   # restore only packages from a specific manager
   stamp restore -m brew`,
 		Long: `Read the manifest and restore your system state.
-It first adds all tracked repositories sequentially,
-then installs all tracked packages concurrently across package managers.`,
+It first adds all tracked repositories sequentially, then installs all
+tracked packages across package managers concurrently, batched per
+manager into a single native invocation (falling back to per-package
+installs for managers without batch support).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			app := appFromCtx(cmd)

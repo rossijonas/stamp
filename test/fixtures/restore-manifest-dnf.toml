@@ -1,0 +1,14 @@
+version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "dnf"
+
+[[packages]]
+name = "tree"
+manager = "dnf"
+
+[[packages]]
+name = "ripgrep"
+manager = "dnf"

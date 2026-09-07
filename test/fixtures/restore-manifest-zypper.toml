@@ -1,0 +1,10 @@
+version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "zypper"
+
+[[packages]]
+name = "tree"
+manager = "zypper"
