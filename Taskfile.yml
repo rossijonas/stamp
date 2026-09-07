@@ -61,7 +61,7 @@ tasks:
     desc: "Lints shell scripts with shellcheck"
     cmds:
       - "sh -c 'which shellcheck 2>/dev/null || (echo \"shellcheck not installed. Install: sudo dnf install -y shellcheck\" && exit 1)'"
-      - shellcheck test/integration/*.sh
+      - shellcheck -x test/integration/*.sh test/lib/*.sh
 
   verify:
     desc: "Verifies module dependencies and checksums"

@@ -20,5 +20,7 @@ ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
 ARG BIN
 COPY $BIN /usr/local/bin/stamp
 COPY test/integration/centos.sh /test.sh
+COPY test/fixtures /test/fixtures
+COPY test/lib /test/lib
 USER linuxbrew
 CMD ["/test.sh"]

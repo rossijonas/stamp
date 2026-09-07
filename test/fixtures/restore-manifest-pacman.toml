@@ -1,0 +1,10 @@
+version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "pacman"
+
+[[packages]]
+name = "tree"
+manager = "pacman"
