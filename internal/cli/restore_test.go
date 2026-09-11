@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -331,6 +332,8 @@ manager = "brew"
 }
 
 func TestRestore_MultiAdapterOneFails(t *testing.T) {
+	overrideSudo(t, func(context.Context) bool { return true }, func(context.Context) error { return nil })
+
 	mockBrew := &manager.Mock{
 		ManagerName: "brew",
 		InstallErr:  assert.AnError,
@@ -372,6 +375,106 @@ manager = "dnf"
 
 	assert.NotContains(t, mockBrew.InstalledPkgs, "htop")
 	assert.Contains(t, mockDNF.InstalledPkgs, "tmux")
+}
+
+// restoreSerialAdapters returns two non-batch adapters whose Install records
+// concurrency, so restore's serial-vs-parallel decision can be asserted.
+func restoreSerialAdapters(probe *inflight) []manager.Adapter {
+	mk := func(name string) manager.Adapter {
+		return &noBatchAdapter{mock: &manager.Mock{
+			ManagerName: name,
+			InstallFunc: func(context.Context, string) error { return probe.run() },
+		}}
+	}
+	return []manager.Adapter{mk("brew"), mk("dnf")}
+}
+
+func restoreSudoManifest(t *testing.T, dir string) string {
+	t.Helper()
+	mPath := filepath.Join(dir, "manifest.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "htop"
+manager = "brew"
+
+[[packages]]
+name = "tmux"
+manager = "dnf"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+	return mPath
+}
+
+func TestRestore_GuardFalseRunsSerial(t *testing.T) {
+	overrideSudo(t, func(context.Context) bool { return false }, func(context.Context) error { return assert.AnError })
+	overrideIsTerminal(t, true)
+
+	probe := &inflight{}
+	adapters := restoreSerialAdapters(probe)
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+	mPath := restoreSudoManifest(t, tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "-y"})
+	require.NoError(t, root.Execute())
+
+	assert.Contains(t, buf.String(), "sudo validation failed")
+	assert.Equal(t, 1, probe.peak(), "guard false must serialize restores")
+}
+
+func TestRestore_GuardTrueRunsParallel(t *testing.T) {
+	overrideSudo(t, func(context.Context) bool { return true }, func(context.Context) error { return nil })
+
+	probe := &inflight{}
+	adapters := restoreSerialAdapters(probe)
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+	mPath := restoreSudoManifest(t, tmpDir)
+
+	root := NewRootCmd(WithAdapters(adapters), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "-y"})
+	require.NoError(t, root.Execute())
+
+	assert.GreaterOrEqual(t, probe.peak(), 2, "ready sudo must restore in parallel")
+}
+
+func TestRestore_AbortedContextAbortsCleanly(t *testing.T) {
+	overrideSudo(t, func(context.Context) bool { return true }, func(context.Context) error { return nil })
+
+	mockDNF := &manager.Mock{ManagerName: "dnf"}
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+	mPath := filepath.Join(tmpDir, "manifest.toml")
+	content := `version = 1
+system = "linux"
+
+[[packages]]
+name = "tmux"
+manager = "dnf"
+`
+	require.NoError(t, os.WriteFile(mPath, []byte(content), 0600))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	root := NewRootCmd(WithAdapters([]manager.Adapter{mockDNF}), WithManifestPath(mPath), WithConfigPath(filepath.Join(tmpDir, "config.toml")))
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"restore", "-y"})
+	require.NoError(t, root.ExecuteContext(ctx))
+
+	assert.Contains(t, buf.String(), "aborted")
+	assert.Empty(t, mockDNF.InstalledPkgs, "canceled run must not restore any package")
 }
 
 func TestRestore_CorruptedManifest(t *testing.T) {

@@ -70,9 +70,30 @@ installs for managers without batch support).`,
 				return err
 			}
 
+			targets := restoreAdapters(app.adapters, repos, pkgs)
+
+			// Authenticate before Phase 1 (repos), then re-validate right before
+			// the parallel package phase; serialize when sudo cannot cache so
+			// concurrent prompts never race.
+			sudoPreflight(cmd, targets, cmd.ErrOrStderr())
+
+			// Interrupted (SIGINT) during auth: abort cleanly rather than start Phase 1.
+			if cmd.Context().Err() != nil {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
+				return nil
+			}
+
 			restoreRepositories(cmd.Context(), cmd.ErrOrStderr(), app.adapters, repos)
 
-			errs := restorePackages(cmd.Context(), cmd.ErrOrStderr(), app.adapters, pkgs)
+			parallelOK := sudoPreflight(cmd, targets, cmd.ErrOrStderr())
+
+			// Interrupted (SIGINT) during Phase 1/auth: abort cleanly rather than start Phase 2.
+			if cmd.Context().Err() != nil {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "aborted")
+				return nil
+			}
+
+			errs := restorePackages(cmd.Context(), cmd.ErrOrStderr(), app.adapters, pkgs, !parallelOK)
 			if len(errs) > 0 {
 				renderRestoreErrors(cmd.ErrOrStderr(), errs)
 				return fmt.Errorf("failed to restore %d package(s)", len(errs))

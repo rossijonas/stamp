@@ -184,7 +184,7 @@ func restorePackageGroupSequential(ctx context.Context, w io.Writer, a manager.A
 	}
 }
 
-func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkgs []manifest.Package) []restoreError {
+func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapter, pkgs []manifest.Package, serial bool) []restoreError {
 	if len(pkgs) == 0 {
 		return nil
 	}
@@ -213,6 +213,11 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 			continue
 		}
 
+		if serial {
+			restorePackageGroup(ctx, w, adapter, pNames, pkgs, &errMu, &outMu, &errors)
+			continue
+		}
+
 		wg.Add(1)
 		go func(a manager.Adapter, names []string) {
 			defer wg.Done()
@@ -222,6 +227,25 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 
 	wg.Wait()
 	return errors
+}
+
+// restoreAdapters returns the adapters for the managers referenced by repos and
+// pkgs, so sudo decisions are scoped to the operations actually being restored.
+func restoreAdapters(adapters []manager.Adapter, repos []manifest.Repository, pkgs []manifest.Package) []manager.Adapter {
+	need := make(map[string]struct{}, len(repos)+len(pkgs))
+	for _, r := range repos {
+		need[r.Manager] = struct{}{}
+	}
+	for _, p := range pkgs {
+		need[p.Manager] = struct{}{}
+	}
+	var out []manager.Adapter
+	for _, a := range adapters {
+		if _, ok := need[a.Name()]; ok {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 func restoreSaveSnapshots(ctx context.Context, w io.Writer, adapters []manager.Adapter) {

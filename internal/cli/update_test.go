@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -34,6 +36,20 @@ func (sb *syncBuffer) String() string {
 // execUpdateCmd is like execCmd but uses syncBuffer for concurrent-safe output.
 func execUpdateCmd(t *testing.T, args []string, adapters []manager.Adapter) (*syncBuffer, error) {
 	t.Helper()
+	return execUpdateCmdSudo(t, args, adapters, func(context.Context) bool { return true }, nil, false)
+}
+
+// execUpdateCmdSudo runs the update command with sudo preflight seams injected,
+// so tests never invoke sudo. terminal controls the isTerminal gate.
+func execUpdateCmdSudo(t *testing.T, args []string, adapters []manager.Adapter,
+	ready func(context.Context) bool, ensureErr error, terminal bool) (*syncBuffer, error) {
+	t.Helper()
+	oldReady, oldEnsure, oldTerm := sudoReady, sudoEnsure, isTerminal
+	sudoReady = ready
+	sudoEnsure = func(context.Context) error { return ensureErr }
+	isTerminal = func(io.Reader) bool { return terminal }
+	t.Cleanup(func() { sudoReady, sudoEnsure, isTerminal = oldReady, oldEnsure, oldTerm })
+
 	buf := new(syncBuffer)
 	tmpDir := t.TempDir()
 	cPath := filepath.Join(tmpDir, "config.toml")
@@ -50,6 +66,33 @@ func execUpdateCmd(t *testing.T, args []string, adapters []manager.Adapter) (*sy
 	root.SetArgs(args)
 	err = root.Execute()
 	return buf, err
+}
+
+func TestUpdateCmd_GuardFalseRunsSerial(t *testing.T) {
+	probe := &inflight{}
+	newAdapter := func(name string) manager.Adapter {
+		return &mockAdapter{name: name, UpdateFunc: func(context.Context, string) error { return probe.run() }}
+	}
+	adapters := []manager.Adapter{newAdapter("dnf"), newAdapter("apt")}
+
+	buf, err := execUpdateCmdSudo(t, []string{"update", "-y"}, adapters,
+		func(context.Context) bool { return false }, assert.AnError, true)
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "sudo validation failed")
+	assert.Equal(t, 1, probe.peak(), "guard false must serialize updates")
+}
+
+func TestUpdateCmd_GuardTrueRunsParallel(t *testing.T) {
+	probe := &inflight{}
+	newAdapter := func(name string) manager.Adapter {
+		return &mockAdapter{name: name, UpdateFunc: func(context.Context, string) error { return probe.run() }}
+	}
+	adapters := []manager.Adapter{newAdapter("dnf"), newAdapter("apt")}
+
+	_, err := execUpdateCmdSudo(t, []string{"update", "-y"}, adapters,
+		func(context.Context) bool { return true }, nil, false)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, probe.peak(), 2, "ready sudo must run updates in parallel")
 }
 
 func TestUpdateCmd_AllManagers(t *testing.T) {

@@ -91,7 +91,7 @@ func TestRestoreBatch_Success(t *testing.T) {
 		{Name: "tmux", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	assert.Equal(t, 1, mock.InstallManyCalls, "one batch call per manager")
 	assert.Contains(t, mock.InstalledPkgs, "htop")
@@ -111,7 +111,7 @@ func TestRestoreBatch_BatchFailRetryAllSucceed(t *testing.T) {
 		{Name: "btop", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs, "all retries succeed → no errors")
 	assert.Equal(t, 1, mock.InstallManyCalls)
 	assert.Equal(t, []string{"htop", "btop"}, mock.InstallCalls, "each retried individually")
@@ -135,7 +135,7 @@ func TestRestoreBatch_BatchFailOneRetryFails(t *testing.T) {
 		{Name: "btop", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Len(t, errs, 1, "only the failing retry is reported")
 	require.Equal(t, "btop", errs[0].Pkg)
 	require.ErrorIs(t, errs[0].Err, assert.AnError)
@@ -155,7 +155,7 @@ func TestRestoreBatch_BatchFailAllRetriesFail(t *testing.T) {
 		{Name: "btop", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Len(t, errs, 2)
 	assert.Equal(t, "htop", errs[0].Pkg)
 	assert.Equal(t, "btop", errs[1].Pkg)
@@ -171,7 +171,7 @@ func TestRestoreBatch_GroupExcluded(t *testing.T) {
 		{Name: "tmux", Manager: "dnf"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	assert.Equal(t, 1, mock.InstallManyCalls, "non-group packages batched")
 	assert.False(t, mock.LastBatchGroup, "batch context has group=false (correct)")
@@ -201,7 +201,7 @@ func TestRestoreBatch_AllCaskBatch(t *testing.T) {
 		{Name: "cask-util", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	assert.Equal(t, 1, mock.InstallManyCalls, "all-cask batch")
 	assert.True(t, mock.LastBatchCask, "cask flag set on batch context")
@@ -219,7 +219,7 @@ func TestRestoreBatch_MixedCaskFormulaFallback(t *testing.T) {
 		{Name: "formula", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	// Mixed → per-package fallback, no InstallMany
 	assert.Equal(t, 0, mock.InstallManyCalls, "mixed must not batch")
@@ -237,7 +237,7 @@ func TestRestoreBatch_NonBatchInstallerFallback(t *testing.T) {
 		{Name: "tmux", Manager: "pipx"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{nba}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{nba}, pkgs, false)
 	require.Empty(t, errs)
 	// NoBatchInstaller → sequential Install
 	assert.Len(t, nba.mock.InstallCalls, 2, "each package installed individually")
@@ -253,7 +253,7 @@ func TestRestoreBatch_BatchSuccessNoEcho(t *testing.T) {
 		{Name: "git", Manager: "dnf"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	output := buf.String()
 	assert.Contains(t, output, "restored 2 package(s) via dnf")
@@ -272,7 +272,7 @@ func TestRestoreBatch_RetryKeepsEcho(t *testing.T) {
 		{Name: "htop", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	// Retry path echoes on success
 	assert.Contains(t, buf.String(), "installed htop via brew")
@@ -291,7 +291,7 @@ func TestRestoreBatch_RetryAppliesCask(t *testing.T) {
 		{Name: "firefox", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	// Batch failed → retry applies live cask detection (WithCask on Install)
 	assert.Equal(t, []bool{true}, mock.InstallCaskCalls, "retry stacks WithCask for cask")
@@ -308,7 +308,7 @@ func TestRestoreBatch_MultiManager(t *testing.T) {
 		{Name: "git", Manager: "dnf"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mockBrew, mockDNF}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mockBrew, mockDNF}, pkgs, false)
 	require.Empty(t, errs)
 	assert.Equal(t, 1, mockBrew.InstallManyCalls, "brew gets 1 batch")
 	assert.Equal(t, 1, mockDNF.InstallManyCalls, "dnf gets 1 batch")
@@ -326,7 +326,7 @@ func TestRestoreBatch_BatchSuccessCaskEchoRemoved(t *testing.T) {
 		{Name: "firefox", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mock}, pkgs, false)
 	require.Empty(t, errs)
 	assert.Contains(t, buf.String(), "restored 1 package(s) via brew")
 	assert.NotContains(t, buf.String(), "installed firefox via brew")
@@ -339,7 +339,7 @@ func TestRestoreBatch_SinglePackageUsesBatch(t *testing.T) {
 		{Name: "htop", Manager: "brew"},
 	}
 	var buf bytes.Buffer
-	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mockBrew}, pkgs)
+	errs := restorePackages(context.Background(), &buf, []manager.Adapter{mockBrew}, pkgs, false)
 	require.Empty(t, errs)
 	assert.Equal(t, 1, mockBrew.InstallManyCalls, "single package still batched")
 	assert.Contains(t, buf.String(), "restored 1 package(s) via brew")
