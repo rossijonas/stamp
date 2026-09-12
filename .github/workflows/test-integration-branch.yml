@@ -1,0 +1,50 @@
+name: "intgr.: branch (dispatch)"
+
+# Manual-only: builds stamp from an arbitrary ref and runs the integration
+# suite, so a branch can be validated before release. Trigger conditions match
+# the release integration workflows (workflow_dispatch); no PR trigger is added.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (branch, tag, or SHA)"
+        required: false
+        default: "main"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: intgr-branch-${{ inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [ubuntu, debian, fedora, centos, rocky, arch, opensuse]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build stamp from ref
+        run: |
+          mkdir -p bin
+          go build -o bin/stamp ./cmd/stamp
+
+      - name: Build Docker image
+        run: |
+          docker build --build-arg BIN=bin/stamp \
+            -f test/Dockerfile.${{ matrix.distro }} \
+            -t stamp-test-${{ matrix.distro }} .
+
+      - name: Run integration tests
+        run: docker run --rm stamp-test-${{ matrix.distro }}

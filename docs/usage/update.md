@@ -51,7 +51,7 @@ By default, running `stamp update` performs metadata refresh, then a serialized 
 
 Proceed with updates? [Y/n]: y
 
-▪ sudo password:
+[sudo] password for user:
 [apt] Reading package lists... Done
 [apt] Upgrading: 2 packages
 [dnf] Upgrading: 1 package
@@ -67,8 +67,12 @@ To ensure accuracy, the check phase runs an explicit metadata refresh step
 before querying for updates. Each adapter's `Refresh` method is called
 (e.g., `brew update`, `apt update`, `zypper refresh`, `pacman -Sy`)
 before the check loop. Managers like `dnf` and `flatpak` skip refresh
-since they use local metadata. A single sudo prompt at the start covers
-both the refresh and the run phase.
+since they use local metadata. Privileged steps run under `sudo`, which
+prompts **natively** only when authentication is required. On hosts where
+`sudo` is configured with `NOPASSWD`, or where credentials are already cached,
+stamp never prompts. Before the parallel update phase stamp re-validates
+credentials; if a password is required and `sudo` cannot cache it, updates
+run serially so prompts never race.
 
 ### Check Only (Dry-Run)
 

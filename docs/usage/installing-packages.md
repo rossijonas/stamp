@@ -177,7 +177,7 @@ are not supported for the go adapter.
 
 ### Aborting an operation
 
-Press Ctrl+C at any point (including the sudo password prompt) to abort cleanly:
+Press Ctrl+C at any point (including at sudo's password prompt) to abort cleanly:
 
 - First Ctrl+C — stamp cancels the running command, kills the child process, and restores the terminal. Any in-progress `sudo`/`dnf`/`apt` process is terminated.
 - Second Ctrl+C — stamp force-exits with status 130 and kills its entire process group, guaranteeing no orphaned processes are left behind.

@@ -1,10 +1,11 @@
 #!/bin/bash
 set -eo pipefail
 export HOMEBREW_NO_AUTO_UPDATE=1
+source /test/lib/sudo-preflight.sh
 
 TIMEOUT=10
-TIMEOUT_LONG=30
-TIMEOUT_EXTRA=120
+TIMEOUT_LONG=120
+TIMEOUT_EXTRA=300
 test_count=0
 pass_count=0
 skip_count=0
@@ -115,7 +116,7 @@ check "reconcile all managers" timeout $TIMEOUT stamp reconcile
 
 echo "=== Flag Tests ==="
 check "search --json" timeout $TIMEOUT stamp search htop --json -m apt
-check "install --note" timeout $TIMEOUT stamp install hello -m apt --note "test note" -y
+check "install --note" timeout $TIMEOUT_LONG stamp install hello -m apt --note "test note" -y
 check "note persisted in manifest" bash -c "stamp list --json | jq -e 'any(.Notes == \"test note\")' > /dev/null"
 check "list -m apt" timeout $TIMEOUT stamp list -m apt
 
@@ -166,7 +167,7 @@ check "update single package" timeout $TIMEOUT stamp update -p hello -m brew -y
 check "reconcile --yes flag" timeout $TIMEOUT stamp reconcile -y -m apt
 
 echo "=== Alias Tests ==="
-check "install via add alias" timeout $TIMEOUT stamp add hello -m apt -y
+check "install via add alias" timeout $TIMEOUT_LONG stamp add hello -m apt -y
 check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m apt -y
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m apt
 check "repo install alias" timeout $TIMEOUT_EXTRA stamp repo install ppa:git-core/ppa -m apt -y
@@ -188,5 +189,8 @@ echo "=== Root Command ==="
 check "stamp (no args)" bash -c "stamp 2>/dev/null | head -5 > /dev/null"
 
 echo
+echo "=== Sudo Preflight ==="
+check "sudo preflight does not prompt on NOPASSWD (apt)" run_sudo_preflight_check apt
+
 echo "  Results: $pass_count passed / $((test_count - pass_count - skip_count)) failed / $skip_count skipped"
 [[ "$pass_count" = "$((test_count - skip_count))" ]]

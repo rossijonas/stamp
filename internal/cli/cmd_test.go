@@ -26,6 +26,7 @@ type mockAdapter struct {
 	searchResults   []string
 	checkUpdates    []manager.UpdateInfo
 	checkUpdatesErr error
+	UpdateFunc      func(ctx context.Context, pkg string) error
 }
 
 func (m *mockAdapter) Name() string                                      { return m.name }
@@ -50,7 +51,12 @@ func (m *mockAdapter) Info(_ context.Context, q string) (string, error) {
 func (m *mockAdapter) Doctor(_ context.Context) (string, error) {
 	return "mock doctor: all good", m.err
 }
-func (m *mockAdapter) Update(_ context.Context, _ string) error { return m.err }
+func (m *mockAdapter) Update(ctx context.Context, pkg string) error {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, pkg)
+	}
+	return m.err
+}
 func (m *mockAdapter) CheckUpdate(_ context.Context, _ string) ([]manager.UpdateInfo, error) {
 	if m.checkUpdatesErr != nil {
 		return nil, m.checkUpdatesErr

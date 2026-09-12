@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	"github.com/rossijonas/stamp/internal/manager"
 )
@@ -18,16 +16,6 @@ type checkResult struct {
 	Name    string
 	Updates []manager.UpdateInfo
 	Err     error
-}
-
-func needsSudo(adapters []manager.Adapter) bool {
-	for _, a := range adapters {
-		switch a.Name() {
-		case "dnf", "apt", "zypper", "pacman", "paru", "macports", "snap", "npm":
-			return true
-		}
-	}
-	return false
 }
 
 func runUpdate(ctx context.Context, w io.Writer, a manager.Adapter, pkg string, prefix string) bool {
@@ -137,25 +125,6 @@ func runUpdates(ctx context.Context, w io.Writer, adapters []manager.Adapter, pk
 	return runUpdatesParallel(ctx, w, adapters, pkg)
 }
 
-// promptSudoPassword re-authenticates sudo when needed, caching the password
-// for all subsequent sudo commands. Returns a cleanup func or nil.
-func promptSudoPassword(cmd *cobra.Command, adapters []manager.Adapter, errOut io.Writer, tty bool) (cleanup func()) {
-	if !needsSudo(adapters) || !isTerminal(cmd.InOrStdin()) {
-		return nil
-	}
-	_, _ = fmt.Fprint(errOut, iconLine(tty, "▪", "sudo password:")+" ")
-	//nolint:gosec // uintptr -> int conversion is safe on all target platforms
-	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
-	_, _ = fmt.Fprintln(errOut)
-	if err != nil {
-		// Non-interactive environment — sudo -n will fail fast if password needed
-		_, _ = fmt.Fprintf(errOut, "  warning: cannot read password in non-interactive mode: %v\n", err)
-		return nil
-	}
-	manager.SetSudoPassword(pw)
-	return manager.ClearSudoPassword
-}
-
 // runCheckPhase runs the check phase and decides whether to proceed. It
 // returns true when updates should run, false when the command should stop.
 func runCheckPhase(cmd *cobra.Command, adapters []manager.Adapter, packageFlag string, checkOnly bool, errOut io.Writer) (proceed bool, err error) {
@@ -217,12 +186,10 @@ func validateUpdateArgs(app *AppContext, checkOnly bool, managerFlag, packageFla
 // executeUpdate runs the check phase (unless -y) and then the update phase.
 func executeUpdate(cmd *cobra.Command, app *AppContext, adapters []manager.Adapter, packageFlag string, checkOnly, serial bool) error {
 	errOut := cmd.ErrOrStderr()
-	tty := isOutputTerminal(errOut)
 	ctx := cmd.Context()
 
-	if cleanup := promptSudoPassword(cmd, adapters, errOut, tty); cleanup != nil {
-		defer cleanup()
-	}
+	// Authenticate before the metadata refresh; the check phase may itself run sudo.
+	sudoPreflight(cmd, adapters, errOut)
 
 	// Check phase (skipped when -y)
 	if !app.yes {
@@ -235,8 +202,18 @@ func executeUpdate(cmd *cobra.Command, app *AppContext, adapters []manager.Adapt
 		}
 	}
 
+	// Re-validate right before the run phase. The returned flag forces serial
+	// execution when sudo cannot cache credentials, so prompts never race.
+	parallelOK := sudoPreflight(cmd, adapters, errOut)
+
+	// Interrupted (SIGINT) during auth: abort cleanly rather than start the run.
+	if ctx.Err() != nil {
+		_, _ = fmt.Fprintln(errOut, "aborted")
+		return nil
+	}
+
 	// Run phase
-	if runUpdates(ctx, errOut, adapters, packageFlag, serial) {
+	if runUpdates(ctx, errOut, adapters, packageFlag, serial || !parallelOK) {
 		return fmt.Errorf("one or more managers failed to update")
 	}
 	return nil

@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -530,63 +529,6 @@ func TestDNF_CheckUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, updates, 1)
 	assert.Equal(t, "htop", updates[0].Package)
-}
-
-func TestSudoCmd_NonTTY(t *testing.T) {
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	_ = w.Close()
-
-	oldStdin := stdIn
-	stdIn = r
-	defer func() {
-		stdIn = oldStdin
-		_ = r.Close()
-	}()
-
-	result := sudoCmd("install", "-y", "htop")
-	assert.Equal(t, []string{"sudo", "-n", "install", "-y", "htop"}, result)
-}
-
-func TestSudoCmd_StatError(t *testing.T) {
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	_ = r.Close()
-	_ = w.Close()
-
-	oldStdin := stdIn
-	stdIn = r
-	defer func() { stdIn = oldStdin }()
-
-	result := sudoCmd("update")
-	// Stat returns error on closed pipe → original behavior: no -n (interactive assumed)
-	assert.Equal(t, []string{"sudo", "update"}, result)
-}
-
-func TestSudoCmd_WithPassword(t *testing.T) {
-	defer ClearSudoPassword()
-	SetSudoPassword([]byte("secret"))
-
-	result := sudoCmd("install", "-y", "htop")
-	assert.Equal(t, []string{"sudo", "-S", "install", "-y", "htop"}, result)
-}
-
-func TestSudoCmd_PasswordOverridesNonTTY(t *testing.T) {
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	_ = w.Close()
-	defer func() { _ = r.Close() }()
-
-	oldStdin := stdIn
-	stdIn = r
-	defer func() { stdIn = oldStdin }()
-
-	defer ClearSudoPassword()
-	SetSudoPassword([]byte("secret"))
-
-	// Password present → -S, even in non-TTY (not -n)
-	result := sudoCmd("update")
-	assert.Equal(t, []string{"sudo", "-S", "update"}, result)
 }
 
 func TestDNF_ProvidesError(t *testing.T) {

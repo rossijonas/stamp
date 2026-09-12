@@ -256,6 +256,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 	}
 
 	root.Version = Version
+	root.SetVersionTemplate("{{.Name}} version {{.Version}} (commit " + Commit + ", built " + Date + ")\n")
 	root.SetHelpTemplate(`{{if .Parent}}{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
 
 {{end}}{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`)
