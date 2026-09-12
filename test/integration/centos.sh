@@ -1,11 +1,12 @@
 #!/bin/bash
 set -eo pipefail
 export HOMEBREW_NO_AUTO_UPDATE=1
+source /test/lib/sudo-preflight.sh
 
 TIMEOUT=10
-TIMEOUT_LONG=30
+TIMEOUT_LONG=120
 # shellcheck disable=SC2034
-TIMEOUT_EXTRA=120
+TIMEOUT_EXTRA=300
 test_count=0
 pass_count=0
 skip_count=0
@@ -152,5 +153,8 @@ check "remove via rm alias" timeout $TIMEOUT stamp rm hello -m dnf -y
 check "repo list via ls alias" timeout $TIMEOUT stamp repo ls -m dnf
 
 echo
+echo "=== Sudo Preflight ==="
+check "sudo preflight does not prompt on NOPASSWD (dnf)" run_sudo_preflight_check dnf
+
 echo "  Results: $pass_count passed / $((test_count - pass_count - skip_count)) failed / $skip_count skipped"
 [[ "$pass_count" = "$((test_count - skip_count))" ]]

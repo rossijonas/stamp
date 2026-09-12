@@ -102,3 +102,6 @@ packages actually being restored, so a brew-only restore never probes sudo.
 - **Tests:** `manager.SudoReady`/`EnsureSudo` and `cli.sudoPreflight` are covered
   via injectable seams (`sudoProbe`, `sudoValidate`, `sudoReady`, `sudoEnsure`),
   matching the existing `stdIn`/`lookPath`/`isTerminal` override convention.
+  Integration asserts the no-prompt guarantee on the real NOPASSWD container
+  user: `test/lib/sudo-preflight.sh` runs `stamp update -m <manager> --check`
+  under a PTY in each distro suite and fails if a password prompt appears.

@@ -28,7 +28,7 @@ We use `task` instead of `make`. Here are the essential commands:
 - `task verify` - Ensures `go.mod` and `go.sum` are clean and cryptographically verified.
 - `task security` - Runs `govulncheck` to scan for known CVEs.
 - SonarCloud - Analyzes every push/PR automatically (code smells, duplication, complexity hotspots; quality gate evaluates new code). View results at [sonarcloud.io](https://sonarcloud.io/project/overview?id=rossijonas_stamp).
-- `task test:integration` - Builds the binary, runs integration smoke tests in Docker containers (Ubuntu, Debian, Fedora, CentOS Stream 10, Rocky Linux 9, Arch Linux, openSUSE Tumbleweed). Requires Docker or Podman (`podman-docker` on Fedora).
+- `task test:integration` - Builds the binary, runs integration smoke tests in Docker containers (Ubuntu, Debian, Fedora, CentOS Stream 10, Rocky Linux 9, Arch Linux, openSUSE Tumbleweed). Requires Docker or Podman (`podman-docker` on Fedora). The same suite can be run from any branch or tag via the manual `intgr.: branch (dispatch)` workflow (`test-integration-branch.yml`), which builds `stamp` from the requested ref instead of a release binary. The suite is network-bound (package-manager metadata fetches) and can be slow on congested mirrors; the NOPASSWD sudo-preflight assertion is network-independent.
 - `task clean` - Removes build artifacts.
 - `task docs` - Regenerates CLI reference docs from cobra into `docs/usage/` and `docs/man/`.
 - `task docs:serve` - Serves the Jekyll docs site locally at `http://localhost:4000` (requires `bundle install` first).
