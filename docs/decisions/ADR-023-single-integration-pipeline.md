@@ -85,9 +85,11 @@ credentials (`persist-credentials: false`), and disables the Go module cache
   race is gone.
 - **Positive:** the manual `workflow_dispatch` + `ref` capability of
   `test-integration-branch.yml` is preserved.
-- **Positive:** the concurrency group is scoped by workflow, source
-  repository, and branch, so a run from a fork whose branch name matches a
-  trusted branch cannot cancel an in-flight `main` run.
+- **Positive:** the concurrency group is scoped by workflow, upstream
+  workflow, source repository, and branch. A fork whose branch name matches a
+  trusted branch cannot cancel an in-flight `main` run, and the sibling
+  `CI`-push and `Auto Tag & Release` `workflow_run` chains on the same merge
+  occupy separate lanes instead of cancelling each other.
 - **Residual:** the published release tarball is no longer integration-tested
   directly; the pipeline tests the `main` commit that produced it.
 - **Residual:** the full seven-distro Docker matrix runs on every qualifying
