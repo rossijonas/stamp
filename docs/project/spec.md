@@ -53,14 +53,14 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 | `stamp` | | | Prints welcome message suggesting `stamp hello` or `stamp --help`. |
 | `stamp setup` | `hello` | | Runs first-time setup wizard: completions, man pages, init, doctor. |
 | `stamp init` | | | Initializes `manifest.toml` and takes baseline snapshot. |
-| `stamp install <pkg>...` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. Multiple packages require `-m` (native batch support). |
+| `stamp install <pkg>...` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. Multiple packages require `-m` (native batch support). A tap-qualified brew ref (`owner/tap/formula`) is accepted and routed to brew. |
 | `stamp remove <pkg>...` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes natively and untracks. Multiple packages require `-m` (native batch support). |
-| `stamp reinstall <pkg>...` | | | Reinstalls natively and records intent. Works for both manifest-tracked and pre-existing packages. Multiple packages require `-m` (native batch support). |
-| `stamp search <query>` | | `--manager, -m <name>` | Searches across managers. |
-| `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. |
+| `stamp reinstall <pkg>...` | | | Reinstalls natively and records intent. Works for both manifest-tracked and pre-existing packages. Multiple packages require `-m` (native batch support). Tap-qualified brew refs accepted. |
+| `stamp search <query>` | | `--manager, -m <name>` | Searches across managers. A tap-qualified query (`owner/tap/formula`) scopes to brew. |
+| `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. Tap-qualified refs require `-m brew`. |
 | `stamp reconcile` | | `--dry-run, -d`, `--manager, -m <name>` | Detects drift since last snapshot and auto-tracks discovered packages and repositories. Warns when tracked packages are no longer installed. |
 | `stamp restore` | | `--dry-run, -d`, `--manager, -m <name>` | Reinstalls repos and packages on a new machine. |
-| `stamp update` | `upgrade` | `--manager, -m <name>`, `--package, -p <pkg>`, `--serial, -s` | Runs system upgrades across all managers. Parallel by default. Use `-s` for serial, `-p` for single-package. |
+| `stamp update` | `upgrade` | `--manager, -m <name>`, `--package, -p <pkg>`, `--serial, -s` | Runs system upgrades across all managers. Parallel by default. Use `-s` for serial, `-p` for single-package. `-p` accepts tap-qualified brew refs with `-m brew`. |
 | `stamp list` | `ls` | `--json, -j`, `--manager, -m <name>`, `--type, -t <type>` | Lists tracked packages and repos. Filter by entity type and origin (stamped/reconciled); `--type missing` lists manifest packages not installed. |
 | `stamp manifest` | | `--json, -j` | Manifest management. Subcommands: `history` (list backups), `diff [ts\|hash]` (compare current with a backup). |
 | `stamp doctor` | | `--json, -j`, `--manager, -m <name>` | Checks manager availability, manifest integrity, manifest-vs-system drift, and UNIX compliance. |
@@ -113,7 +113,7 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 
 ## Package Manager Resolution Engine
 
-When a user runs a package or repository command (e.g., `stamp install htop`) without specifying `--manager`, the tool resolves ambiguity using a three-tier engine:
+When a user runs a package or repository command (e.g., `stamp install htop`) without specifying `--manager`, the tool resolves ambiguity using a three-tier engine. (A tap-qualified Homebrew ref — `owner/tap/formula` — is an exception: its slash syntax is brew-specific, so it routes directly to brew and bypasses this engine; a two-segment `owner/tap` is a tap, use `stamp tap`.)
 
 1. **Tier 1: Explicit Override:** If `--manager <name>` or `-m <name>` is provided, `stamp` directly executes that manager's command.
 

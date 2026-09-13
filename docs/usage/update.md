@@ -117,6 +117,12 @@ Update only one specific package instead of all packages (requires `-m`):
 stamp update -p htop -m apt
 ```
 
+A tap-qualified Homebrew formula updates the same way:
+
+```bash
+stamp update -p nklmilojevic/sofka/sofka -m brew
+```
+
 ### Serial Mode
 
 Run updates one manager at a time instead of concurrently (useful for debugging):

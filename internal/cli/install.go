@@ -27,6 +27,9 @@ func newInstallCmd() *cobra.Command {
   # install from a specific manager
   stamp install spotify -m flatpak
 
+  # install a tap-qualified Homebrew formula (auto-routes to brew)
+  stamp install nklmilojevic/sofka/sofka
+
   # install multiple packages in one command (per-manager batch, -m required)
   stamp install htop atop btop -m dnf
 
@@ -333,6 +336,9 @@ func newRemoveCmd() *cobra.Command {
   # specify a manager explicitly
   stamp remove lazygit -m brew
 
+  # remove a tap-qualified Homebrew formula
+  stamp remove nklmilojevic/sofka/sofka
+
   # remove a DNF package group (by group ID)
   stamp remove development-tools -m dnf --group
 
@@ -603,6 +609,9 @@ func newSearchCmd() *cobra.Command {
 
   # limit search to a specific manager
   stamp search lazygit -m brew
+
+  # a tap-qualified query searches the brew tap
+  stamp search nklmilojevic/sofka/sofka
 
   # search DNF package groups instead of individual packages
   stamp search Development -m dnf --group`,

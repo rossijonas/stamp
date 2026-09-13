@@ -34,6 +34,12 @@ confirmation prompt; the manifest is updated once.
 stamp remove lazygit -m brew
 ```
 
+A tap-qualified Homebrew formula removes the same way (auto-routes to brew):
+
+```bash
+stamp remove nklmilojevic/sofka/sofka
+```
+
 ### Using aliases
 
 ```bash

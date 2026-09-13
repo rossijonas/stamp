@@ -84,6 +84,10 @@ homebrew/cask
 homebrew/core
 ```
 
+`stamp tap` / `stamp untap` record and remove the tap's manifest entry (the same
+entry `stamp repo add/remove -m brew` writes), so taps added this way appear in
+`stamp repo list` and are re-added by `stamp restore`.
+
 ### Homebrew tap trust
 
 Homebrew 6.0.0+ refuses to load formulae, casks, and commands from untrusted
@@ -95,6 +99,15 @@ consent-gated step (the prompt reads "Add and trust repo X via brew"), so
 stamp repo add anomalyco/tap -m brew     # prompts: "Add and trust repo anomalyco/tap via brew?"
 stamp install opencode -m brew           # works, no untrusted-tap warning
 ```
+
+To install one formula from a tap without trusting the whole tap, use its fully
+qualified name — Homebrew then trusts only that item:
+
+```bash
+stamp install owner/tap/formula
+```
+
+See [Installing Packages](/usage/installing-packages.html#homebrew-taps-and-tap-qualified-formulae).
 
 Manage trust explicitly:
 

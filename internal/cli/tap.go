@@ -19,7 +19,9 @@ func newTapCmd() *cobra.Command {
   stamp tap homebrew/cask
 
   # equivalent canonical command
-  stamp repo add homebrew/cask -m brew`,
+  stamp repo add homebrew/cask -m brew
+
+  # the tap is recorded in the manifest and re-added by 'stamp restore'`,
 		Long: `Add a third-party Homebrew tap repository.
 Equivalent to "stamp repo add <name> -m brew".`,
 		Args: cobra.ExactArgs(1),
@@ -77,7 +79,9 @@ func newUntapCmd() *cobra.Command {
   stamp untap homebrew/cask
 
   # equivalent canonical command
-  stamp repo remove homebrew/cask -m brew`,
+  stamp repo remove homebrew/cask -m brew
+
+  # removing a tap also drops its manifest entry`,
 		Long: `Remove a third-party Homebrew tap repository.
 Equivalent to "stamp repo remove <name> -m brew".`,
 		Args: cobra.ExactArgs(1),

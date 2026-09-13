@@ -23,7 +23,9 @@ Stamp batches packages per manager for faster restores (one native
 invocation per manager instead of one per package). On batch failure,
 packages are retried individually with per-package error attribution.
 Homebrew casks are installed with --cask and DNF groups with --group
-automatically.
+automatically. Brew packages installed by their tap-qualified name
+(`owner/tap/formula`) are restored as-is, which re-grants Homebrew's per-item
+tap trust.
 ```
 
 ### Dry run

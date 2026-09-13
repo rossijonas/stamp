@@ -22,6 +22,8 @@ stamp untap <name> [flags]
 
   # equivalent canonical command
   stamp repo remove homebrew/cask -m brew
+
+  # removing a tap also drops its manifest entry
 ```
 
 ### Options

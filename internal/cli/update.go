@@ -240,6 +240,9 @@ func newUpdateCmd() *cobra.Command {
   # update a specific package (requires --manager)
   stamp update -p htop -m brew
 
+  # update a tap-qualified Homebrew formula
+  stamp update -p nklmilojevic/sofka/sofka -m brew
+
   # run updates one manager at a time instead of parallel
   stamp update --serial
 

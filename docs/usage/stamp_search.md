@@ -18,6 +18,9 @@ stamp search <query> [flags]
   # limit search to a specific manager
   stamp search lazygit -m brew
 
+  # a tap-qualified query searches the brew tap
+  stamp search nklmilojevic/sofka/sofka
+
   # search DNF package groups instead of individual packages
   stamp search Development -m dnf --group
 ```

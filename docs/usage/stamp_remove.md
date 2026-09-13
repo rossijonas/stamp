@@ -18,6 +18,9 @@ stamp remove <package> [flags]
   # specify a manager explicitly
   stamp remove lazygit -m brew
 
+  # remove a tap-qualified Homebrew formula
+  stamp remove nklmilojevic/sofka/sofka
+
   # remove a DNF package group (by group ID)
   stamp remove development-tools -m dnf --group
 

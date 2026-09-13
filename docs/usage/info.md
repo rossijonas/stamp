@@ -46,6 +46,12 @@ URL         : https://htop.dev/
 License     : GPL-2.0-only
 ```
 
+A tap-qualified Homebrew formula requires `-m brew` (the slash form is brew-only):
+
+```bash
+stamp info nklmilojevic/sofka/sofka -m brew
+```
+
 ### JSON output
 
 ```bash
