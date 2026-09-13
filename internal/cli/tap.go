@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/rossijonas/stamp/internal/manager"
+	"github.com/rossijonas/stamp/internal/manifest"
 )
 
 func newTapCmd() *cobra.Command {
@@ -23,23 +24,49 @@ func newTapCmd() *cobra.Command {
 Equivalent to "stamp repo add <name> -m brew".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			app := appFromCtx(cmd)
-			name := args[0]
-			for _, a := range app.adapters {
-				if a.Name() == "brew" {
-					if err := requireConsent(cmd, fmt.Sprintf("Tap %s via brew", name)); err != nil {
-						return handleConsent(err)
-					}
-					if err := a.AddRepo(manager.WithYes(cmd.Context()), name, ""); err != nil {
-						return fmt.Errorf("failed to tap %s: %w", name, err)
-					}
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "added tap %s via brew\n", name)
-					return nil
-				}
-			}
-			return fmt.Errorf("brew is not available")
+			return runTap(cmd, args[0])
 		},
 	}
+}
+
+// runTap adds a Homebrew tap and records it in the manifest, mirroring the
+// repo add command so taps added here are listed and restored.
+func runTap(cmd *cobra.Command, name string) error {
+	app := appFromCtx(cmd)
+	if app.manifestErr != nil {
+		return app.manifestErr
+	}
+	adapter := brewAdapter(app.adapters)
+	if adapter == nil {
+		return fmt.Errorf("brew is not available")
+	}
+	if err := requireConsent(cmd, fmt.Sprintf("Tap %s via brew", name)); err != nil {
+		return handleConsent(err)
+	}
+	if err := adapter.AddRepo(manager.WithYes(cmd.Context()), name, ""); err != nil {
+		// AddRepo already contextualizes with the tap name.
+		return err
+	}
+	app.manifest.AddRepository(manifest.Repository{
+		Name:    name,
+		Manager: "brew",
+		Origin:  manifest.OriginStamped,
+	})
+	if err := app.saveManifest(); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "added tap %s via brew\n", name)
+	return nil
+}
+
+// brewAdapter returns the brew adapter, or nil when brew is unavailable.
+func brewAdapter(adapters []manager.Adapter) manager.Adapter {
+	for _, a := range adapters {
+		if a.Name() == "brew" {
+			return a
+		}
+	}
+	return nil
 }
 
 func newUntapCmd() *cobra.Command {
@@ -55,23 +82,35 @@ func newUntapCmd() *cobra.Command {
 Equivalent to "stamp repo remove <name> -m brew".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			app := appFromCtx(cmd)
-			name := args[0]
-			for _, a := range app.adapters {
-				if a.Name() == "brew" {
-					if err := requireConsent(cmd, fmt.Sprintf("Untap %s via brew", name)); err != nil {
-						return handleConsent(err)
-					}
-					if err := a.RemoveRepo(manager.WithYes(cmd.Context()), name); err != nil {
-						return fmt.Errorf("failed to untap %s: %w", name, err)
-					}
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "removed tap %s via brew\n", name)
-					return nil
-				}
-			}
-			return fmt.Errorf("brew is not available")
+			return runUntap(cmd, args[0])
 		},
 	}
+}
+
+// runUntap removes a Homebrew tap and drops it from the manifest, mirroring
+// the repo remove command.
+func runUntap(cmd *cobra.Command, name string) error {
+	app := appFromCtx(cmd)
+	if app.manifestErr != nil {
+		return app.manifestErr
+	}
+	adapter := brewAdapter(app.adapters)
+	if adapter == nil {
+		return fmt.Errorf("brew is not available")
+	}
+	if err := requireConsent(cmd, fmt.Sprintf("Untap %s via brew", name)); err != nil {
+		return handleConsent(err)
+	}
+	if err := adapter.RemoveRepo(manager.WithYes(cmd.Context()), name); err != nil {
+		// RemoveRepo already contextualizes with the tap name.
+		return err
+	}
+	app.manifest.RemoveRepository(name, "brew")
+	if err := app.saveManifest(); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "removed tap %s via brew\n", name)
+	return nil
 }
 
 // listBrewTaps prints all Homebrew tap repositories. Returns an error

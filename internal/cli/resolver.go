@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/rossijonas/stamp/internal/manager"
 )
@@ -16,6 +17,12 @@ type Resolver struct {
 // NewResolver creates a new Resolver.
 func NewResolver(adapters []manager.Adapter, config *Config) *Resolver {
 	return &Resolver{adapters: adapters, config: config}
+}
+
+// isTapQualifiedRef reports whether pkg is a tap-qualified Homebrew reference
+// (owner/tap/formula). That form is brew-specific syntax.
+func isTapQualifiedRef(pkg string) bool {
+	return strings.Count(pkg, "/") == 2
 }
 
 // resolveByOverride matches an explicit --manager override to an adapter.
@@ -65,6 +72,17 @@ func (r *Resolver) Resolve(pkg string, override string) (manager.Adapter, error)
 	// Tier 1: Explicit override
 	if override != "" {
 		return resolveByOverride(r.adapters, override)
+	}
+
+	// Tier 1b: tap-qualified Homebrew references (owner/tap/formula) are
+	// brew-specific syntax; route them straight to brew.
+	if isTapQualifiedRef(pkg) {
+		for _, a := range r.adapters {
+			if a.Name() == "brew" {
+				return a, nil
+			}
+		}
+		return nil, catErr(ErrUnavailable, "tap-qualified package %q requires brew", pkg)
 	}
 
 	// Tier 2: Pattern rules (highest priority in declarative mode)

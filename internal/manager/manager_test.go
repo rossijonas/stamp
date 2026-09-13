@@ -252,6 +252,45 @@ func TestValidatePackageForManager(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestValidateBrewPackageName(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		pkg   string
+		valid bool
+	}{
+		{"short formula", "htop", true},
+		{"qualified formula", "nklmilojevic/sofka/sofka", true},
+		{"qualified cask", "homebrew/cask/firefox", true},
+		{"tap only two segments", "homebrew/cask", true},
+		{"leading dash", "-x", false},
+		{"empty", "", false},
+		{"double slash", "a//b", false},
+		{"trailing slash", "a/b/", false},
+		{"leading slash", "/a", false},
+		{"space", "a b", false},
+		{"too many segments", "a/b/c/d", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateBrewPackageName(tt.pkg)
+			if tt.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestValidatePackageForManager_BrewQualified(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, ValidatePackageForManager("brew", "nklmilojevic/sofka/sofka"))
+	// Non-brew managers still reject the tap-qualified slash form.
+	require.Error(t, ValidatePackageForManager("dnf", "nklmilojevic/sofka/sofka"))
+}
+
 func TestExitCodeFromError(t *testing.T) {
 	t.Parallel()
 	// Non-exit error

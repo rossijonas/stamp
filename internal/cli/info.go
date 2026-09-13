@@ -143,11 +143,22 @@ func renderInfoText(w io.Writer, pkg string, results []infoRawResult, managerFla
 	}
 }
 
+// packageNameValidator returns the package-name validator for an info query.
+// Tap-qualified references use the brew validator only when the query targets
+// brew (or all managers); an explicit non-brew manager keeps the strict
+// validator so the slash is rejected with a clear error.
+func packageNameValidator(pkgName, managerFlag string) func(string) error {
+	if isTapQualifiedRef(pkgName) && (managerFlag == "" || manager.ResolveManager(managerFlag) == "brew") {
+		return manager.ValidateBrewPackageName
+	}
+	return manager.ValidatePackageName
+}
+
 // validateInfoArgs validates the package name and the --group/--manager flag
 // combination for stamp info.
 func validateInfoArgs(pkgName, managerFlag string, groupInfo bool, targets []manager.Adapter) error {
 	if !groupInfo {
-		if err := manager.ValidatePackageName(pkgName); err != nil {
+		if err := packageNameValidator(pkgName, managerFlag)(pkgName); err != nil {
 			return fmt.Errorf("invalid package name: %w", err)
 		}
 	}

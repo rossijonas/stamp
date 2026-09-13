@@ -121,6 +121,33 @@ stamp install firefox -m brew
 
 Casks are recorded in the manifest and restored correctly with `stamp restore`.
 
+### Homebrew taps and tap-qualified formulae
+
+Install a formula from a third-party tap with its fully qualified name. Stamp
+routes `owner/tap/formula` straight to brew, so `-m brew` is optional:
+
+```bash
+stamp install nklmilojevic/sofka/sofka
+```
+
+```text
+▪ installing nklmilojevic/sofka/sofka via brew...
+✓ installed nklmilojevic/sofka/sofka via brew
+```
+
+Homebrew 6 requires non-official taps to be trusted. Installing a fully
+qualified name trusts only that formula, and stamp relies on that — it does not
+tap or trust the whole tap. The qualified name is recorded in the manifest, so
+`stamp reinstall`, `stamp remove`, `stamp info`, `stamp update -p`, and
+`stamp restore` all accept it.
+
+To trust an entire tap (every current and future formula, cask, and command),
+use `stamp tap user/tap`; it is recorded as a repository and re-added by
+`stamp restore`, mirroring `stamp repo add user/tap -m brew`.
+
+Tap-qualified **casks** (`owner/tap/cask`) are not supported yet; install those
+with `brew install --cask owner/tap/cask`.
+
 ### Using show/view aliases
 
 ```bash

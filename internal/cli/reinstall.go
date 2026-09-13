@@ -121,13 +121,13 @@ tracked in the manifest, resolve the manager and track it.`,
 				return reinstallMany(cmd, app, args, managerFlag, note)
 			}
 			pkgName := args[0]
-			if err := manager.ValidatePackageName(pkgName); err != nil {
-				return fmt.Errorf("invalid package name: %w", err)
-			}
 
 			adapter, err := resolveReinstallAdapter(app, pkgName, managerFlag)
 			if err != nil {
 				return err
+			}
+			if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
+				return fmt.Errorf("invalid package name: %w", err)
 			}
 			isPreExisting := !hasRecordedManager(app.manifest.Packages, pkgName)
 
