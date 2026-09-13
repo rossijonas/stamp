@@ -860,3 +860,50 @@ func TestBrew_PreviewInstall_QualifiedSkipsDryRun(t *testing.T) {
 	assert.False(t, pv.Noop)
 	assert.Zero(t, calls, "qualified preview must not invoke brew")
 }
+
+func TestBrew_PreviewRemove_QualifiedSkipsDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewBrew()
+	calls := 0
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		calls++
+		return nil, nil
+	}
+
+	pv, err := m.PreviewRemove(context.Background(), "nklmilojevic/sofka/sofka")
+	require.NoError(t, err)
+	assert.Empty(t, pv.Output)
+	assert.False(t, pv.Noop)
+	assert.Zero(t, calls, "qualified remove preview must not invoke brew")
+}
+
+func TestBrew_PreviewRemove_PlainInvokesDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewBrew()
+	var got []string
+	m.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		got = append([]string{}, args...)
+		return []byte("Would uninstall htop"), nil
+	}
+
+	pv, err := m.PreviewRemove(context.Background(), "htop")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"uninstall", "--dry-run", "htop"}, got)
+	assert.Contains(t, pv.Output, "Would uninstall")
+}
+
+func TestBrew_PreviewRemove_Validation(t *testing.T) {
+	t.Parallel()
+	m := NewBrew()
+	calls := 0
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		calls++
+		return nil, nil
+	}
+
+	// Slash-containing but invalid: pins validation before the qualified skip,
+	// which would otherwise return a silent empty preview.
+	_, err := m.PreviewRemove(context.Background(), "a//b")
+	require.Error(t, err)
+	assert.Zero(t, calls, "validation must reject before invoking brew")
+}
