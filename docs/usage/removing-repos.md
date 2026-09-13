@@ -44,3 +44,6 @@ repos are disabled via `dnf copr disable`.
 (the prompt reads "Remove and untrust repo X via brew"), so a later re-tap
 starts clean under Homebrew 6.0.0+ tap-trust.
 
+`stamp untap <tap>` (alias for `stamp repo remove <tap> -m brew`) also removes
+the tap's manifest entry.
+

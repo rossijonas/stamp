@@ -102,6 +102,9 @@ func newReinstallCmd() *cobra.Command {
   # reinstall a pre-existing package from a specific manager
   stamp reinstall lazygit -m brew
 
+  # reinstall a tap-qualified Homebrew formula
+  stamp reinstall nklmilojevic/sofka/sofka
+
   # reinstall multiple packages in one command (per-manager batch, -m required)
   stamp reinstall lazygit jq -m brew
 

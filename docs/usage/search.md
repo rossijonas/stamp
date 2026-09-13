@@ -29,6 +29,13 @@ stamp search lazygit -m brew
 lazygit (brew)
 ```
 
+A tap-qualified query (`owner/tap/formula`) searches the brew tap directly; `-m`
+is not required:
+
+```bash
+stamp search nklmilojevic/sofka/sofka
+```
+
 ### Search DNF package groups
 
 Use `--group` / `-g` to search DNF package groups instead of individual

@@ -174,6 +174,8 @@ For pre-existing packages (installed before `stamp init`), reinstall resolves th
 
 Stamp validates package names to prevent shell injection. Names must start with a letter, number, or underscore, and contain only safe characters (`a-zA-Z0-9_-.+`). Names starting with `-` are rejected.
 
+Homebrew additionally accepts a tap-qualified formula — `owner/tap/formula` (one to three slash-separated segments, each following the rule above). The slash form is brew-only; every other manager rejects `/` with an invalid-package-name error.
+
 ### Python tools (pipx)
 
 ```bash

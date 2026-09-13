@@ -33,11 +33,11 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `stamp install <pkg>...` | `add` | ✓ | ✓ | ✓ Resolver → adapter → manifest; multi-package batch with `-m` (per-manager only) | ✓ Complete |
-| `stamp remove <pkg>...` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Manifest lookup + adapter; multi-package batch with `-m` (per-manager only) | ✓ Complete |
-| `stamp reinstall <pkg>...` | | ✓ | ✓ | ✓ Manifest-tracked + pre-existing via resolver + `Reinstall` adapter method; multi-package batch with `-m` (per-manager only, snap excluded) | ✓ Complete |
-| `stamp search <query>` | | ✓ | ✓ | ✓ Queries adapters | ✓ Complete |
-| `stamp info <pkg>` | | ✓ | ✓ | ✓ Queries adapter Info() | ✓ Complete |
+| `stamp install <pkg>...` | `add` | ✓ | ✓ | ✓ Resolver → adapter → manifest; multi-package batch with `-m` (per-manager only); tap-qualified brew refs (`owner/tap/formula`) auto-route to brew | ✓ Complete |
+| `stamp remove <pkg>...` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Manifest lookup + adapter; multi-package batch with `-m` (per-manager only); tap-qualified brew refs auto-route to brew | ✓ Complete |
+| `stamp reinstall <pkg>...` | | ✓ | ✓ | ✓ Manifest-tracked + pre-existing via resolver + `Reinstall` adapter method; multi-package batch with `-m` (per-manager only, snap excluded); tap-qualified brew refs accepted | ✓ Complete |
+| `stamp search <query>` | | ✓ | ✓ | ✓ Queries adapters; a tap-qualified query scopes to brew | ✓ Complete |
+| `stamp info <pkg>` | | ✓ | ✓ | ✓ Queries adapter Info(); tap-qualified refs require `-m brew` | ✓ Complete |
 | `stamp repo add <name> [url]` | `install` | ✓ | ✓ | ✓ Adapter + manifest (--manager required) | ✓ Complete |
 | `stamp repo remove <name>` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Adapter + manifest (--manager optional when tracked) | ✓ Complete |
 | `stamp repo list` | `ls` | ✓ | ✓ | ✓ Reads manifest | ✓ Complete |
@@ -49,7 +49,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp hello` | | ✓ | ✓ | ✓ Prints ASCII logo + suggested next steps | ✓ Complete |
 | `stamp setup` | `hello` | ✓ | ✓ | ✓ Interactive wizard for completions, man, init, doctor | ✓ Complete |
 | `stamp init` | | ✓ | ✓ | ✓ Creates dirs + manifest + snapshots | ✓ Complete |
-| `stamp update` | `upgrade` | ✓ | ✓ | ✓ Two-phase check + confirm, --check flag, -y skips check, parallel execution, --serial flag | ✓ Complete |
+| `stamp update` | `upgrade` | ✓ | ✓ | ✓ Two-phase check + confirm, --check flag, -y skips check, parallel execution, --serial flag; `-p` accepts tap-qualified brew refs with `-m brew` | ✓ Complete |
 | `stamp list` | `ls` | ✓ | ✓ | ✓ Reads manifest, filter by type/origin/missing | ✓ Complete |
 | `stamp manifest` | | ✓ | ✓ | ✓ Backup history + diff against backups | ✓ Complete |
 | `stamp manifest history` | `backups` | ✓ | ✓ | ✓ List backups with counts + hashes | ✓ Complete |
@@ -65,8 +65,8 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | `stamp override <app-id>` | | ✓ | ✓ | ✓ Flatpak-only, CLI command via type assertion | ✓ Complete |
 | `stamp outdated` | | ✓ | ✓ | ✓ Delegates to runCheck (same as update --check) | ✓ Complete |
 | `stamp check-update` | | ✓ | ✓ | ✓ Delegates to runCheck (same as update --check) | ✓ Complete |
-| `stamp tap <name>` | | ✓ | ✓ | ✓ Delegates to brew AddRepo (taps + trusts, consent-gated) | ✓ Complete |
-| `stamp untap <name>` | | ✓ | ✓ | ✓ Delegates to brew RemoveRepo (untaps + untrusts, consent-gated) | ✓ Complete |
+| `stamp tap <name>` | | ✓ | ✓ | ✓ Delegates to brew AddRepo (taps + trusts, consent-gated); recorded in the manifest | ✓ Complete |
+| `stamp untap <name>` | | ✓ | ✓ | ✓ Delegates to brew RemoveRepo (untaps + untrusts, consent-gated); removes the manifest entry | ✓ Complete |
 | `stamp taps` | | ✓ | ✓ | ✓ Delegates to brew ListRepos | ✓ Complete |
 
 ### Repository Commands
@@ -175,7 +175,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 - **Cask:** Brew-specific feature for macOS GUI applications (`brew install --cask`). Flatpak and Snap support GUI apps natively on Linux through their standard install flow — no separate flag needed.
 - **Hold:** APT (apt-mark), DNF (dnf versionlock), Pacman/Paru (IgnorePkg in pacman.conf). Other managers do not support version pinning.
 - **Repo management:** DNF supports COPR repos and `.repo` file URLs (fetched verbatim, gpg settings preserved; URL-added repos are removed by deleting the `.repo` file, COPR repos via `dnf copr disable`), APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
-- **Brew tap trust:** On Homebrew 6.0.0+, `stamp repo add <tap> -m brew` taps **and** trusts the tap (prompt reads "Add and trust ..."); `stamp repo remove <tap> -m brew` untrusts it. `stamp repo trust` / `stamp repo untrust` manage whole-tap trust explicitly. Trust is best-effort on older brew (warn instead of fail).
+- **Brew tap trust:** On Homebrew 6.0.0+, `stamp repo add <tap> -m brew` taps **and** trusts the tap (prompt reads "Add and trust ..."); `stamp repo remove <tap> -m brew` untrusts it. `stamp repo trust` / `stamp repo untrust` manage whole-tap trust explicitly. Trust is best-effort on older brew (warn instead of fail). A **tap-qualified install** (`stamp install owner/tap/formula`) instead lets Homebrew trust only that one item — no whole-tap trust — and stores the qualified name in the manifest.
 - **Non-interactive (`-y`):** With `-y`, stamp suppresses each manager's native prompt — `-y`/`--assume-no` for apt/dnf, `--noconfirm` for pacman/paru, `-y` for zypper, and a piped `y\n` to Homebrew's stdin for brew. Snap, MacPorts, and the toolchain adapters (Go, Npm, Pipx, Uv, Cargo) do not present native confirmation prompts.
 - **CheckUpdate:** Toolchain managers (Go, Pipx, Uv) cannot preview updates. They print an informational notice during `stamp update --check` and continue.
 - **Backup retention:** The `[backup]` section of `config.toml` controls timestamped backup retention (logrotate-style: max/min count + min/max age axes, `0` = unlimited). `stamp reconcile` rotates manifest backups; `stamp init` re-init rotates manifest + snapshot backups. Misconfigurations are reported by `stamp doctor`.
@@ -189,6 +189,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | Feature | Description | Supported Managers | Stamp Command | Status |
 |---------|-------------|-------------------|---------------|--------|
 | **Cask (GUI Apps)** | macOS GUI application management via `brew install --cask`. Auto-detected on install, stored in manifest. | Brew | `stamp install <pkg> -m brew` | ✓ Complete |
+| **Tap-Qualified Install** | Install one formula from a third-party tap by its fully qualified name (`owner/tap/formula`); Homebrew trusts only that item, no whole-tap trust. Stored verbatim in the manifest. | Brew | `stamp install owner/tap/formula` | ✓ Complete |
 | **File Search (provides)** | Find which package owns a specific file or binary. | DNF, APT, Pacman, Paru, Zypper, MacPorts | `stamp provides <file>` | ✓ Complete |
 | **Orphan Cleanup (autoremove)** | Remove unused dependencies that were pulled in automatically. | Brew, DNF, APT, Pacman, Paru, Zypper, Flatpak, MacPorts | `stamp autoremove` | ✓ Complete |
 | **Cache Cleanup (clean)** | Clear locally cached package files to free disk space. | Brew, DNF, APT, Pacman, Paru, Zypper, Snap, MacPorts | `stamp clean` | ✓ Complete |

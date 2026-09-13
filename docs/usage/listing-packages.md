@@ -15,7 +15,11 @@ Shows every package recorded in your manifest.
 htop (apt)
 lazygit (brew) — better git TUI than default
 spotify (flatpak)
+nklmilojevic/sofka/sofka (brew)
 ```
+
+Brew packages installed by their tap-qualified name (`owner/tap/formula`) are
+listed verbatim, matching Homebrew's own naming.
 
 ### JSON output
 

@@ -22,6 +22,8 @@ stamp tap <name> [flags]
 
   # equivalent canonical command
   stamp repo add homebrew/cask -m brew
+
+  # the tap is recorded in the manifest and re-added by 'stamp restore'
 ```
 
 ### Options

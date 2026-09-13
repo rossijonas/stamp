@@ -18,6 +18,9 @@ stamp install <package> [flags]
   # install from a specific manager
   stamp install spotify -m flatpak
 
+  # install a tap-qualified Homebrew formula (auto-routes to brew)
+  stamp install nklmilojevic/sofka/sofka
+
   # install multiple packages in one command (per-manager batch, -m required)
   stamp install htop atop btop -m dnf
 

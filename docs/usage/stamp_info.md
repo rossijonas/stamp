@@ -24,6 +24,9 @@ stamp info <package> [flags]
   # show full raw output from a specific manager
   stamp info htop -m dnf
 
+  # tap-qualified Homebrew formula (use -m brew)
+  stamp info nklmilojevic/sofka/sofka -m brew
+
   # machine-readable JSON output
   stamp info htop --json
 
