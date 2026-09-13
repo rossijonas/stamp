@@ -1,0 +1,86 @@
+---
+name: Integration Tests
+
+# Single integration pipeline:
+#   - after "Auto Tag & Release" succeeds on main  -> test main
+#   - after "CI" succeeds on a pull_request        -> test the PR head SHA
+#   - manual dispatch                              -> test an arbitrary ref
+# workflow_run runs execute in the default-branch context and can access
+# secrets, so the upstream must be a same-repository PR (no forks) and the
+# checked-out ref is pinned explicitly. The PR's Dockerfiles and test scripts
+# are untrusted and run with a read-only token, no secrets, and no Go module
+# cache (cache: false) to avoid poisoning. The upstream workflow names below
+# ("CI", "Auto Tag & Release") must match those workflows' `name:` fields.
+on:
+  workflow_run:
+    workflows: ["CI", "Auto Tag & Release"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (branch, tag, or SHA)"
+        required: false
+        default: "main"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name || github.repository }}-${{ github.event.workflow_run.head_branch || inputs.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (${{ matrix.distro }})
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       (github.event.workflow_run.name == 'Auto Tag & Release' ||
+        (github.event.workflow_run.name == 'CI' &&
+         github.event.workflow_run.event == 'pull_request')))
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [ubuntu, debian, fedora, centos, rocky, arch, opensuse]
+    steps:
+      - name: Resolve ref
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_REF: ${{ inputs.ref }}
+          UPSTREAM_EVENT: ${{ github.event.workflow_run.event }}
+          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "ref=$INPUT_REF" >> "$GITHUB_OUTPUT"
+          elif [ "$UPSTREAM_EVENT" = "pull_request" ]; then
+            echo "ref=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.resolve.outputs.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build stamp from ref
+        run: |
+          mkdir -p bin
+          go build -o bin/stamp ./cmd/stamp
+
+      - name: Build Docker image
+        run: |
+          docker build --build-arg BIN=bin/stamp \
+            -f test/Dockerfile.${{ matrix.distro }} \
+            -t stamp-test-${{ matrix.distro }} .
+
+      - name: Run integration tests
+        run: docker run --rm stamp-test-${{ matrix.distro }}
