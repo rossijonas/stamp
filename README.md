@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/rossijonas/stamp/actions/workflows/ci.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/rossijonas/stamp/actions/workflows/integration.yml"><img src="https://github.com/rossijonas/stamp/actions/workflows/integration.yml/badge.svg" alt="Integration Tests"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=rossijonas_stamp"><img src="https://sonarcloud.io/api/project_badges/measure?project=rossijonas_stamp&metric=alert_status" alt="Quality gate status"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=rossijonas_stamp"><img src="https://sonarcloud.io/api/project_badges/measure?project=rossijonas_stamp&metric=bugs" alt="Bugs"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=rossijonas_stamp"><img src="https://sonarcloud.io/api/project_badges/measure?project=rossijonas_stamp&metric=code_smells" alt="Code Smells"></a>
