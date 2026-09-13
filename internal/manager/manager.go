@@ -26,6 +26,24 @@ func ValidatePackageName(pkg string) error {
 
 var validModulePathRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_\-\.\+/]*$`)
 
+// validBrewPkgRegex matches a Homebrew formula reference: a bare name, or a
+// tap-qualified owner/tap/formula (1-3 slash-separated segments). It rejects a
+// leading '-' (flag injection) and empty segments.
+var validBrewPkgRegex = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\+]*(/[a-zA-Z0-9_][a-zA-Z0-9_\-\.\+]*){0,2}$`)
+
+// ValidateBrewPackageName validates a Homebrew formula reference, permitting
+// the tap-qualified owner/tap/formula form. The name is passed to brew as an
+// argument (no shell interpolation), so '/' is safe.
+func ValidateBrewPackageName(pkg string) error {
+	if strings.HasPrefix(pkg, "-") {
+		return fmt.Errorf("invalid package name %q: cannot start with '-'", pkg)
+	}
+	if !validBrewPkgRegex.MatchString(pkg) {
+		return fmt.Errorf("invalid package name %q: contains invalid characters", pkg)
+	}
+	return nil
+}
+
 // BatchInstaller is implemented by adapters whose native install command
 // accepts multiple packages in one invocation (e.g. `dnf install a b`). The
 // CLI type-asserts this interface for `stamp install <a> <b> -m <manager>`;
@@ -103,10 +121,14 @@ func ValidateModulePath(pkg string) error {
 // for the given manager name. Go adapters use ValidateModulePath; all
 // others use ValidatePackageName.
 func ValidatePackageForManager(managerName, pkg string) error {
-	if managerName == "go" {
+	switch managerName {
+	case "go":
 		return ValidateModulePath(pkg)
+	case "brew":
+		return ValidateBrewPackageName(pkg)
+	default:
+		return ValidatePackageName(pkg)
 	}
-	return ValidatePackageName(pkg)
 }
 
 // RepositoryInfo holds the name and URL of a third-party repository.

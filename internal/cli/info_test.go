@@ -128,3 +128,17 @@ func TestInfoCmd_BrewVersion(t *testing.T) {
 	assert.Contains(t, output, "stable 3.4.1 (bottled), HEAD")
 	assert.NotContains(t, output, "available")
 }
+
+func TestInfoCmd_QualifiedRequiresBrew(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"info", qualifiedRef, "-m", "dnf"}, []manager.Adapter{&mockAdapter{name: "dnf"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid package name")
+}
+
+func TestInfoCmd_QualifiedWithBrew(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"info", qualifiedRef, "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), qualifiedRef)
+}

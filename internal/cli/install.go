@@ -37,34 +37,7 @@ func newInstallCmd() *cobra.Command {
   stamp add lazygit -m brew --note "better git TUI"`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			app := appFromCtx(cmd)
-			if app.manifestErr != nil {
-				return app.manifestErr
-			}
-
-			if len(args) > 1 && managerFlag != "" && manager.ResolveManager(managerFlag) == "flatpak" && !strings.Contains(args[0], ".") {
-				return catErr(ErrUsage, "flatpak install takes a remote and app ID separately; use: stamp install <app-id> -m flatpak")
-			}
-			if len(args) > 1 {
-				return installMany(cmd, app, args, managerFlag, note, groupInstall)
-			}
-			pkgName := args[0]
-
-			r := NewResolver(app.adapters, app.config)
-			adapter, err := r.Resolve(pkgName, managerFlag)
-			if err != nil {
-				return fmt.Errorf("cannot resolve package manager: %w", err)
-			}
-
-			if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
-				if groupInstall {
-					return catErr(ErrUsage, "group IDs contain only a-z0-9_- (see 'dnf group list')")
-				}
-				return fmt.Errorf("invalid package name: %w", err)
-			}
-
-			cask := detectBrewCask(cmd.Context(), adapter, pkgName)
-			return runSingleInstall(cmd, app, adapter, pkgName, note, cask, groupInstall)
+			return runInstall(cmd, appFromCtx(cmd), args, managerFlag, note, groupInstall)
 		},
 	}
 
@@ -72,6 +45,43 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&note, "note", "n", "", "annotation for this package")
 	cmd.Flags().BoolVarP(&groupInstall, "group", "g", false, "install a DNF package group (by group ID)")
 	return cmd
+}
+
+// runInstall performs a single- or multi-package install: flatpak argument
+// validation, tap-qualified routing, manager resolution, package validation,
+// and dispatch to the single or batch install path.
+func runInstall(cmd *cobra.Command, app *AppContext, args []string, managerFlag, note string, groupInstall bool) error {
+	if app.manifestErr != nil {
+		return app.manifestErr
+	}
+
+	if len(args) > 1 && managerFlag != "" && manager.ResolveManager(managerFlag) == "flatpak" && !strings.Contains(args[0], ".") {
+		return catErr(ErrUsage, "flatpak install takes a remote and app ID separately; use: stamp install <app-id> -m flatpak")
+	}
+	if len(args) > 1 {
+		return installMany(cmd, app, args, managerFlag, note, groupInstall)
+	}
+	pkgName := args[0]
+
+	if strings.Count(pkgName, "/") == 1 && (managerFlag == "" || manager.ResolveManager(managerFlag) == "brew") {
+		return catErr(ErrUsage, "%q looks like a Homebrew tap; use 'stamp tap %s'", pkgName, pkgName)
+	}
+
+	r := NewResolver(app.adapters, app.config)
+	adapter, err := r.Resolve(pkgName, managerFlag)
+	if err != nil {
+		return fmt.Errorf("cannot resolve package manager: %w", err)
+	}
+
+	if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
+		if groupInstall {
+			return catErr(ErrUsage, "group IDs contain only a-z0-9_- (see 'dnf group list')")
+		}
+		return fmt.Errorf("invalid package name: %w", err)
+	}
+
+	cask := detectBrewCask(cmd.Context(), adapter, pkgName)
+	return runSingleInstall(cmd, app, adapter, pkgName, note, cask, groupInstall)
 }
 
 // runSingleInstall performs one package install: group validation, context
@@ -257,6 +267,10 @@ func brewCasks(ctx context.Context, adapter manager.Adapter, pkgs []string) map[
 	}
 	m := make(map[string]bool, len(pkgs))
 	for _, p := range pkgs {
+		if strings.Contains(p, "/") {
+			// Tap-qualified: keep to the formula path (see detectBrewCask).
+			continue
+		}
 		if isCask, err := detector.IsCask(ctx, p); err == nil {
 			m[p] = isCask
 		}
@@ -268,6 +282,11 @@ func brewCasks(ctx context.Context, adapter manager.Adapter, pkgs []string) map[
 // *manager.Brew implements cask detection, so a failed type assertion is a
 // non-cask result (matching the previous Name()=="brew" guard).
 func detectBrewCask(ctx context.Context, adapter manager.Adapter, pkg string) bool {
+	if strings.Contains(pkg, "/") {
+		// Tap-qualified: keep to the formula path and skip `brew info --cask`,
+		// which could otherwise tap/load the untrusted tap as a side effect.
+		return false
+	}
 	d, ok := adapter.(caskDetector)
 	if !ok {
 		return false
@@ -376,6 +395,11 @@ func resolveRemoveTarget(app *AppContext, pkgName, managerFlag string) (manager.
 	if managerFlag == "" {
 		if a, cask, found := findTrackedAdapter(app.manifest.Packages, app.adapters, pkgName); found {
 			return a, cask, nil
+		}
+		if isTapQualifiedRef(pkgName) {
+			if a := brewAdapter(app.adapters); a != nil {
+				return a, false, nil
+			}
 		}
 		if len(app.adapters) > 0 {
 			return app.adapters[0], false, nil
@@ -590,6 +614,13 @@ func newSearchCmd() *cobra.Command {
 			targets, err := selectSearchTargets(app.adapters, managerFlag)
 			if err != nil {
 				return err
+			}
+			if managerFlag == "" && isTapQualifiedRef(query) {
+				a := brewAdapter(app.adapters)
+				if a == nil {
+					return catErr(ErrUnavailable, "tap-qualified search %q requires brew", query)
+				}
+				targets = []manager.Adapter{a}
 			}
 			if err := validateGroupSearch(targets, managerFlag, groupSearch); err != nil {
 				return err

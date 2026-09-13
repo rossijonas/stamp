@@ -844,3 +844,19 @@ func TestBrew_TrustInvalidName(t *testing.T) {
 	err = mgr.Untrust(WithYes(context.Background()), "-formula")
 	require.Error(t, err)
 }
+
+func TestBrew_PreviewInstall_QualifiedSkipsDryRun(t *testing.T) {
+	t.Parallel()
+	m := NewBrew()
+	calls := 0
+	m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		calls++
+		return nil, nil
+	}
+
+	pv, err := m.PreviewInstall(context.Background(), "nklmilojevic/sofka/sofka")
+	require.NoError(t, err)
+	assert.Empty(t, pv.Output)
+	assert.False(t, pv.Noop)
+	assert.Zero(t, calls, "qualified preview must not invoke brew")
+}
