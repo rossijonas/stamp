@@ -289,6 +289,13 @@ func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 	if err := ValidateBrewPackageName(pkg); err != nil {
 		return Preview{}, err
 	}
+	if strings.Contains(pkg, "/") {
+		// Tap-qualified: whether brew supports `uninstall --dry-run` varies, and
+		// it can load a trust-gated tap formula before the user consents. Skip
+		// it, matching PreviewInstall, so the confirmation prompt stands alone
+		// with no side effect.
+		return Preview{}, nil
+	}
 	ctx = WithCombinedOutput(ctx)
 	args := []string{"uninstall", brewFlagDryRun}
 	if isCask(ctx) {
