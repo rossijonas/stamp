@@ -81,4 +81,4 @@ Each script validates a common set of features:
 - All Dockerfiles use `USER linuxbrew` for Homebrew compatibility.
 - Flatpak remotes are added per-user as `linuxbrew`.
 - `TIMEOUT_EXTRA=120` variable available for slow operations.
-- Tests are orchestrated via GitHub Actions by a single matrixed workflow (`.github/workflows/integration.yml`), which builds `stamp` from source and runs after `CI` succeeds on a pull request, after `Auto Tag & Release` succeeds on `main`, or on manual dispatch with a `ref`.
+- Tests are orchestrated via GitHub Actions by a single matrixed workflow (`.github/workflows/integration.yml`), which builds `stamp` from source and runs after `CI` succeeds on a pull request (the PR head SHA) or on a push to `main`, or on manual dispatch with a `ref`.
