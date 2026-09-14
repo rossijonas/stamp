@@ -84,6 +84,10 @@ This runs `go run ./tools/docgen/` which generates Markdown + man pages from the
 
 `.github/workflows/docs.yml` automatically regenerates CLI docs, builds the Jekyll site, and deploys to GitHub Pages on every push to `main`.
 
+## Reporting Issues
+
+Use the [bug report and feature request forms](https://github.com/rossijonas/stamp/issues/new/choose). For security vulnerabilities, follow [SECURITY.md](SECURITY.md) instead of opening a public issue. Label meanings are listed in the [community guide](docs/community/index.md).
+
 ## Commit Messages
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/):

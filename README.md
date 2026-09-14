@@ -67,6 +67,13 @@ See the full [OS × Manager compatibility matrix](docs/history/os-manager-matrix
 
 Read the [Project Vision](docs/project/about.md) to understand the "why" behind the project, or check out the [Technical Specs](docs/project/spec.md) and [Architecture Decisions](docs/decisions/).
 
+## ▪ Support & Contributing
+
+- **Bug reports & feature requests** — [open an issue](https://github.com/rossijonas/stamp/issues/new/choose) using the provided forms.
+- **Security issues** — report privately per [SECURITY.md](SECURITY.md); do not open a public issue.
+- **Questions & help** — see [SUPPORT.md](SUPPORT.md) and the [documentation](https://gostamp.dev).
+- **Contributing** — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## ▪ License
 
 This project is licensed under the Apache License, Version 2.0 (Apache-2.0) - see the [LICENSE](LICENSE) file for details.
