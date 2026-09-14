@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: integration-${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name || github.repository }}-${{ github.event.workflow_run.head_branch || inputs.ref || github.run_id }}
+  group: integration-${{ github.workflow }}-${{ github.event.workflow_run.name || 'manual' }}-${{ github.event.workflow_run.head_repository.full_name || github.repository }}-${{ github.event.workflow_run.head_branch || inputs.ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
