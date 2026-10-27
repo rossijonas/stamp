@@ -33,6 +33,7 @@ We use `task` instead of `make`. Here are the essential commands:
 - `task clean` - Removes build artifacts.
 - `task docs` - Regenerates CLI reference docs from cobra into `docs/usage/` and `docs/man/`.
 - `task docs:serve` - Serves the Jekyll docs site locally at `http://localhost:4000` (requires `bundle install` first).
+- `task docs:lint` - Fails on a line-initial HTML tag in `docs/**/*.md` (kramdown reads it as an unclosed raw-HTML block). Skips fenced code blocks.
 
 ## Documentation
 

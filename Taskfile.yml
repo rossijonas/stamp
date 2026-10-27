@@ -93,6 +93,7 @@ tasks:
       - task: lint
       - task: check:complexity
       - task: check:files
+      - task: docs:lint
       - task: test
       - task: security
 
@@ -110,3 +111,14 @@ tasks:
     desc: "Serves the Jekyll docs site locally at http://localhost:4000 (requires bundle install)"
     cmds:
       - bundle exec jekyll serve --source docs --destination docs/_site --livereload
+
+  docs:lint:
+    desc: "Fails on a line-initial HTML tag in docs markdown (kramdown reads it as an unclosed raw-HTML block)"
+    cmds:
+      - |
+        git ls-files -z 'docs/**/*.md' | xargs -0 awk '
+          FNR == 1 { fence = 0 }
+          /^ {0,3}(```|~~~)/ { fence = !fence; next }
+          !fence && /^ {0,3}<[A-Za-z\/!]/ { printf "%s:%d: %s\n", FILENAME, FNR, $0; bad = 1 }
+          END { exit bad }
+        '

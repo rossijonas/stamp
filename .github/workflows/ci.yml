@@ -47,6 +47,9 @@ jobs:
           go run ./tools/docgen/
           git diff --exit-code docs/usage/ || (echo "error: docs out of date — run 'go run ./tools/docgen/' and commit changes" && exit 1)
 
+      - name: Docs markdown lint
+        run: go run github.com/go-task/task/v3/cmd/task@latest docs:lint
+
       - name: Run Tests & Enforce Coverage
         run: |
           go test -v -race -coverprofile=coverage.out ./...
