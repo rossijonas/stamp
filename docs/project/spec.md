@@ -610,6 +610,18 @@ follows the `pipx` model — installing user-facing tools, not project dependenc
 - Batch (`stamp update`): lists installed binaries, recovers module paths, reinstalls
   each one with `@latest`. Binaries without recoverable module paths are skipped.
 
+### Toolchain Policy
+- Installs always target `@latest` — Stamp does not pin module versions
+  (`ValidateModulePath` rejects `@`, and batch update would re-bump a pin).
+- When `GOTOOLCHAIN=local`, the go command refuses packages whose `go.mod` requires a
+  newer Go version and reports the diagnosis on stderr. Because that stderr is streamed
+  rather than captured, `Install` failures under this policy append a parenthetical hint
+  naming `go env -w GOTOOLCHAIN=auto`.
+- The probe is failure-path only: one `go env GOTOOLCHAIN` lookup per failed install,
+  skipped when the policy is `auto`, `path`, `local+auto`, or unknown.
+- Fedora's `golang-bin` package ships `GOTOOLCHAIN=local` in `/usr/lib/golang/go.env`;
+  `go env -w GOTOOLCHAIN=auto` overrides it per user (`go env -u GOTOOLCHAIN` reverts).
+
 ### GOBIN / GOPATH Resolution
 - Checks `go env GOBIN` first (returns the bin directory directly).
 - Falls back to `go env GOPATH` (uses the first entry of the colon-separated list

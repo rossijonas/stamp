@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,61 @@ func TestGo_Install(t *testing.T) {
 	err := mgr.Install(WithYes(context.Background()), "github.com/example/tool")
 	require.NoError(t, err)
 	assert.Equal(t, 1, calls)
+}
+
+func TestGo_Install_ToolchainHint(t *testing.T) {
+	t.Parallel()
+	errInstall := errors.New("exit status 1")
+	mgr := NewGo()
+	mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "env" && args[1] == "GOTOOLCHAIN" {
+			return []byte("local\n"), nil
+		}
+		if len(args) >= 1 && args[0] == "install" {
+			return nil, errInstall
+		}
+		return nil, nil
+	}
+
+	err := mgr.Install(WithYes(context.Background()), "github.com/example/tool")
+	require.Error(t, err)
+	require.ErrorIs(t, err, errInstall)
+	require.ErrorContains(t, err, "failed to install github.com/example/tool: exit status 1")
+	require.ErrorContains(t, err, "GOTOOLCHAIN=local pins the installed go toolchain")
+	require.ErrorContains(t, err, "go env -w GOTOOLCHAIN=auto")
+}
+
+func TestGo_Install_NoToolchainHint(t *testing.T) {
+	t.Parallel()
+	errInstall := errors.New("exit status 1")
+	tests := []struct {
+		name   string
+		policy string
+		envErr error
+	}{
+		{name: "auto", policy: "auto\n"},
+		{name: "path", policy: "path\n"},
+		{name: "local plus auto", policy: "local+auto\n"},
+		{name: "unset", policy: ""},
+		{name: "env query fails", envErr: errInstall},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewGo()
+			mgr.exec = func(_ context.Context, _ string, args ...string) ([]byte, error) {
+				if len(args) >= 2 && args[0] == "env" && args[1] == "GOTOOLCHAIN" {
+					return []byte(tt.policy), tt.envErr
+				}
+				return nil, errInstall
+			}
+
+			err := mgr.Install(WithYes(context.Background()), "github.com/example/tool")
+			require.Error(t, err)
+			require.ErrorIs(t, err, errInstall)
+			assert.EqualError(t, err, "failed to install github.com/example/tool: exit status 1")
+		})
+	}
 }
 
 func TestGo_Install_ShortName(t *testing.T) {

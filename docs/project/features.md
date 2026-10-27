@@ -23,7 +23,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | MacPorts | ✓ Complete | All except repo mgmt | macOS, sudo for write ops |
 | Pipx | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | pip-installable CLI tools, --yes for non-interactive, JSON listing with text fallback, no search/doctor/repo support |
 | Uv | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | Rust-based Python tool manager (uv tool subcommand), --force for reinstall, no search/doctor/repo support |
-| Go | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | go install with module path validation, no search/doctor/repo support, ListInstalled recovers module paths via binary metadata, batch update reinstalls recoverable paths, binary-name fallback for unrecoverable |
+| Go | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | go install with module path validation, no search/doctor/repo support, ListInstalled recovers module paths via binary metadata, batch update reinstalls recoverable paths, binary-name fallback for unrecoverable, GOTOOLCHAIN=local hint on failed installs |
 | Npm | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | Node.js package manager for globally installed CLI tools, no search/doctor/repo support, user-space |
 | Cargo | ✓ Complete | Install, Remove, Search, Info, ListInstalled, Update (single + batch) | Rust crate installer via cargo install, native search/info via crates.io, --force for reinstall, no doctor/repo support, user-space |
 

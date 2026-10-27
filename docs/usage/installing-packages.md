@@ -204,6 +204,11 @@ like `golangci-lint` are rejected — Stamp cannot derive the module path from a
 Go tools are installed via `go install <module>@latest`. Search, doctor, and repo management
 are not supported for the go adapter.
 
+If `go install` fails while `GOTOOLCHAIN=local` pins your Go toolchain — common on
+Fedora, where `golang-bin` sets it in `/usr/lib/golang/go.env` — Stamp appends a hint to
+the error. Packages that need a newer Go version then fail until you run
+`go env -w GOTOOLCHAIN=auto` (revert with `go env -u GOTOOLCHAIN`) or install a newer Go.
+
 ### Aborting an operation
 
 Press Ctrl+C at any point (including at sudo's password prompt) to abort cleanly:

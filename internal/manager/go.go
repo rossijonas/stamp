@@ -133,6 +133,22 @@ func (m *Go) ListInstalled(ctx context.Context) ([]string, error) {
 	return result, nil
 }
 
+// installToolchainHint returns a parenthetical hint when the go command is
+// pinned to the local toolchain, which makes it refuse packages that require a
+// newer Go version (the diagnosis is streamed to stderr, so it is not part of
+// the returned error). Returns "" when switching is permitted or the policy
+// cannot be determined.
+func (m *Go) installToolchainHint(ctx context.Context) string {
+	out, err := m.exec(ctx, "go", "env", "GOTOOLCHAIN")
+	if err != nil {
+		return ""
+	}
+	if strings.TrimSpace(string(out)) != "local" {
+		return ""
+	}
+	return " (GOTOOLCHAIN=local pins the installed go toolchain, so packages requiring a newer go version cannot be installed; run 'go env -w GOTOOLCHAIN=auto' to allow toolchain switching)"
+}
+
 // Install runs go install <pkg>@latest.
 func (m *Go) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
@@ -143,7 +159,7 @@ func (m *Go) Install(ctx context.Context, pkg string) error {
 	}
 	_, err := m.exec(WithStreamIO(ctx), "go", "install", pkg+"@latest")
 	if err != nil {
-		return fmt.Errorf("failed to install %s: %w", pkg, err)
+		return fmt.Errorf("failed to install %s: %w%s", pkg, err, m.installToolchainHint(ctx))
 	}
 	return nil
 }
