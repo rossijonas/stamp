@@ -481,8 +481,8 @@ or `20260802T091500Z`) or a content-hash prefix (pure hex, ≥ 6 chars) from
 `history`. Added entries render with `+`, removed with `-`. `--manager, -m` and
 `--origin` (stamped/reconciled) filter both sets after diffing. An unknown or
 ambiguous reference errors with `no backup found for <arg>` / `ambiguous hash`.
-Diffing against a corrupted backup errors with `failed to parse backup at
-<path>`. If no backup exists, `diff` errors with `no backup to compare against`.
+Diffing against a corrupted backup errors with `failed to parse backup at <path>`.
+If no backup exists, `diff` errors with `no backup to compare against`.
 
 ### Exit Codes
 
@@ -734,4 +734,4 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 25. **Reinstall (Adapters):** `adapter.Reinstall()` executes the native reinstall command for each manager (brew reinstall, dnf reinstall, flatpak install).
 26. **Reconcile (Snapshot Save on No Drift):** If reconcile detects no drift, the current snapshot is saved to disk so future package removals are tracked correctly.
 27. **Update:** `stamp update` runs native upgrade commands for all available managers concurrently. Errors from one manager don't block others. `--manager` flag scopes to a single manager. Non-zero exit if any manager fails.
-27. **Auto-Reconcile:** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.
+28. **Auto-Reconcile:** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.

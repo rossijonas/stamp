@@ -36,6 +36,9 @@ jobs:
       - name: Generate CLI docs
         run: go run -mod=mod ./tools/docgen/
 
+      - name: Docs markdown lint
+        run: go run github.com/go-task/task/v3/cmd/task@latest docs:lint
+
       - name: Build Jekyll site
         run: bundle exec jekyll build --source docs --destination docs/_site
 
