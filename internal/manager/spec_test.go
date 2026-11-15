@@ -62,7 +62,7 @@ func TestParseSpecForManager(t *testing.T) {
 		{name: "macports variant", manager: "macports", spec: "htop+universal", wantErr: "variants"},
 
 		{name: "go path", manager: "go", spec: "github.com/example/tool", want: "github.com/example/tool"},
-		{name: "go version", manager: "go", spec: "github.com/example/tool@v1.2.3", wantErr: "invalid"},
+		{name: "go version", manager: "go", spec: "github.com/example/tool@v1.2.3", wantErr: "version pins"},
 
 		{name: "cargo name", manager: "cargo", spec: "ripgrep", want: "ripgrep"},
 		{name: "cargo version", manager: "cargo", spec: "ripgrep@14.1.0", want: "ripgrep"},

@@ -43,6 +43,9 @@ stamp update [flags]
   # run updates one manager at a time instead of parallel
   stamp update --serial
 
+  # update a versioned apt package (tracked as htop)
+  stamp update -p htop=3.2.1 -m apt
+
   # alias
   stamp upgrade
 ```

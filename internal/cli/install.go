@@ -37,7 +37,13 @@ func newInstallCmd() *cobra.Command {
   stamp install development-tools -m dnf --group
 
   # add a note so you remember why later
-  stamp add lazygit -m brew --note "better git TUI"`,
+  stamp add lazygit -m brew --note "better git TUI"
+
+  # install a versioned Homebrew formula
+  stamp install python@3.14 -m brew
+
+  # install a repo-qualified pacman package
+  stamp install extra/htop -m pacman`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInstall(cmd, appFromCtx(cmd), args, managerFlag, note, groupInstall)
@@ -424,7 +430,10 @@ func newRemoveCmd() *cobra.Command {
   stamp del htop
 
   # remove multiple packages in one command (per-manager batch, -m required)
-  stamp remove htop atop btop -m dnf`,
+  stamp remove htop atop btop -m dnf
+
+  # remove a versioned apt package (tracked as htop)
+  stamp remove htop=3.2.1 -m apt`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)

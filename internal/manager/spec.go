@@ -68,6 +68,9 @@ func parseGenericSpec(raw string) (Spec, error) {
 }
 
 func parseGoSpec(raw string) (Spec, error) {
+	if strings.Contains(raw, "@") {
+		return Spec{}, fmt.Errorf("invalid module path %q: version pins are not supported; stamp installs @latest (ADR-010)", raw)
+	}
 	if err := ValidateModulePath(raw); err != nil {
 		return Spec{}, err
 	}

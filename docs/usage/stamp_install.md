@@ -29,6 +29,12 @@ stamp install <package> [flags]
 
   # add a note so you remember why later
   stamp add lazygit -m brew --note "better git TUI"
+
+  # install a versioned Homebrew formula
+  stamp install python@3.14 -m brew
+
+  # install a repo-qualified pacman package
+  stamp install extra/htop -m pacman
 ```
 
 ### Options

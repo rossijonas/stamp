@@ -140,7 +140,10 @@ func newReinstallCmd() *cobra.Command {
   stamp reinstall lazygit jq -m brew
 
   # annotate a reinstall so you remember why later
-  stamp reinstall lazygit -m brew --note "refresh intent"`,
+  stamp reinstall lazygit -m brew --note "refresh intent"
+
+  # reinstall a versioned cargo crate (tracked as ripgrep)
+  stamp reinstall ripgrep@14.1.0 -m cargo`,
 		Long: `Look up the package in the manifest to find its recorded package manager,
 then execute the native reinstallation command. If the package is not
 tracked in the manifest, resolve the manager and track it.`,
