@@ -16,8 +16,9 @@ import (
 type caskKey struct{}
 
 const (
-	brewFlagCask   = "--cask"
-	brewFlagDryRun = "--dry-run"
+	brewFlagCask    = "--cask"
+	brewFlagDryRun  = "--dry-run"
+	brewFlagFormula = "--formula"
 )
 
 // WithCask returns a context that signals cask operations for brew.
@@ -109,6 +110,58 @@ func (m *Brew) ListInstalled(ctx context.Context) ([]string, error) {
 	}
 	return formulas, nil
 }
+
+// CheckInstalled reports which of pkgs are not installed by brew. Presence is
+// read from `brew list` — a local Cellar read — because `brew leaves` excludes
+// dependency-installed formulae and is a reconcile-intent source, not an
+// installed set.
+func (m *Brew) CheckInstalled(ctx context.Context, pkgs []string) ([]string, error) {
+	if len(pkgs) == 0 {
+		return nil, nil
+	}
+
+	out, err := m.exec(ctx, "brew", "list", brewFlagFormula)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list installed formulae: %w", err)
+	}
+	installed := make(map[string]struct{}, len(pkgs))
+	for _, name := range parseLines(out) {
+		installed[name] = struct{}{}
+	}
+
+	// Cask entries are excluded from missing candidates upstream, but merging
+	// them keeps an unflagged cask from becoming a false positive. A brew
+	// without casks may fail this command; the formula set still stands.
+	if caskOut, caskErr := m.exec(ctx, "brew", "list", brewFlagCask); caskErr == nil {
+		for _, name := range parseLines(caskOut) {
+			installed[name] = struct{}{}
+		}
+	}
+
+	var absent []string
+	for _, p := range pkgs {
+		if !brewNameInstalled(installed, p) {
+			absent = append(absent, p)
+		}
+	}
+	return absent, nil
+}
+
+// brewNameInstalled reports whether name is in the installed set. A
+// tap-qualified reference (owner/tap/formula) matches by its formula segment,
+// because `brew list` prints short names.
+func brewNameInstalled(installed map[string]struct{}, name string) bool {
+	if _, ok := installed[name]; ok {
+		return true
+	}
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		_, ok := installed[name[i+1:]]
+		return ok
+	}
+	return false
+}
+
+var _ InstalledChecker = (*Brew)(nil)
 
 // IsCask returns true if the given package is a Homebrew cask.
 func (m *Brew) IsCask(ctx context.Context, pkg string) (bool, error) {

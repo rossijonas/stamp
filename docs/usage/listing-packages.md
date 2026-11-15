@@ -81,6 +81,10 @@ current system — typically packages removed directly via your native package
 manager (e.g. `sudo dnf remove htop`). It queries the installed state of every
 active manager, so it always reflects the live system.
 
+Presence uses each manager's native check where one exists (dnf provides
+resolution, `brew list` for Homebrew), so packages installed as dependencies are
+not reported as missing.
+
 ```bash
 stamp list -t missing
 ```

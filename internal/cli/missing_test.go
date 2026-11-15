@@ -172,6 +172,21 @@ func TestMissingFromSystem_InstalledChecker(t *testing.T) {
 		assert.Equal(t, 1, checker.calls)
 	})
 
+	t.Run("brew dependency-installed formula is present", func(t *testing.T) {
+		// brew leaves omits dependency-installed formulae; the native presence
+		// check must answer from the full installed set (issue #269).
+		checker := &checkerMock{
+			Mock:   manager.Mock{ManagerName: "brew", InstalledPkgs: []string{}},
+			absent: map[string]bool{},
+		}
+		got := missingFromSystem(context.Background(), []manager.Adapter{checker}, manifestWith(
+			manifest.Package{Name: "lean-ctx", Manager: "brew"},
+			manifest.Package{Name: "tokensave", Manager: "brew"},
+		))
+		assert.Empty(t, got)
+		assert.Equal(t, 1, checker.calls)
+	})
+
 	t.Run("checker error degrades to ListInstalled matching", func(t *testing.T) {
 		checker := &checkerMock{
 			Mock: manager.Mock{ManagerName: "dnf", InstalledPkgs: []string{"htop"}},
