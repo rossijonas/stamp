@@ -1,14 +1,88 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "codegraph": {
-      "type": "local",
-      "command": [
-        "codegraph",
-        "serve",
-        "--mcp"
-      ],
-      "enabled": true
+    "servers": {
+      "codegraph": {
+        "type": "local",
+        "command": [
+          "codegraph",
+          "serve",
+          "--mcp"
+        ],
+        "disabled": false,
+        "codemode": false
+      },
+      "tokensave": {
+        "type": "local",
+        "command": [
+          "/home/linuxbrew/.linuxbrew/bin/tokensave",
+          "serve"
+        ],
+        "cwd": ".",
+        "disabled": false,
+        "codemode": false
+      },
+      "lean-ctx": {
+        "type": "local",
+        "command": [
+          "/home/linuxbrew/.linuxbrew/bin/lean-ctx"
+        ],
+        "cwd": ".",
+        "disabled": false,
+        "codemode": false
+      }
     }
-  }
+  },
+  "permissions": [
+    {
+      "action": "tokensave_*str_replace*",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "tokensave_*multi_str_replace*",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "tokensave_*replace_lines*",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "tokensave_*replace_symbol*",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "tokensave_*rename*",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "tokensave_*insert_at*",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "tokensave_*delete_symbol*",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "lean-ctx_ctx_patch",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "lean-ctx_ctx_execute",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "lean-ctx_ctx_call",
+      "resource": "*",
+      "effect": "deny"
+    }
+  ]
 }

@@ -66,7 +66,7 @@ func runInstall(cmd *cobra.Command, app *AppContext, args []string, managerFlag,
 	}
 	pkgName := args[0]
 
-	if strings.Count(pkgName, "/") == 1 && (managerFlag == "" || manager.ResolveManager(managerFlag) == "brew") {
+	if strings.Count(pkgName, "/") == 1 && !strings.HasPrefix(pkgName, "@") && (managerFlag == "" || manager.ResolveManager(managerFlag) == "brew") {
 		return catErr(ErrUsage, "%q looks like a Homebrew tap; use 'stamp tap %s'", pkgName, pkgName)
 	}
 
@@ -80,7 +80,7 @@ func runInstall(cmd *cobra.Command, app *AppContext, args []string, managerFlag,
 		if groupInstall {
 			return catErr(ErrUsage, "group IDs contain only a-z0-9_- (see 'dnf group list')")
 		}
-		return fmt.Errorf("invalid package name: %w", err)
+		return err
 	}
 
 	cask := detectBrewCask(cmd.Context(), adapter, pkgName)
@@ -113,7 +113,7 @@ func runSingleInstall(cmd *cobra.Command, app *AppContext, adapter manager.Adapt
 	}
 
 	app.manifest.AddPackage(manifest.Package{
-		Name:    pkgName,
+		Name:    manager.TrackedName(adapter.Name(), pkgName),
 		Manager: adapter.Name(),
 		Notes:   note,
 		Cask:    cask,
@@ -227,7 +227,7 @@ func countCasks(casks map[string]bool) int {
 func validateBatchPackages(adapter manager.Adapter, pkgs []string) error {
 	for _, p := range pkgs {
 		if err := manager.ValidatePackageForManager(adapter.Name(), p); err != nil {
-			return fmt.Errorf("invalid package name %q: %w", p, err)
+			return err
 		}
 	}
 	return nil
@@ -237,7 +237,7 @@ func validateBatchPackages(adapter manager.Adapter, pkgs []string) error {
 // after a batch install succeeds (saveManifest persists it).
 func addTrackedAll(app *AppContext, pkgs []string, mgr, note string) {
 	for _, p := range pkgs {
-		app.manifest.AddPackage(manifest.Package{Name: p, Manager: mgr, Notes: note, Origin: manifest.OriginStamped})
+		app.manifest.AddPackage(manifest.Package{Name: manager.TrackedName(mgr, p), Manager: mgr, Notes: note, Origin: manifest.OriginStamped})
 	}
 }
 
@@ -381,7 +381,8 @@ func newRemoveCmd() *cobra.Command {
 // is not tracked.
 func findTrackedAdapter(pkgs []manifest.Package, adapters []manager.Adapter, name string) (manager.Adapter, bool, bool) {
 	for _, p := range pkgs {
-		if p.Name != name {
+		tracked := p.Name == name || (p.Manager == "npm" && p.Name == manager.TrackedName("npm", name))
+		if !tracked {
 			continue
 		}
 		for _, a := range adapters {
@@ -455,7 +456,7 @@ func runSingleRemove(cmd *cobra.Command, app *AppContext, adapter manager.Adapte
 		return fmt.Errorf("remove failed: %w", err)
 	}
 
-	app.manifest.RemovePackage(pkgName, adapter.Name())
+	app.manifest.RemovePackage(manager.TrackedName(adapter.Name(), pkgName), adapter.Name())
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
@@ -533,7 +534,7 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 // once after a batch remove succeeds (saveManifest persists it).
 func removeTrackedAll(app *AppContext, pkgs []string, mgr string) {
 	for _, p := range pkgs {
-		app.manifest.RemovePackage(p, mgr)
+		app.manifest.RemovePackage(manager.TrackedName(mgr, p), mgr)
 	}
 }
 

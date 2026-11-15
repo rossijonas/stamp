@@ -26,7 +26,7 @@ func hasRecordedManager(packages []manifest.Package, pkgName string) bool {
 func resolveReinstallAdapter(app *AppContext, pkgName, managerFlag string) (adapter manager.Adapter, err error) {
 	var recordedManager string
 	for _, p := range app.manifest.Packages {
-		if p.Name == pkgName {
+		if p.Name == pkgName || (p.Manager == "npm" && p.Name == manager.TrackedName("npm", pkgName)) {
 			recordedManager = p.Manager
 			break
 		}
@@ -66,16 +66,17 @@ func executeSingleReinstall(cmd *cobra.Command, app *AppContext, adapter manager
 	restoreSaveSnapshots(cmd.Context(), errOut, app.adapters)
 
 	// Add to manifest if pre-existing
+	trackedName := manager.TrackedName(adapter.Name(), pkgName)
 	if isPreExisting {
 		app.manifest.AddPackage(manifest.Package{
-			Name:    pkgName,
+			Name:    trackedName,
 			Manager: adapter.Name(),
 			Notes:   note,
 			Origin:  manifest.OriginStamped,
 		})
 	} else if note != "" {
 		// Tracked package: refresh its note to capture reinstall intent.
-		app.manifest.SetNote(pkgName, adapter.Name(), note)
+		app.manifest.SetNote(trackedName, adapter.Name(), note)
 	}
 
 	// Save manifest
@@ -130,9 +131,9 @@ tracked in the manifest, resolve the manager and track it.`,
 				return err
 			}
 			if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
-				return fmt.Errorf("invalid package name: %w", err)
+				return err
 			}
-			isPreExisting := !hasRecordedManager(app.manifest.Packages, pkgName)
+			isPreExisting := !hasRecordedManager(app.manifest.Packages, manager.TrackedName(adapter.Name(), pkgName))
 
 			// Confirmation gate: prompts unless -y is passed. Non-interactive
 			// runs without -y abort (fail closed, non-zero exit).
@@ -222,9 +223,10 @@ func reinstallMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFl
 // honored the way the single-package path does.
 func validateBatchReinstall(adapter manager.Adapter, pkgs []string, packages []manifest.Package) error {
 	for _, p := range pkgs {
+		tracked := manager.TrackedName(adapter.Name(), p)
 		for _, rec := range packages {
-			if rec.Name == p && rec.Manager != adapter.Name() {
-				return catErr(ErrUsage, "package %s is tracked under %s, not %s; reinstall it with -m %s", p, rec.Manager, adapter.Name(), rec.Manager)
+			if rec.Name == tracked && rec.Manager != adapter.Name() {
+				return catErr(ErrUsage, "package %s is tracked under %s, not %s; reinstall it with -m %s", tracked, rec.Manager, adapter.Name(), rec.Manager)
 			}
 		}
 	}
@@ -257,15 +259,16 @@ func execBatchReinstall(ctx context.Context, adapter manager.Adapter, br manager
 // notes of already-tracked ones when a note was given.
 func trackBatchReinstalls(m *manifest.Manifest, pkgs []string, mgr, note string) {
 	for _, p := range pkgs {
-		if !m.HasPackage(p, mgr) {
+		tracked := manager.TrackedName(mgr, p)
+		if !m.HasPackage(tracked, mgr) {
 			m.AddPackage(manifest.Package{
-				Name:    p,
+				Name:    tracked,
 				Manager: mgr,
 				Notes:   note,
 				Origin:  manifest.OriginStamped,
 			})
 		} else if note != "" {
-			m.SetNote(p, mgr, note)
+			m.SetNote(tracked, mgr, note)
 		}
 	}
 }

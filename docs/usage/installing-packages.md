@@ -172,9 +172,24 @@ For pre-existing packages (installed before `stamp init`), reinstall resolves th
 
 ### Package name validation
 
-Stamp validates package names to prevent shell injection. Names must start with a letter, number, or underscore, and contain only safe characters (`a-zA-Z0-9_-.+`). Names starting with `-` are rejected.
+Stamp validates package names to prevent shell injection. Generic names must start with a letter, number, or underscore, and contain only safe characters (`a-zA-Z0-9_-.+`). Names starting with `-` are rejected.
 
-Homebrew additionally accepts a tap-qualified formula — `owner/tap/formula` (one to three slash-separated segments, each following the rule above). The slash form is brew-only; every other manager rejects `/` with an invalid-package-name error.
+Homebrew additionally accepts a tap-qualified formula — `owner/tap/formula` (one to three slash-separated segments, each following the rule above). The slash form is brew-only; every other manager rejects `/`.
+
+npm accepts its native package-spec grammar:
+
+```bash
+stamp install @scope/tool -m npm
+stamp install @scope/tool@latest -m npm
+stamp install typescript@5.6.3 -m npm
+```
+
+- Scoped names require the `@` prefix; a bare `scope/tool` is rejected with a hint.
+- The optional `@version` suffix accepts a tag, an exact version, or a range
+  (without spaces), and is passed to npm unchanged.
+- The manifest records the package name only (`@scope/tool`, `typescript`), never the
+  version, so remove, reinstall, and update keep matching the installed package.
+- npm is not in the default resolution precedence, so pass `-m npm` explicitly.
 
 ### Python tools (pipx)
 

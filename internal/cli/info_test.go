@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -141,4 +142,28 @@ func TestInfoCmd_QualifiedWithBrew(t *testing.T) {
 	buf, err := execCmd(t, []string{"info", qualifiedRef, "-m", "brew"}, []manager.Adapter{&mockAdapter{name: "brew"}})
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), qualifiedRef)
+}
+
+func TestInfoCmd_NpmScopedWithoutManager(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"info", "@scope/tool"}, []manager.Adapter{
+		&mockAdapter{name: "dnf"}, &mockAdapter{name: "npm"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "@scope/tool")
+}
+
+func TestInfoCmd_NpmScopedWithManager(t *testing.T) {
+	t.Parallel()
+	buf, err := execCmd(t, []string{"info", "@scope/tool", "-m", "npm"}, []manager.Adapter{&mockAdapter{name: "npm"}})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "@scope/tool via npm")
+}
+
+func TestInfoCmd_NpmBareScopeHint(t *testing.T) {
+	t.Parallel()
+	_, err := execCmd(t, []string{"info", "scope/tool", "-m", "npm"}, []manager.Adapter{&mockAdapter{name: "npm"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `did you mean "@scope/tool"?`)
+	assert.Equal(t, 1, strings.Count(err.Error(), "invalid package name"))
 }

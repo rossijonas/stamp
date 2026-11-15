@@ -45,6 +45,7 @@ func TestNpm_Install(t *testing.T) {
 		wantErr bool
 	}{
 		{"success", "typescript", nil, false},
+		{"scoped versioned", "@scope/tool@latest", nil, false},
 		{"error", "typescript", assert.AnError, true},
 		{"validation error", "-invalid", nil, true},
 	}
@@ -97,6 +98,7 @@ func TestNpm_Remove(t *testing.T) {
 		wantErr bool
 	}{
 		{"success", "typescript", nil, false},
+		{"scoped", "@scope/tool", nil, false},
 		{"error", "typescript", assert.AnError, true},
 		{"validation error", "-invalid", nil, true},
 	}
@@ -106,6 +108,72 @@ func TestNpm_Remove(t *testing.T) {
 			mgr := NewNpm()
 			mgr.exec = mockExecutorHelper("", tt.mockErr)
 			err := mgr.Remove(WithYes(context.Background()), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestNpm_InstallMany(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkgs    []string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", []string{"typescript", "@scope/tool@latest"}, nil, false},
+		{"error", []string{"typescript"}, assert.AnError, true},
+		{"validation error", []string{"typescript", "foo bar"}, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewNpm()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.InstallMany(WithYes(context.Background()), tt.pkgs...)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestNpm_InstallMany_Args(t *testing.T) {
+	t.Parallel()
+	var gotArgs []string
+	mgr := NewNpm()
+	mgr.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		gotArgs = append([]string{name}, args...)
+		return nil, nil
+	}
+	require.NoError(t, mgr.InstallMany(WithYes(context.Background()), "@scope/tool@latest", "typescript"))
+	assert.Equal(t, []string{"npm", "install", "-g", "@scope/tool@latest", "typescript"}, gotArgs[len(gotArgs)-5:])
+}
+
+func TestNpm_RemoveMany(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkgs    []string
+		mockErr error
+		wantErr bool
+	}{
+		{"success", []string{"typescript", "@scope/tool"}, nil, false},
+		{"error", []string{"typescript"}, assert.AnError, true},
+		{"validation error", []string{"-invalid"}, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mgr := NewNpm()
+			mgr.exec = mockExecutorHelper("", tt.mockErr)
+			err := mgr.RemoveMany(WithYes(context.Background()), tt.pkgs...)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -149,6 +217,15 @@ func TestNpm_Info(t *testing.T) {
 	}
 }
 
+func TestNpm_Info_Scoped(t *testing.T) {
+	t.Parallel()
+	mgr := NewNpm()
+	mgr.exec = mockExecutorHelper("Name: @scope/tool\n", nil)
+	res, err := mgr.Info(context.Background(), "@scope/tool@latest")
+	require.NoError(t, err)
+	assert.Contains(t, res, "@scope/tool")
+}
+
 func TestNpm_Update(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -158,6 +235,7 @@ func TestNpm_Update(t *testing.T) {
 		wantErr bool
 	}{
 		{"success", "", nil, false},
+		{"scoped package", "@scope/tool@latest", nil, false},
 		{"error", "", assert.AnError, true},
 		{"single package", "typescript", nil, false},
 	}
