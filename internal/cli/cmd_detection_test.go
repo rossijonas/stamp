@@ -63,6 +63,78 @@ func TestDetectAdapters_FallbackToPacman(t *testing.T) {
 	assert.True(t, hasPacman, "pacman should be detected when pacman binary is present")
 }
 
+func TestLookPathFirst(t *testing.T) {
+	tests := []struct {
+		name      string
+		available []string
+		want      string
+		wantOK    bool
+	}{
+		{name: "prefers the first candidate", available: []string{"apt", "apt-get"}, want: "apt", wantOK: true},
+		{name: "falls back to the second", available: []string{"apt-get"}, want: "apt-get", wantOK: true},
+		{name: "none available", available: nil, want: "", wantOK: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lookPathOrig := lookPath
+			defer func() { lookPath = lookPathOrig }()
+			lookPath = func(name string) (string, error) {
+				for _, available := range tt.available {
+					if name == available {
+						return "/usr/bin/" + name, nil
+					}
+				}
+				return "", fmt.Errorf("not found: %s", name)
+			}
+
+			got, ok := lookPathFirst("apt", "apt-get")
+			assert.Equal(t, tt.wantOK, ok)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestDetectAdapters_FallbackToAptGet(t *testing.T) {
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+	lookPath = func(name string) (string, error) {
+		if name == "apt-get" {
+			return "/usr/bin/apt-get", nil
+		}
+		return "", fmt.Errorf("not found: %s", name)
+	}
+
+	adapters := detectAdapters()
+	count := 0
+	for _, a := range adapters {
+		if a.Name() == "apt" {
+			count++
+		}
+	}
+	assert.Equal(t, 1, count, "apt should be detected through apt-get when apt is absent")
+}
+
+func TestDetectAdapters_PrefersAptOverAptGet(t *testing.T) {
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+	lookPath = func(name string) (string, error) {
+		if name == "apt" || name == "apt-get" {
+			return "/usr/bin/" + name, nil
+		}
+		return "", fmt.Errorf("not found: %s", name)
+	}
+
+	adapters := detectAdapters()
+	count := 0
+	for _, a := range adapters {
+		if a.Name() == "apt" {
+			count++
+		}
+	}
+	assert.Equal(t, 1, count, "apt should register once when both apt and apt-get exist")
+}
+
 func TestDetectAdapters_NpmDetected(t *testing.T) {
 	lookPathOrig := lookPath
 	defer func() { lookPath = lookPathOrig }()

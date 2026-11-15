@@ -15,7 +15,9 @@ remove, reinstall, and restore keep working.
 This is the audit behind [issue #264](https://github.com/rossijonas/stamp/issues/264).
 Implementation status lives in the gap tables; the matrix is the source of truth
 for current acceptance. The validation policy is recorded in
-[ADR-026](../decisions/ADR-026-package-spec-validation-policy.html).
+[ADR-026](../decisions/ADR-026-package-spec-validation-policy.html). The list of
+managers covered here is in
+[Supported Managers](../getting-started/supported-managers.html).
 
 ## Method
 

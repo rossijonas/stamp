@@ -43,6 +43,11 @@ func (m *DNF) Name() string {
 	return "dnf"
 }
 
+// Binary returns the executable this adapter runs ("dnf" or "yum").
+func (m *DNF) Binary() string {
+	return m.cmd
+}
+
 // ReconcileReliability reports OverInclusive: `repoquery --userinstalled` is
 // the documented dnf5 method but returns base OS packages (kernel, glibc,
 // bash) that Anaconda marks as "User". Output is consistent run-to-run, so

@@ -93,6 +93,18 @@ func WithManifestPath(p string) RootOption {
 	return func(c *rootConfig) { c.manifestPath = p }
 }
 
+// lookPathFirst returns the first binary found on $PATH, preserving the order
+// of preference. Detection for managers with a fallback binary uses it so the
+// choice is testable.
+func lookPathFirst(names ...string) (string, bool) {
+	for _, name := range names {
+		if _, err := lookPath(name); err == nil {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 func detectAdapters() []manager.Adapter {
 	adapters := make([]manager.Adapter, 0)
 	detect := func(bin string, fn func() manager.Adapter) {
@@ -106,8 +118,9 @@ func detectAdapters() []manager.Adapter {
 		} else if _, err := lookPath("yum"); err == nil {
 			adapters = append(adapters, manager.NewDNF("yum"))
 		}
-		if _, err := lookPath("apt"); err == nil {
-			adapters = append(adapters, manager.NewAPT("apt"))
+		if bin, ok := lookPathFirst("apt", "apt-get"); ok {
+			// Minimal Debian images ship apt-get without apt.
+			adapters = append(adapters, manager.NewAPT(bin))
 		}
 		detect("flatpak", func() manager.Adapter { return manager.NewFlatpak() })
 		detect("snap", func() manager.Adapter { return manager.NewSnap() })

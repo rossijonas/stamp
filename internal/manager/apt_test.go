@@ -205,6 +205,22 @@ func TestAPT_ListInstalled_Fallback(t *testing.T) {
 	assert.Equal(t, 2, calls)
 }
 
+func TestAPT_ListInstalled_AptGetUsesDPKG(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	m := NewAPT("apt-get")
+	m.exec = func(_ context.Context, name string, _ ...string) ([]byte, error) {
+		calls++
+		assert.Equal(t, "dpkg-query", name, "apt-get has no list subcommand")
+		return []byte("installed htop\ninstalled jq\n"), nil
+	}
+
+	pkgs, err := m.ListInstalled(WithYes(context.Background()))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"htop", "jq"}, pkgs)
+	assert.Equal(t, 1, calls)
+}
+
 func TestAPT_ListInstalled_BothFail(t *testing.T) {
 	t.Parallel()
 	calls := 0
@@ -566,6 +582,155 @@ func TestAPT_ProvidesError(t *testing.T) {
 	m.exec = mockExecutorHelper("", assert.AnError)
 	_, err := m.Provides(WithYes(context.Background()), "htop")
 	require.Error(t, err)
+}
+
+func TestAPT_AutoRemove_AptGet(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt-get")
+	var got []string
+	m.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		got = append([]string{name}, args...)
+		return nil, nil
+	}
+
+	_, err := m.AutoRemove(WithYes(context.Background()), false)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(got), 3)
+	assert.Equal(t, []string{"apt-get", "autoremove", "-y"}, got[len(got)-3:])
+}
+
+func TestAPT_Clean_AptGet(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt-get")
+	var got []string
+	m.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		got = append([]string{name}, args...)
+		return nil, nil
+	}
+
+	_, err := m.Clean(WithYes(context.Background()), false)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(got), 2)
+	assert.Equal(t, []string{"apt-get", "clean"}, got[len(got)-2:])
+}
+
+func TestParseAPTGetSimulateUpgrade(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		output string
+		want   []UpdateInfo
+	}{
+		{
+			name:   "upgrade with current version",
+			output: "Inst htop [3.2.1] (3.2.2 Debian:stable [amd64])\n",
+			want:   []UpdateInfo{{Package: "htop", CurrentVersion: "3.2.1", AvailableVersion: "3.2.2"}},
+		},
+		{
+			name:   "new install has no current version",
+			output: "Inst jq (1.7.1 Debian:stable [amd64])\n",
+			want:   []UpdateInfo{{Package: "jq", AvailableVersion: "1.7.1"}},
+		},
+		{
+			name:   "multiple packages and noise lines",
+			output: "Reading package lists...\nInst git [1.0] (2.0 repo [amd64])\nConf curl (8.0 repo [amd64])\nInst vim [9.0] (9.1 repo [amd64])\n",
+			want: []UpdateInfo{
+				{Package: "git", CurrentVersion: "1.0", AvailableVersion: "2.0"},
+				{Package: "vim", CurrentVersion: "9.0", AvailableVersion: "9.1"},
+			},
+		},
+		{name: "empty output", output: "", want: nil},
+		{name: "malformed inst line", output: "Inst\n", want: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, parseAPTGetSimulateUpgrade([]byte(tt.output)))
+		})
+	}
+}
+
+func TestAPT_CheckUpdate_InvalidSpecSkipsExec(t *testing.T) {
+	t.Parallel()
+
+	for _, cmd := range []string{"apt", "apt-get"} {
+		t.Run(cmd, func(t *testing.T) {
+			t.Parallel()
+
+			calls := 0
+			m := NewAPT(cmd)
+			m.exec = func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+				calls++
+				return nil, nil
+			}
+
+			_, err := m.CheckUpdate(WithYes(context.Background()), "bad name!")
+			require.Error(t, err)
+			assert.Zero(t, calls, "invalid spec must not execute %s", cmd)
+		})
+	}
+}
+
+func TestAPT_CheckUpdate_PackageFilter(t *testing.T) {
+	t.Parallel()
+	var got []string
+	m := NewAPT("apt")
+	m.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		got = append([]string{name}, args...)
+		return []byte("Listing...\ngit/stable 2.0 amd64 [upgradable from: 1.0]\n"), nil
+	}
+
+	updates, err := m.CheckUpdate(WithYes(context.Background()), "git=2.0")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"apt", "list", "--upgradable", "git"}, got)
+	require.Len(t, updates, 1)
+	assert.Equal(t, "git", updates[0].Package)
+}
+
+func TestAPT_CheckUpdate_AptGet(t *testing.T) {
+	t.Parallel()
+	m := NewAPT("apt-get")
+	var got []string
+	m.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		got = append([]string{name}, args...)
+		return []byte("Inst htop [3.2.1] (3.2.2 Debian:stable [amd64])\nInst git [1.0] (2.0 Debian:stable [amd64])\n"), nil
+	}
+
+	updates, err := m.CheckUpdate(WithYes(context.Background()), "")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"apt-get", "-s", "upgrade"}, got)
+	require.Len(t, updates, 2)
+	assert.Equal(t, "htop", updates[0].Package)
+	assert.Equal(t, "3.2.1", updates[0].CurrentVersion)
+	assert.Equal(t, "3.2.2", updates[0].AvailableVersion)
+}
+
+func TestAPT_CheckUpdate_AptGet_PackageFilter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		pkg  string
+	}{
+		{name: "plain name", pkg: "git"},
+		{name: "versioned spec", pkg: "git=2.0"},
+		{name: "suite-qualified spec", pkg: "git/bookworm"},
+		{name: "arch-qualified spec", pkg: "git:amd64"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := NewAPT("apt-get")
+			m.exec = mockExecutorHelper("Inst htop [3.2.1] (3.2.2 Debian:stable [amd64])\nInst git [1.0] (2.0 Debian:stable [amd64])\n", nil)
+
+			updates, err := m.CheckUpdate(WithYes(context.Background()), tt.pkg)
+			require.NoError(t, err)
+			require.Len(t, updates, 1)
+			assert.Equal(t, "git", updates[0].Package)
+		})
+	}
 }
 
 func TestAPT_AutoRemove(t *testing.T) {

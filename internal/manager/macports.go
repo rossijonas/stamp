@@ -24,6 +24,11 @@ func (m *MacPorts) Name() string {
 	return "macports"
 }
 
+// Binary returns the executable this adapter runs.
+func (m *MacPorts) Binary() string {
+	return "port"
+}
+
 func parsePortInstalled(output []byte) []string {
 	lines := bytes.Split(output, []byte("\n"))
 	result := make([]string, 0, len(lines))

@@ -15,6 +15,57 @@ import (
 	"github.com/rossijonas/stamp/internal/manager"
 )
 
+func TestBuildManagersReport_UsesAdapterBinary(t *testing.T) {
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+
+	tests := []struct {
+		name    string
+		adapter manager.Adapter
+		binary  string
+	}{
+		{name: "apt-get fallback", adapter: manager.NewAPT("apt-get"), binary: "apt-get"},
+		{name: "yum fallback", adapter: manager.NewDNF("yum"), binary: "yum"},
+		{name: "macports uses port", adapter: manager.NewMacPorts(), binary: "port"},
+		{name: "falls back to adapter name", adapter: &manager.Mock{ManagerName: "brew"}, binary: "brew"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lookPath = func(name string) (string, error) {
+				if name == tt.binary {
+					return "/usr/bin/" + name, nil
+				}
+				return "", errors.New("not found: " + name)
+			}
+
+			report := buildManagersReport([]manager.Adapter{tt.adapter})
+			status, ok := statusByName(report, tt.adapter.Name())
+			require.True(t, ok)
+			assert.True(t, status.Active)
+			assert.Equal(t, "/usr/bin/"+tt.binary, status.Path)
+		})
+	}
+}
+
+func TestBuildManagersReport_InactiveManager(t *testing.T) {
+	report := buildManagersReport(nil)
+	status, ok := statusByName(report, "apt")
+	require.True(t, ok)
+	assert.False(t, status.Active)
+	assert.Empty(t, status.Path)
+	assert.Equal(t, "Executable not found in $PATH", status.Details)
+}
+
+func statusByName(report []managerStatus, name string) (managerStatus, bool) {
+	for _, status := range report {
+		if status.Name == name {
+			return status, true
+		}
+	}
+	return managerStatus{}, false
+}
+
 func TestDoctor_Plain(t *testing.T) {
 	stubManExec(t)
 	oldCandidates := manPageCandidates

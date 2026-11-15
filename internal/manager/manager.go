@@ -135,6 +135,14 @@ type InstalledNameResolver interface {
 	ResolveInstalledName(ctx context.Context, spec string) (string, error)
 }
 
+// BinaryReporter is implemented by adapters whose executable name differs from
+// Name(): a fallback binary (apt → apt-get, dnf → yum) or a differently named
+// command (macports → port). Doctor uses it to report the real path. Adapters
+// without it are looked up by Name().
+type BinaryReporter interface {
+	Binary() string
+}
+
 // TapTrustManager is implemented by adapters that can manage whole-tap trust
 // (Homebrew 6.0.0+). The CLI type-asserts this interface for
 // `stamp repo trust`/`stamp repo untrust`; only brew implements it today.

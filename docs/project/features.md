@@ -20,6 +20,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | Snap | ✓ Complete | All except repo mgmt | Ubuntu, Linux (universal), sudo for write ops |
 | Zypper | ✓ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
 | Paru | ✓ Complete | All except repo mgmt | Arch Linux, AUR + official repos, replaces pacman when available, sudo for write ops |
+| Pacman | ✓ Complete | All except repo mgmt | Arch Linux, fallback when Paru is not installed, sudo for write ops |
 | MacPorts | ✓ Complete | All except repo mgmt | macOS, sudo for write ops |
 | Pipx | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | pip-installable CLI tools, --yes for non-interactive, JSON listing with text fallback, no search/doctor/repo support |
 | Uv | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | Rust-based Python tool manager (uv tool subcommand), --force for reinstall, no search/doctor/repo support |
@@ -31,7 +32,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 
 ## CLI Commands
 
-Per-manager native spec acceptance is tracked in the [Package Specification Support](package-spec-audit.html).
+Per-manager native spec acceptance is tracked in the [Package Specification Support](package-spec-audit.html). The full manager list and detection rules are in [Supported Managers](../getting-started/supported-managers.html).
 
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
