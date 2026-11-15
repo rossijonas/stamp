@@ -122,6 +122,22 @@ intent names that map to different concrete packages (`nodejs` → `nodejs22`,
 what `dnf install <pkg>` itself would satisfy, so doctor and `stamp restore`
 always agree.
 
+On brew, presence comes from `brew list --formula` (plus `--cask`), not from
+`brew leaves`. `leaves` lists only formulae that are not dependencies of
+another formula and is used solely for reconcile intent, so a
+dependency-installed formula is correctly **not** reported missing:
+
+```text
+> brew list --formula | grep tokensave
+tokensave
+
+> brew leaves --installed-on-request | grep tokensave
+(nothing)
+```
+
+A tap-qualified manifest entry (`owner/tap/formula`) matches the short formula
+name that `brew list` reports.
+
 ### Config validation
 
 Doctor validates the `[backup]` retention policy in `config.toml`. A

@@ -62,6 +62,22 @@ the check is best-effort diagnostics, not a hard error.
   because nothing is auto-actioned.
 - Deterministic output: deduplicated and sorted by `(manager, name)`.
 
+### Update (2026-11-15): native presence checks
+
+`InstalledChecker` (`internal/manager/manager.go`) lets an adapter answer presence
+directly instead of relying on `ListInstalled` name matching:
+
+- **dnf:** full installed set plus `repoquery --installed --whatprovides`.
+- **brew:** `brew list --formula` (plus `--cask`). `brew leaves` is **not** used
+  for presence — it excludes dependency-installed formulae, and a failed leaves
+  lookup can exit 0 with empty output. `ListInstalled` keeps `leaves` for
+  reconcile intent (ADR-001).
+- Tap-qualified brew entries match by their formula segment, because
+  `brew list` prints short names. Same-name collisions across taps are not
+  distinguished; presence is best-effort diagnostics, never an action.
+
+Issue #269 tracks the brew false positives this fixes.
+
 ## Alternatives Considered
 
 ### Auto-reinstall missing packages from `stamp reconcile`
