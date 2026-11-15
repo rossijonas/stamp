@@ -662,6 +662,34 @@ The Uv adapter supports `uv tool install` for CLI tools from the Python ecosyste
 ### Update
 - Single: `uv tool upgrade <pkg>`. Batch: `uv tool upgrade --all`.
 
+## npm Adapter
+
+The npm adapter supports `npm install -g` for globally installed CLI tools.
+
+### Package Names
+- Uses `ValidateNpmPackageName`, which accepts npm's package-spec grammar:
+  `name`, `@scope/name`, and either form suffixed with `@tag`, `@version`, or a range
+  (without spaces).
+- A bare `scope/name` (no `@`) is rejected with a hint, because npm requires the scope prefix.
+- Leading `-`, empty segments, `..`, whitespace, and control characters are rejected.
+
+### Manifest Identity
+- The manifest records the package **name**; an npm `@version` suffix is not part of
+  identity and is dropped via `TrackedName("npm", spec)`.
+- `npm ls -g --depth=0` already reports scoped names without versions, so reconcile,
+  doctor, remove, and reinstall match the recorded name exactly.
+
+### ListInstalled
+- Parses `npm ls -g --depth=0`; the last `@` separates the version, so `@scope/name`
+  survives intact.
+
+### Search / Doctor / Repos
+- Search and Doctor return errors. Repo operations are unsupported and return errors
+  or an empty list.
+
+### Update
+- Single: `npm update -g <pkg>`. Batch: `npm update -g` across all global packages.
+
 ## Boundaries
 
 - **Always:** Use `context.Context` for all shell executions (`os/exec`).

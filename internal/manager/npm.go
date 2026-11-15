@@ -66,12 +66,23 @@ func parseNpmLs(output []byte) []string {
 	return result
 }
 
+// validateNpmPackages validates every spec in a batch before any native
+// command runs, so a bad spec aborts the whole operation upfront.
+func validateNpmPackages(pkgs []string) error {
+	for _, p := range pkgs {
+		if err := ValidateNpmPackageName(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Install runs npm install -g <pkg>.
 func (m *Npm) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateNpmPackageName(pkg); err != nil {
 		return err
 	}
 	cmdArgs := sudoCmd("npm", "install", "-g", pkg)
@@ -95,7 +106,7 @@ func (m *Npm) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateNpmPackageName(pkg); err != nil {
 		return err
 	}
 	cmdArgs := sudoCmd("npm", "uninstall", "-g", pkg)
@@ -111,7 +122,7 @@ func (m *Npm) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validateNpmPackages(pkgs); err != nil {
 		return err
 	}
 	cmdArgs := batchArgs(sudoCmd("npm", "install", "-g"), pkgs)
@@ -132,7 +143,7 @@ func (m *Npm) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validateNpmPackages(pkgs); err != nil {
 		return err
 	}
 	cmdArgs := batchArgs(sudoCmd("npm", "uninstall", "-g"), pkgs)
@@ -146,7 +157,7 @@ func (m *Npm) RemoveMany(ctx context.Context, pkgs ...string) error {
 // PreviewInstall previews installing pkg.
 // npm install --dry-run reports what would be installed without changes.
 func (m *Npm) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateNpmPackageName(pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -160,7 +171,7 @@ func (m *Npm) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 
 // PreviewRemove previews removing pkg.
 func (m *Npm) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateNpmPackageName(pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -187,7 +198,7 @@ func (m *Npm) Search(_ context.Context, _ string) ([]string, error) {
 
 // Info returns details about a package via the npm registry.
 func (m *Npm) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateNpmPackageName(pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "npm", "view", pkg)
@@ -209,7 +220,7 @@ func (m *Npm) Update(ctx context.Context, pkg string) error {
 	}
 	var args []string
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateNpmPackageName(pkg); err != nil {
 			return err
 		}
 		args = []string{"update", "-g", pkg}

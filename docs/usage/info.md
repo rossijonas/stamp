@@ -52,6 +52,16 @@ A tap-qualified Homebrew formula requires `-m brew` (the slash form is brew-only
 stamp info nklmilojevic/sofka/sofka -m brew
 ```
 
+Scoped npm packages use npm's native syntax:
+
+```bash
+stamp info @scope/tool -m npm
+stamp info @scope/tool          # query every manager
+```
+
+Without `-m`, stamp does not pre-validate the name — each manager decides, so a
+name that only npm accepts still resolves through the npm adapter.
+
 ### JSON output
 
 ```bash

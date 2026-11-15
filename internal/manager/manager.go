@@ -44,6 +44,53 @@ func ValidateBrewPackageName(pkg string) error {
 	return nil
 }
 
+// validNpmPkgRegex matches an npm package spec: an optional @scope/ prefix,
+// a name, and an optional @version suffix (tag, semver, or range).
+var validNpmPkgRegex = regexp.MustCompile(`^(@[A-Za-z0-9_][A-Za-z0-9._-]*/)?[A-Za-z0-9_][A-Za-z0-9._-]*(@[A-Za-z0-9._^~<>=|*+-]+)?$`)
+
+// npmBareScopeRegex matches the scoped form minus the required '@' prefix, so
+// validation can suggest the fix instead of a generic invalid-character error.
+var npmBareScopeRegex = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]*/[A-Za-z0-9_][A-Za-z0-9._-]*(@[A-Za-z0-9._^~<>=|*+-]+)?$`)
+
+// ValidateNpmPackageName validates an npm package spec: a bare name,
+// @scope/name, or either form suffixed with @tag/@version/@range. The spec is
+// passed to npm as a single argument (no shell), so '@', '/', and version-range
+// characters are safe; a leading '-' is still rejected as flag injection.
+func ValidateNpmPackageName(spec string) error {
+	if strings.HasPrefix(spec, "-") {
+		return fmt.Errorf("invalid package name %q: cannot start with '-'", spec)
+	}
+	if strings.HasSuffix(spec, "@") {
+		return fmt.Errorf("invalid package name %q: missing version after '@'", spec)
+	}
+	if strings.Contains(npmSpecName(spec), "..") || !validNpmPkgRegex.MatchString(spec) {
+		if npmBareScopeRegex.MatchString(spec) {
+			return fmt.Errorf("invalid package name %q: scoped npm packages require an \"@\" prefix (did you mean %q?)", spec, "@"+spec)
+		}
+		return fmt.Errorf("invalid package name %q: contains invalid characters", spec)
+	}
+	return nil
+}
+
+// npmSpecName strips an npm @version suffix. The scope's leading '@' is kept:
+// only a later '@' separates the version.
+func npmSpecName(spec string) string {
+	if atIdx := strings.LastIndex(spec, "@"); atIdx > 0 {
+		return spec[:atIdx]
+	}
+	return spec
+}
+
+// TrackedName returns the manifest identity for a package spec. npm version
+// specs are not part of package identity, so the suffix is dropped; every other
+// manager keeps the spec verbatim (e.g. brew's versioned formulae python@3.14).
+func TrackedName(managerName, spec string) string {
+	if managerName != "npm" {
+		return spec
+	}
+	return npmSpecName(spec)
+}
+
 // BatchInstaller is implemented by adapters whose native install command
 // accepts multiple packages in one invocation (e.g. `dnf install a b`). The
 // CLI type-asserts this interface for `stamp install <a> <b> -m <manager>`;
@@ -126,6 +173,8 @@ func ValidatePackageForManager(managerName, pkg string) error {
 		return ValidateModulePath(pkg)
 	case "brew":
 		return ValidateBrewPackageName(pkg)
+	case "npm":
+		return ValidateNpmPackageName(pkg)
 	default:
 		return ValidatePackageName(pkg)
 	}

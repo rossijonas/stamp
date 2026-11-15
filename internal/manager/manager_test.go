@@ -291,6 +291,84 @@ func TestValidatePackageForManager_BrewQualified(t *testing.T) {
 	require.Error(t, ValidatePackageForManager("dnf", "nklmilojevic/sofka/sofka"))
 }
 
+func TestValidatePackageForManager_Npm(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, ValidatePackageForManager("npm", "@scope/name@latest"))
+	require.NoError(t, ValidatePackageForManager("npm", "typescript@5.6.3"))
+	// Non-npm managers keep rejecting the scoped '@' form.
+	require.Error(t, ValidatePackageForManager("dnf", "@scope/name"))
+}
+
+func TestValidateNpmPackageName(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		spec  string
+		valid bool
+	}{
+		{"unscoped", "typescript", true},
+		{"scoped", "@scope/name", true},
+		{"versioned", "typescript@5.6.3", true},
+		{"scoped versioned", "@scope/name@latest", true},
+		{"version range", "@scope/name@^1.2.0", true},
+		{"x-range", "typescript@1.x", true},
+		{"legacy uppercase", "JSONStream", true},
+		{"leading dash", "-x", false},
+		{"at only", "@", false},
+		{"empty scope name", "@/x", false},
+		{"trailing scope slash", "@scope/", false},
+		{"missing version", "name@", false},
+		{"double version at", "name@@1", false},
+		{"nested scope", "@a/b/c", false},
+		{"space", "foo bar", false},
+		{"leading dot", ".hidden", false},
+		{"double dot", "a..b", false},
+		{"shell metacharacter", "pkg;rm", false},
+		{"empty", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateNpmPackageName(tt.spec)
+			if tt.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateNpmPackageName_BareScopeHint(t *testing.T) {
+	t.Parallel()
+	err := ValidateNpmPackageName("scope/name")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `did you mean "@scope/name"?`)
+}
+
+func TestTrackedName(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		manager string
+		spec    string
+		want    string
+	}{
+		{"npm versioned", "npm", "typescript@5.6.3", "typescript"},
+		{"npm scoped versioned", "npm", "@scope/name@latest", "@scope/name"},
+		{"npm scoped", "npm", "@scope/name", "@scope/name"},
+		{"npm plain", "npm", "typescript", "typescript"},
+		{"brew versioned formula", "brew", "python@3.14", "python@3.14"},
+		{"dnf plain", "dnf", "htop", "htop"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, TrackedName(tt.manager, tt.spec))
+		})
+	}
+}
+
 func TestExitCodeFromError(t *testing.T) {
 	t.Parallel()
 	// Non-exit error
