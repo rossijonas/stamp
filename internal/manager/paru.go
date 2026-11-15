@@ -41,37 +41,37 @@ func (m *Paru) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via paru.
 func (m *Paru) Install(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", paruFlagNoConfirm, pkg), "install", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", paruFlagNoConfirm, pkg), "install", "paru", pkg)
 }
 
 // Reinstall reinstalls a package via paru.
 func (m *Paru) Reinstall(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", paruFlagNoConfirm, pkg), "reinstall", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-S", paruFlagNoConfirm, pkg), "reinstall", "paru", pkg)
 }
 
 // Remove removes a package and its unneeded dependencies via paru.
 func (m *Paru) Remove(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("paru", "-Rs", paruFlagNoConfirm, pkg), "remove", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("paru", "-Rs", paruFlagNoConfirm, pkg), "remove", "paru", pkg)
 }
 
 // InstallMany installs multiple packages in one paru invocation.
 func (m *Paru) InstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", paruFlagNoConfirm), pkgs), "install", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", paruFlagNoConfirm), pkgs), "install", "paru", pkgs)
 }
 
 // ReinstallMany reinstalls multiple packages in one paru invocation.
 func (m *Paru) ReinstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", paruFlagNoConfirm), pkgs), "reinstall", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-S", paruFlagNoConfirm), pkgs), "reinstall", "paru", pkgs)
 }
 
 // RemoveMany removes multiple packages in one paru invocation.
 func (m *Paru) RemoveMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-Rs", paruFlagNoConfirm), pkgs), "remove", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("paru", "-Rs", paruFlagNoConfirm), pkgs), "remove", "paru", pkgs)
 }
 
 // Search searches for packages via paru (official repos + AUR).
 func (m *Paru) Search(ctx context.Context, query string) ([]string, error) {
-	if err := ValidatePackageName(query); err != nil {
+	if err := ValidateSpecForManager(m.Name(), query); err != nil {
 		return nil, err
 	}
 	out, err := m.exec(ctx, "paru", "-Ss", query)
@@ -83,7 +83,7 @@ func (m *Paru) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info returns details about a package.
 func (m *Paru) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "paru", "-Qi", pkg)
@@ -105,7 +105,7 @@ func (m *Paru) Update(ctx context.Context, pkg string) error {
 	}
 	var args []string
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args = sudoCmd("paru", "-S", paruFlagNoConfirm, pkg)
@@ -194,7 +194,7 @@ func (m *Paru) Refresh(ctx context.Context) error {
 func (m *Paru) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	args := []string{"paru", "-Qu"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)

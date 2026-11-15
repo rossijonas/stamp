@@ -154,7 +154,7 @@ func (m *Go) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidateModulePath(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "go", "install", pkg+"@latest")
@@ -177,7 +177,7 @@ func (m *Go) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidateModulePath(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	binName, err := binNameFromModule(pkg)
@@ -209,7 +209,7 @@ func (m *Go) Search(_ context.Context, _ string) ([]string, error) {
 
 // Info returns module metadata from the installed binary.
 func (m *Go) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidateModulePath(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	binName, err := binNameFromModule(pkg)

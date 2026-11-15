@@ -59,7 +59,7 @@ func (m *UvTool) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "uv", "tool", "install", pkg)
@@ -74,7 +74,7 @@ func (m *UvTool) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "uv", "tool", "install", "--force", pkg)
@@ -89,7 +89,7 @@ func (m *UvTool) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "uv", "tool", "uninstall", pkg)
@@ -106,7 +106,7 @@ func (m *UvTool) Search(_ context.Context, _ string) ([]string, error) {
 
 // Info returns details about an installed uv tool package.
 func (m *UvTool) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "uv", "tool", "list")
@@ -137,7 +137,7 @@ func (m *UvTool) Update(ctx context.Context, pkg string) error {
 		return err
 	}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		_, err := m.exec(WithStreamIO(ctx), "uv", "tool", "upgrade", pkg)

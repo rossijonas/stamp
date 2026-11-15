@@ -83,7 +83,7 @@ func (m *MacPorts) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd("port", "install", pkg)
@@ -99,7 +99,7 @@ func (m *MacPorts) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd("port", "install", "--force", pkg)
@@ -115,7 +115,7 @@ func (m *MacPorts) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd("port", "uninstall", pkg)
@@ -131,7 +131,7 @@ func (m *MacPorts) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd("port", "install"), pkgs)
@@ -147,7 +147,7 @@ func (m *MacPorts) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd("port", "install", "--force"), pkgs)
@@ -163,7 +163,7 @@ func (m *MacPorts) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd("port", "uninstall"), pkgs)
@@ -188,7 +188,7 @@ func (m *MacPorts) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info returns details about a port.
 func (m *MacPorts) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "port", "info", pkg)
@@ -209,7 +209,7 @@ func (m *MacPorts) Update(ctx context.Context, pkg string) error {
 		return err
 	}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args := sudoCmd("port", "upgrade", pkg)
@@ -301,7 +301,7 @@ func (m *MacPorts) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, e
 	}
 	args := []string{"port", "outdated"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)

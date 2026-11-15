@@ -118,6 +118,7 @@ func TestReinstallCmd_ResolveAliasRecordsCanonicalName(t *testing.T) {
 		[]manager.Adapter{adapter}, mPath, cPath)
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "tracking nodejs-corepack")
+	assert.Equal(t, 1, adapter.calls)
 
 	m := loadManifest(t, mPath)
 	assert.True(t, m.HasPackage("nodejs-corepack", "dnf"))

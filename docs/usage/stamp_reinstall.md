@@ -38,7 +38,7 @@ stamp reinstall <package> [flags]
 
 ```
   -h, --help             help for reinstall
-  -m, --manager string   package manager to use (pre-existing packages only)
+  -m, --manager string   manager for pre-existing packages (tracked packages use their recorded manager)
   -n, --note string      annotation for this package
 ```
 

@@ -21,24 +21,24 @@ func sudoExec(ctx context.Context, exec Executor, args []string, errMsg string) 
 }
 
 // runSingle gates a destructive single-package operation: requireConsent,
-// ValidatePackageName, then sudoExec with errMsg="failed to <verb> <pkg>".
-func runSingle(ctx context.Context, exec Executor, args []string, verb, pkg string) error {
+// manager-aware spec validation, then sudoExec with errMsg="failed to <verb> <pkg>".
+func runSingle(ctx context.Context, exec Executor, args []string, verb, managerName, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(managerName, pkg); err != nil {
 		return err
 	}
 	return sudoExec(ctx, exec, args, fmt.Sprintf("failed to %s %s", verb, pkg))
 }
 
 // runBatch gates a destructive batch operation: requireConsent,
-// validatePackages, then sudoExec with errMsg="failed to <verb> packages".
-func runBatch(ctx context.Context, exec Executor, args []string, verb string, pkgs []string) error {
+// manager-aware validation, then sudoExec with errMsg="failed to <verb> packages".
+func runBatch(ctx context.Context, exec Executor, args []string, verb, managerName string, pkgs []string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(managerName, pkgs); err != nil {
 		return err
 	}
 	return sudoExec(ctx, exec, args, fmt.Sprintf("failed to %s packages", verb))

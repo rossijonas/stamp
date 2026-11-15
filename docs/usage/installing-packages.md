@@ -179,7 +179,10 @@ stamp view htop      # alias for stamp info htop
 
 ### Reinstall
 
-The `reinstall` command works for both manifest-tracked and pre-existing packages:
+The `reinstall` command works for both manifest-tracked and pre-existing packages.
+For a tracked package, the recorded manager always wins; `-m` applies only to
+pre-existing packages. To change a package's manager, `stamp remove` it and
+install it again with the desired `-m`.
 
 ```bash
 stamp reinstall htop
@@ -212,6 +215,9 @@ stamp install typescript@5.6.3 -m npm
 - The manifest records the package name only (`@scope/tool`, `typescript`), never the
   version, so remove, reinstall, and update keep matching the installed package.
 - npm is not in the default resolution precedence, so pass `-m npm` explicitly.
+
+The full per-manager acceptance matrix, including versioned, repo-qualified, and
+rejected forms, is in [Package Specification Support](/project/package-spec-audit.html).
 
 ### Python tools (pipx)
 

@@ -106,7 +106,7 @@ func (m *Snap) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd("snap", "install", pkg)
@@ -122,7 +122,7 @@ func (m *Snap) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	removeArgs := sudoCmd("snap", "remove", pkg)
@@ -143,7 +143,7 @@ func (m *Snap) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd("snap", "remove", pkg)
@@ -159,7 +159,7 @@ func (m *Snap) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd("snap", "install"), pkgs)
@@ -176,7 +176,7 @@ func (m *Snap) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd("snap", "remove"), pkgs)
@@ -201,7 +201,7 @@ func (m *Snap) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info returns details about a snap package.
 func (m *Snap) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "snap", "info", pkg)
@@ -223,7 +223,7 @@ func (m *Snap) Update(ctx context.Context, pkg string) error {
 	}
 	args := sudoCmd("snap", "refresh")
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args = append(args, pkg)
@@ -254,7 +254,7 @@ func (m *Snap) ListRepos(_ context.Context) ([]RepositoryInfo, error) {
 func (m *Snap) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	args := []string{"snap", "refresh", "--list"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)

@@ -63,39 +63,39 @@ func (m *Pacman) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package via pacman.
 func (m *Pacman) Install(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg), "install", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg), "install", "pacman", pkg)
 }
 
 // Reinstall reinstalls a package via pacman.
 func (m *Pacman) Reinstall(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg), "reinstall", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg), "reinstall", "pacman", pkg)
 }
 
 // Remove removes a package and its unneeded dependencies via pacman.
 func (m *Pacman) Remove(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd("pacman", "-Rs", pacmanFlagNoConfirm, pkg), "remove", pkg)
+	return runSingle(ctx, m.exec, sudoCmd("pacman", "-Rs", pacmanFlagNoConfirm, pkg), "remove", "pacman", pkg)
 }
 
 // InstallMany installs multiple packages in one pacman invocation.
 func (m *Pacman) InstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", pacmanFlagNoConfirm), pkgs), "install", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", pacmanFlagNoConfirm), pkgs), "install", "pacman", pkgs)
 }
 
 // ReinstallMany reinstalls multiple packages in one pacman invocation.
 func (m *Pacman) ReinstallMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", pacmanFlagNoConfirm), pkgs), "reinstall", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-S", pacmanFlagNoConfirm), pkgs), "reinstall", "pacman", pkgs)
 }
 
 // RemoveMany removes multiple packages in one pacman invocation.
 func (m *Pacman) RemoveMany(ctx context.Context, pkgs ...string) error {
-	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-Rs", pacmanFlagNoConfirm), pkgs), "remove", pkgs)
+	return runBatch(ctx, m.exec, batchArgs(sudoCmd("pacman", "-Rs", pacmanFlagNoConfirm), pkgs), "remove", "pacman", pkgs)
 }
 
 // PreviewInstall previews installing pkg.
 // -S --print prints the resolved targets without modifying the system and
 // without requiring root.
 func (m *Pacman) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -108,7 +108,7 @@ func (m *Pacman) PreviewInstall(ctx context.Context, pkg string) (Preview, error
 
 // PreviewRemove previews removing pkg.
 func (m *Pacman) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -129,7 +129,7 @@ var _ Previewer = (*Pacman)(nil)
 
 // Search searches for packages via pacman.
 func (m *Pacman) Search(ctx context.Context, query string) ([]string, error) {
-	if err := ValidatePackageName(query); err != nil {
+	if err := ValidateSpecForManager(m.Name(), query); err != nil {
 		return nil, err
 	}
 	out, err := m.exec(ctx, "pacman", "-Ss", query)
@@ -141,7 +141,7 @@ func (m *Pacman) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info returns details about a package.
 func (m *Pacman) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "pacman", "-Qi", pkg)
@@ -163,7 +163,7 @@ func (m *Pacman) Update(ctx context.Context, pkg string) error {
 	}
 	var args []string
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args = sudoCmd("pacman", "-S", pacmanFlagNoConfirm, pkg)
@@ -252,7 +252,7 @@ func (m *Pacman) Refresh(ctx context.Context) error {
 func (m *Pacman) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	args := []string{"pacman", "-Qu"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)

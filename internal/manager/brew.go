@@ -63,12 +63,7 @@ func validateTapName(name string) error {
 // validateBrewPackages validates every brew package reference in a batch,
 // allowing tap-qualified names, before any native command runs.
 func validateBrewPackages(pkgs []string) error {
-	for _, p := range pkgs {
-		if err := ValidateBrewPackageName(p); err != nil {
-			return err
-		}
-	}
-	return nil
+	return validatePackages("brew", pkgs)
 }
 
 // Brew implements the Adapter interface for Homebrew.
@@ -165,7 +160,7 @@ var _ InstalledChecker = (*Brew)(nil)
 
 // IsCask returns true if the given package is a Homebrew cask.
 func (m *Brew) IsCask(ctx context.Context, pkg string) (bool, error) {
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return false, err
 	}
 	// brew info --cask succeeds only for casks
@@ -185,7 +180,7 @@ func (m *Brew) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := []string{"install"}
@@ -206,7 +201,7 @@ func (m *Brew) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := []string{"reinstall"}
@@ -227,7 +222,7 @@ func (m *Brew) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := []string{"uninstall"}
@@ -308,7 +303,7 @@ func (m *Brew) RemoveMany(ctx context.Context, pkgs ...string) error {
 // brew install --dry-run prints what would be installed without changing
 // anything and without requiring root.
 func (m *Brew) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	if strings.Contains(pkg, "/") {
@@ -339,7 +334,7 @@ func (m *Brew) PreviewInstall(ctx context.Context, pkg string) (Preview, error) 
 // Any non-zero exit is now treated as a preview failure, which makes the
 // caller fall through to the real remove — the safest path.
 func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	if strings.Contains(pkg, "/") {
@@ -368,7 +363,7 @@ func (m *Brew) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 // preview is impossible. Returning an error makes the confirmation gate
 // degrade to a clean warn-and-prompt instead of rendering brew's usage text.
 func (m *Brew) PreviewReinstall(_ context.Context, pkg string) (Preview, error) {
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	return Preview{}, fmt.Errorf("brew reinstall does not support a dry-run preview")
@@ -380,7 +375,7 @@ var _ TapTrustManager = (*Brew)(nil)
 
 // Search queries the native package manager for the given package name.
 func (m *Brew) Search(ctx context.Context, query string) ([]string, error) {
-	if err := ValidateBrewPackageName(query); err != nil {
+	if err := ValidateSpecForManager(m.Name(), query); err != nil {
 		return nil, err
 	}
 	// 'brew search' can be slow, but is the standard way.
@@ -479,7 +474,7 @@ func (m *Brew) Untrust(ctx context.Context, name string) error {
 
 // Info queries brew info metadata.
 func (m *Brew) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidateBrewPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "brew", "info", pkg)
@@ -506,7 +501,7 @@ func (m *Brew) Update(ctx context.Context, pkg string) error {
 		return err
 	}
 	if pkg != "" {
-		if err := ValidateBrewPackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args := []string{"upgrade", pkg}
@@ -570,7 +565,7 @@ func (m *Brew) Refresh(ctx context.Context) error {
 func (m *Brew) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	args := []string{"brew", "outdated", "--json"}
 	if pkg != "" {
-		if err := ValidateBrewPackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = []string{"brew", "outdated", "--json", pkg}

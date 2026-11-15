@@ -270,6 +270,10 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 				return err
 			}
 
+			if packageFlag != "" {
+				packageFlag = maintenanceName(cmd.Context(), app, adapters[0], packageFlag)
+			}
+
 			if len(adapters) == 0 {
 				return catErr(ErrUnavailable, "no package managers available")
 			}

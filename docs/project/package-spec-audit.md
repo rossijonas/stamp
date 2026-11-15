@@ -14,7 +14,8 @@ remove, reinstall, and restore keep working.
 
 This is the audit behind [issue #264](https://github.com/rossijonas/stamp/issues/264).
 Implementation status lives in the gap tables; the matrix is the source of truth
-for current acceptance.
+for current acceptance. The validation policy is recorded in
+[ADR-026](../decisions/ADR-026-package-spec-validation-policy.html).
 
 ## Method
 
@@ -45,20 +46,42 @@ shell, so the real injection risk is a leading `-` plus control characters, not 
 
 | Manager | Native install forms | Accepted today | Rejected because | Class | Verified | Related |
 |---|---|---|---|---|---|---|
-| apt | `pkg`, `pkg=ver`, `pkg/release`, `pkg:arch`, `pkg+`/`pkg-`, multiple args, regex/glob | `pkg`; `pkg+`/`pkg-` as literal names | `=`, `/`, `:` not in allowlist; regex/wildcards rejected | spec, category | upstream ([apt(8)](https://manpages.debian.org/bookworm/apt/apt.8.en.html), [Multiarch](https://wiki.debian.org/Multiarch/HOWTO), [APT arch-qualified docs](https://github.com/debian/apt/blob/main/doc/external-installation-planner-protocol.md)) | #264 |
-| dnf (yum alias) | name, NEVRA, provides (with `=`/`>=`/`<=` comparisons), rich deps, file provides, binaries, globs, group via `@group` or `group install` | name; NEVRA-shaped strings pass as plain names and are canonicalized by ADR-025 when resolvable; groups via `--group` | `@ = > < / : space` and glob characters rejected; `@group` unsupported as a package name (use `--group`); file/binaries, globs unsupported | spec, category, identity | local (`man dnf5-specs`, `man dnf5-group`; `dnf5 install --assumeno @core`) | #202, #264, #270 |
-| pacman | `pkg`, `repo/pkg`, `pkg>=ver`, groups, provides; `-U` file/URL | `pkg`; group names as package names | `/`, `>`, `=` rejected; groups not routed | spec, category, identity | upstream ([pacman(8)](https://man.archlinux.org/man/pacman.8.en)) | #264 |
-| paru | target name, `--repo`/`--aur` flags, groups (via pacman, unverified) | `pkg` | `/` rejected; selector flags unsupported | spec, category | upstream ([paru man](https://github.com/Morganamilo/paru/blob/master/man/paru.8)) | #262, #264 |
-| zypper | name, `repo:pkg`, capability `NAME[.ARCH][op EDITION]`, `KIND:NAME` (`patch:`, `pattern:`), RPM path/URI, `-name` removal modifier | name | `: = < > / - !` and spaces rejected; kinds and paths unsupported | spec, category | upstream ([zypper(8)](https://manpages.opensuse.org/Tumbleweed/zypper/zypper.8.en.html)) | #264 |
-| snap | name(s), instance `name_instance`, channel/revision flags, local snap file | name; `name_instance` | `=`/paths rejected; channel and revision flags unsupported | spec, category | local (`man snap`, `snap install --help`) | #264 |
+| apt | `pkg`, `pkg=ver`, `pkg/release`, `pkg:arch`, regex/glob | `pkg`, `pkg=ver`, `pkg/release`, `pkg:arch` | trailing `+`/`-` modifiers are apt-specific; regex/wildcards rejected | spec, category | upstream ([apt(8)](https://manpages.debian.org/bookworm/apt/apt.8.en.html), [Multiarch](https://wiki.debian.org/Multiarch/HOWTO), [APT arch-qualified docs](https://github.com/debian/apt/blob/main/doc/external-installation-planner-protocol.md)) | #264 |
+| dnf (yum alias) | name, NEVRA, provides, file provides, binaries, globs, rich deps, group via `@group` or `group install` | name, NEVRA, provides, file provides, binaries, globs, rich deps; groups via `--group` | `@group` as a package name, URLs/`.rpm` paths, non-path `/`; groups need `--group` | spec, category, identity | local (`man dnf5-specs`, `man dnf5-group`; `dnf5 install --assumeno @core`) | #202, #264, #270 |
+| pacman | `pkg`, `repo/pkg`, `pkg>=ver`, groups, provides; `-U` file/URL | `pkg`, `repo/pkg`, `pkg>=ver` | groups not routed; `-U` file/URL paths rejected | spec, category, identity | upstream ([pacman(8)](https://man.archlinux.org/man/pacman.8.en)) | #264 |
+| paru | target name, `--repo`/`--aur` flags, groups (via pacman, unverified) | target name | repo-qualified targets, selector flags, paths rejected | spec, category | upstream ([paru man](https://github.com/Morganamilo/paru/blob/master/man/paru.8)) | #262, #264 |
+| zypper | name, `repo:pkg`, capability `NAME[.ARCH][op EDITION]`, `KIND:NAME` (`patch:`, `pattern:`), RPM path/URI, `-name` removal modifier | name, `repo:pkg`, capability and arch forms | `patch:`/`pattern:` selectors, paths, `-`/`!` modifiers rejected | spec, category | upstream ([zypper(8)](https://manpages.opensuse.org/Tumbleweed/zypper/zypper.8.en.html)) | #264 |
+| snap | name(s), instance `name_instance`, channel/revision flags, local snap file | name, `name_instance` | `=`/paths rejected; channel and revision flags unsupported | spec, category | local (`man snap`, `snap install --help`) | #264 |
 | flatpak | `[REMOTE] REF...`, REF `(app\|runtime)/ID/ARCH/BRANCH`, `--from/--bundle/--image LOCATION` | app ID (dots allowed); explicit multi-arg remote form rejected with guidance | `/`, spaces rejected; remote/ref split and bundle/ref flags unsupported | category, spec | local (`man flatpak-install`) | #227, #264 |
-| brew | formula, `owner/tap/formula`, versioned `python@3.14` ([Versions](https://github.com/Homebrew/brew/blob/main/docs/Versions.md)), cask token | formula, tap-qualified; casks by name | `@` rejected; paths/URLs are not documented formula specs | spec | local (`man brew`, ADR-022) | #264 |
-| macports | `port install name@version_revision+variants`, separate `+variant`/`-variant` args | `pkg`; `name+variant` passes as one token | `@` rejected; variant tokens not separated; spaces rejected | spec | upstream ([port(1)](https://github.com/macports/macports-base/blob/master/doc/port.1.txt), [Variants](https://guide.macports.org/chunked/using.variants.html)) | #264 |
-| go | module path, `module@version`, `/cmd/tool` | module path; stamp always appends `@latest` | `@` rejected by `ValidateModulePath` | spec, identity | local (`go help install`) | ADR-010, #264 |
-| cargo | `crate[@version]`, `--version`, `--git/--path/--branch/--tag/--rev` | crate name | `@` rejected; version and source flags unsupported | spec, category | upstream ([cargo-install](https://doc.rust-lang.org/cargo/commands/cargo-install.html)) | #264 |
+| brew | formula, `owner/tap/formula`, versioned `python@3.14` ([Versions](https://github.com/Homebrew/brew/blob/main/docs/Versions.md)), cask token | formula, tap-qualified, versioned formula names; casks by name | paths/URLs are not documented formula specs | spec | local (`man brew`, ADR-022) | #264 |
+| macports | `port install name@version_revision+variants`, separate `+variant`/`-variant` args | `name`, `name@version` | variant tokens, spaces rejected | spec | upstream ([port(1)](https://github.com/macports/macports-base/blob/master/doc/port.1.txt), [Variants](https://guide.macports.org/chunked/using.variants.html)) | #264 |
+| go | module path, `module@version`, `/cmd/tool` | module path; stamp always appends `@latest` | `@` rejected by `ValidateModulePath` (ADR-010) | spec, identity | local (`go help install`) | ADR-010, #264 |
+| cargo | `crate[@version]`, `--version`, `--git/--path/--branch/--tag/--rev` | `crate`, `crate@version` | version and source flags unsupported | spec, category | upstream ([cargo-install](https://doc.rust-lang.org/cargo/commands/cargo-install.html)) | #264 |
 | npm | `[scope/]name[@tag\|version\|range]` | full grammar from ADR-024 | alias/git/local specs rejected | spec, identity | local | #259, ADR-024 |
-| pipx | `pkg`, `pkg==ver`, `pkg[extra]`, VCS/local spec, `--suffix` | `pkg` | `=`, `[`, `]`, spaces, `@`, URLs rejected; flags unsupported | spec, category | local (`pipx install --help`) | #264 |
-| uv | `uv tool install pkg`, `pkg==ver`, `pkg@version`, `pkg@latest`, `pkg[extra]`, VCS/local spec, `--from` | `pkg` | `=`, `[`, `]`, `@`, `/`, spaces rejected; flags unsupported | spec, category | local (`uv tool install --help`) | #264 |
+| pipx | `pkg`, `pkg==ver`, `pkg[extra]`, VCS/local spec, `--suffix` | `pkg`, `pkg==ver`, `pkg[extra]` | VCS/URL specs, flags unsupported | spec, category | local (`pipx install --help`) | #264 |
+| uv | `uv tool install pkg`, `pkg==ver`, `pkg@version`, `pkg@latest`, `pkg[extra]`, VCS/local spec, `--from` | `pkg`, `pkg==ver`, `pkg@version`, `pkg@latest`, `pkg[extra]` | VCS/URL specs, flags unsupported | spec, category | local (`uv tool install --help`) | #264 |
+
+### Implementation status
+
+The registry implements the supported forms in the matrix above. Rejected forms
+return a targeted hint instead of a character-class error.
+
+`install` passes the typed spec, so versions and qualifiers are honored.
+`remove`, `reinstall`, and `update -p` pass the tracked identity instead;
+native maintenance commands do not reliably accept install-only qualifiers.
+Maintenance identity is resolved as manifest name, then the installed-name
+resolver (dnf aliases/NEVRA), then lexical identity. Batch operations apply the
+same rule per package; batch installs resolve names after success.
+
+Remaining follow-ups: category flags (`--pattern`, flatpak `--remote`), flags
+inside specs (`--git`, `--suffix`, `--from`, `--channel`, `--repo`), VCS/URL
+specs, and legacy manifest migration (use `stamp untrack`).
+
+## Confirmed gaps (Task 1 audit)
+
+The tables below are the original audit. Implementation status is summarized
+above; a row that says “Support” is implemented only where the matrix’s
+“Accepted today” column lists the form.
 
 ## Confirmed gaps
 

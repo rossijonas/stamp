@@ -81,14 +81,18 @@ func npmSpecName(spec string) string {
 	return spec
 }
 
-// TrackedName returns the manifest identity for a package spec. npm version
-// specs are not part of package identity, so the suffix is dropped; every other
-// manager keeps the spec verbatim (e.g. brew's versioned formulae python@3.14).
+// TrackedName returns the manifest identity for a package spec. It delegates
+// to ParseSpecForManager; invalid or unresolved specs fall back to the raw
+// string so callers keep their existing error path.
 func TrackedName(managerName, spec string) string {
-	if managerName != "npm" {
+	parsed, err := ParseSpecForManager(managerName, spec)
+	if err != nil {
+		if managerName == "npm" {
+			return npmSpecName(spec)
+		}
 		return spec
 	}
-	return npmSpecName(spec)
+	return parsed.Name
 }
 
 // BatchInstaller is implemented by adapters whose native install command
@@ -139,11 +143,11 @@ type TapTrustManager interface {
 	Untrust(ctx context.Context, name string) error
 }
 
-// validatePackages validates every package name in a batch before any native
-// command runs, so a bad name aborts the whole operation upfront.
-func validatePackages(pkgs []string) error {
+// validatePackages validates every spec in a batch through the manager's
+// registry before any native command runs.
+func validatePackages(managerName string, pkgs []string) error {
 	for _, p := range pkgs {
-		if err := ValidatePackageName(p); err != nil {
+		if err := ValidateSpecForManager(managerName, p); err != nil {
 			return err
 		}
 	}
@@ -173,20 +177,9 @@ func ValidateModulePath(pkg string) error {
 	return nil
 }
 
-// ValidatePackageForManager dispatches to the correct validation function
-// for the given manager name. Go adapters use ValidateModulePath; all
-// others use ValidatePackageName.
+// ValidatePackageForManager dispatches to the per-manager registry.
 func ValidatePackageForManager(managerName, pkg string) error {
-	switch managerName {
-	case "go":
-		return ValidateModulePath(pkg)
-	case "brew":
-		return ValidateBrewPackageName(pkg)
-	case "npm":
-		return ValidateNpmPackageName(pkg)
-	default:
-		return ValidatePackageName(pkg)
-	}
+	return ValidateSpecForManager(managerName, pkg)
 }
 
 // RepositoryInfo holds the name and URL of a third-party repository.
