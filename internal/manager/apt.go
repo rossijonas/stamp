@@ -103,7 +103,7 @@ func (m *APT) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(m.cmd, "install", "-y", pkg)
@@ -119,7 +119,7 @@ func (m *APT) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(m.cmd, "install", aptFlagReinstall, "-y", pkg)
@@ -135,7 +135,7 @@ func (m *APT) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(m.cmd, "remove", "-y", pkg)
@@ -151,7 +151,7 @@ func (m *APT) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd(m.cmd, "install", "-y"), pkgs)
@@ -167,7 +167,7 @@ func (m *APT) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd(m.cmd, "install", aptFlagReinstall, "-y"), pkgs)
@@ -183,7 +183,7 @@ func (m *APT) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd(m.cmd, "remove", "-y"), pkgs)
@@ -197,7 +197,7 @@ func (m *APT) RemoveMany(ctx context.Context, pkgs ...string) error {
 // PreviewInstall previews installing pkg.
 // --assume-no implies --simulate: no root, no locks, no system change.
 func (m *APT) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -213,7 +213,7 @@ func (m *APT) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 // PreviewRemove previews removing pkg.
 // See PreviewInstall for the --assume-no semantics.
 func (m *APT) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -227,7 +227,7 @@ func (m *APT) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 
 // PreviewReinstall previews reinstalling pkg.
 func (m *APT) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -244,7 +244,7 @@ var _ Previewer = (*APT)(nil)
 
 // Search queries the native package manager for the given package name.
 func (m *APT) Search(ctx context.Context, query string) ([]string, error) {
-	if err := ValidatePackageName(query); err != nil {
+	if err := ValidateSpecForManager(m.Name(), query); err != nil {
 		return nil, err
 	}
 	out, err := m.exec(ctx, "apt-cache", "search", query)
@@ -265,7 +265,7 @@ func (m *APT) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info queries apt info metadata.
 func (m *APT) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	var out []byte
@@ -293,7 +293,7 @@ func (m *APT) Update(ctx context.Context, pkg string) error {
 		return err
 	}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args := sudoCmd(m.cmd, "install", "--only-upgrade", "-y", pkg)
@@ -334,7 +334,7 @@ func (m *APT) Refresh(ctx context.Context) error {
 func (m *APT) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	args := []string{"apt", "list", "--upgradable"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)
@@ -445,7 +445,7 @@ func (m *APT) Hold(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(aptMarkCmd, "hold", pkg)
@@ -461,7 +461,7 @@ func (m *APT) Unhold(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(aptMarkCmd, "unhold", pkg)

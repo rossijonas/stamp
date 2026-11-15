@@ -93,7 +93,8 @@ today. The optional interface matches `InstalledChecker`/`BatchInstaller`.
 - **Positive:** no change for npm, brew, apt, or any adapter without the
   resolver.
 - **Residual:** legacy entries still need `stamp untrack` + reinstall.
-- **Residual:** batch installs keep the requested spec.
+- **Residual:** batch installs are resolved after success (ADR-026), so aliases
+  canonicalize there too.
 - **Residual:** multiple providers or missing metadata leave the spec in place
   with a warning; stamp never guesses.
 - **Cost:** one to three read-only `repoquery` calls per single install.

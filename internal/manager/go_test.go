@@ -119,7 +119,7 @@ func TestGo_Install_InvalidChars(t *testing.T) {
 	mgr := NewGo()
 	err := mgr.Install(WithYes(context.Background()), "github.com/too;l/evil")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid module path")
+	assert.Contains(t, err.Error(), "invalid")
 }
 
 func TestGo_Reinstall(t *testing.T) {

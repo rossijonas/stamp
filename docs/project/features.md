@@ -31,6 +31,8 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 
 ## CLI Commands
 
+Per-manager native spec acceptance is tracked in the [Package Specification Support](package-spec-audit.html).
+
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | `stamp install <pkg>...` | `add` | ✓ | ✓ | ✓ Resolver → adapter → manifest; multi-package batch with `-m` (per-manager only); tap-qualified brew refs (`owner/tap/formula`) auto-route to brew; dnf alias installs record the native package name | ✓ Complete |

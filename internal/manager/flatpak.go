@@ -130,7 +130,7 @@ func (m *Flatpak) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	// -y auto-answers yes to prompts.
@@ -146,7 +146,7 @@ func (m *Flatpak) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "flatpak", "install", "-y", pkg)
@@ -161,7 +161,7 @@ func (m *Flatpak) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "flatpak", "uninstall", "-y", pkg)
@@ -176,7 +176,7 @@ func (m *Flatpak) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := append([]string{"install", "-y"}, pkgs...)
@@ -197,7 +197,7 @@ func (m *Flatpak) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := append([]string{"uninstall", "-y"}, pkgs...)
@@ -212,7 +212,7 @@ func (m *Flatpak) RemoveMany(ctx context.Context, pkgs ...string) error {
 // flatpak has no --dry-run option for install, so installed state is queried
 // via 'flatpak info' — a read-only query that never modifies system state.
 func (m *Flatpak) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	_, err := m.exec(ctx, "flatpak", "info", pkg)
@@ -224,7 +224,7 @@ func (m *Flatpak) PreviewInstall(ctx context.Context, pkg string) (Preview, erro
 
 // PreviewRemove previews removing pkg.
 func (m *Flatpak) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	_, err := m.exec(ctx, "flatpak", "info", pkg)
@@ -325,7 +325,7 @@ func (m *Flatpak) RemoveRepo(ctx context.Context, name string) error {
 
 // Info queries flatpak info metadata.
 func (m *Flatpak) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "flatpak", "info", pkg)
@@ -347,7 +347,7 @@ func (m *Flatpak) Update(ctx context.Context, pkg string) error {
 	}
 	args := []string{"update", "-y"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args = append(args, pkg)
@@ -364,7 +364,7 @@ func (m *Flatpak) Update(ctx context.Context, pkg string) error {
 func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	args := []string{"flatpak", "update", "--no-deploy", "-y"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)
@@ -438,7 +438,7 @@ type OverrideFlags struct {
 // Override manages flatpak sandbox permissions for the given application.
 // This method is NOT part of the Adapter interface — it's flatpak-specific.
 func (m *Flatpak) Override(ctx context.Context, appID string, flags OverrideFlags) error {
-	if err := ValidatePackageName(appID); err != nil {
+	if err := ValidateSpecForManager(m.Name(), appID); err != nil {
 		return err
 	}
 

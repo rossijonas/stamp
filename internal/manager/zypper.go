@@ -75,7 +75,7 @@ func (m *Zypper) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(m.cmd, "install", "-y", pkg)
@@ -91,7 +91,7 @@ func (m *Zypper) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(m.cmd, "install", zypperFlagForce, "-y", pkg)
@@ -107,7 +107,7 @@ func (m *Zypper) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	args := sudoCmd(m.cmd, "remove", "-y", pkg)
@@ -123,7 +123,7 @@ func (m *Zypper) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd(m.cmd, "install", "-y"), pkgs)
@@ -139,7 +139,7 @@ func (m *Zypper) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd(m.cmd, "install", zypperFlagForce, "-y"), pkgs)
@@ -155,7 +155,7 @@ func (m *Zypper) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := batchArgs(sudoCmd(m.cmd, "remove", "-y"), pkgs)
@@ -169,7 +169,7 @@ func (m *Zypper) RemoveMany(ctx context.Context, pkgs ...string) error {
 // PreviewInstall previews installing pkg.
 // zypper install --dry-run prints the transaction without applying it.
 func (m *Zypper) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -183,7 +183,7 @@ func (m *Zypper) PreviewInstall(ctx context.Context, pkg string) (Preview, error
 
 // PreviewRemove previews removing pkg.
 func (m *Zypper) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -199,7 +199,7 @@ func (m *Zypper) PreviewRemove(ctx context.Context, pkg string) (Preview, error)
 // zypper reinstall is `install --force`, which is a real operation whether or
 // not the package is already installed, so it is never a no-op.
 func (m *Zypper) PreviewReinstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -214,7 +214,7 @@ var _ Previewer = (*Zypper)(nil)
 
 // Search searches for packages via zypper.
 func (m *Zypper) Search(ctx context.Context, query string) ([]string, error) {
-	if err := ValidatePackageName(query); err != nil {
+	if err := ValidateSpecForManager(m.Name(), query); err != nil {
 		return nil, err
 	}
 	out, err := m.exec(ctx, m.cmd, "search", query)
@@ -226,7 +226,7 @@ func (m *Zypper) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info returns details about a package via zypper.
 func (m *Zypper) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, m.cmd, "info", pkg)
@@ -248,7 +248,7 @@ func (m *Zypper) Update(ctx context.Context, pkg string) error {
 	}
 	args := sudoCmd(m.cmd, "update", "-y")
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args = append(args, pkg)
@@ -329,7 +329,7 @@ func (m *Zypper) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, err
 	}
 	args := []string{"zypper", "list-updates"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)

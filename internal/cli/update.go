@@ -246,6 +246,9 @@ func newUpdateCmd() *cobra.Command {
   # run updates one manager at a time instead of parallel
   stamp update --serial
 
+  # update a versioned apt package (tracked as htop)
+  stamp update -p htop=3.2.1 -m apt
+
   # alias
   stamp upgrade`,
 		Long: `Run system upgrade commands for each available package manager using a safe two-phase (check + confirm) flow.
@@ -268,6 +271,10 @@ Use --serial to run updates one manager at a time (default: parallel).`,
 
 			if err := validateUpdateArgs(app, checkOnly, managerFlag, packageFlag, adapters); err != nil {
 				return err
+			}
+
+			if packageFlag != "" {
+				packageFlag = maintenanceName(cmd.Context(), app, adapters[0], packageFlag)
 			}
 
 			if len(adapters) == 0 {

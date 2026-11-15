@@ -74,7 +74,7 @@ func (m *Pipx) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "pipx", "install", "--yes", pkg)
@@ -89,7 +89,7 @@ func (m *Pipx) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "pipx", "install", "--yes", "--force", pkg)
@@ -104,7 +104,7 @@ func (m *Pipx) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "pipx", "uninstall", "--yes", pkg)
@@ -121,7 +121,7 @@ func (m *Pipx) Search(_ context.Context, _ string) ([]string, error) {
 
 // Info returns details about an installed pipx package.
 func (m *Pipx) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "pipx", "list", "--json")
@@ -154,7 +154,7 @@ func (m *Pipx) Update(ctx context.Context, pkg string) error {
 		return err
 	}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		_, err := m.exec(WithStreamIO(ctx), "pipx", "upgrade", pkg)

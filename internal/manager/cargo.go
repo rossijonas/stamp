@@ -72,7 +72,7 @@ func (m *Cargo) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "cargo", "install", pkg)
@@ -87,7 +87,7 @@ func (m *Cargo) Reinstall(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "cargo", "install", cargoFlagForce, pkg)
@@ -102,7 +102,7 @@ func (m *Cargo) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	_, err := m.exec(WithStreamIO(ctx), "cargo", "uninstall", pkg)
@@ -117,7 +117,7 @@ func (m *Cargo) InstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := append([]string{"install"}, pkgs...)
@@ -133,7 +133,7 @@ func (m *Cargo) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := append([]string{"install", cargoFlagForce}, pkgs...)
@@ -149,7 +149,7 @@ func (m *Cargo) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	args := append([]string{"uninstall"}, pkgs...)
@@ -162,7 +162,7 @@ func (m *Cargo) RemoveMany(ctx context.Context, pkgs ...string) error {
 
 // Search searches crates.io for packages via cargo search.
 func (m *Cargo) Search(ctx context.Context, query string) ([]string, error) {
-	if err := ValidatePackageName(query); err != nil {
+	if err := ValidateSpecForManager(m.Name(), query); err != nil {
 		return nil, err
 	}
 	out, err := m.exec(ctx, "cargo", "search", query)
@@ -174,7 +174,7 @@ func (m *Cargo) Search(ctx context.Context, query string) ([]string, error) {
 
 // Info returns details about a crate from the crates.io registry.
 func (m *Cargo) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "cargo", "info", pkg)
@@ -195,7 +195,7 @@ func (m *Cargo) Update(ctx context.Context, pkg string) error {
 		return err
 	}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		_, err := m.exec(WithStreamIO(ctx), "cargo", "install", cargoFlagForce, pkg)

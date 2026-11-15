@@ -69,12 +69,7 @@ func parseNpmLs(output []byte) []string {
 // validateNpmPackages validates every spec in a batch before any native
 // command runs, so a bad spec aborts the whole operation upfront.
 func validateNpmPackages(pkgs []string) error {
-	for _, p := range pkgs {
-		if err := ValidateNpmPackageName(p); err != nil {
-			return err
-		}
-	}
-	return nil
+	return validatePackages("npm", pkgs)
 }
 
 // Install runs npm install -g <pkg>.
@@ -82,7 +77,7 @@ func (m *Npm) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidateNpmPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	cmdArgs := sudoCmd("npm", "install", "-g", pkg)
@@ -106,7 +101,7 @@ func (m *Npm) Remove(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := ValidateNpmPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	cmdArgs := sudoCmd("npm", "uninstall", "-g", pkg)
@@ -157,7 +152,7 @@ func (m *Npm) RemoveMany(ctx context.Context, pkgs ...string) error {
 // PreviewInstall previews installing pkg.
 // npm install --dry-run reports what would be installed without changes.
 func (m *Npm) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidateNpmPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -171,7 +166,7 @@ func (m *Npm) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 
 // PreviewRemove previews removing pkg.
 func (m *Npm) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
-	if err := ValidateNpmPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -198,7 +193,7 @@ func (m *Npm) Search(_ context.Context, _ string) ([]string, error) {
 
 // Info returns details about a package via the npm registry.
 func (m *Npm) Info(ctx context.Context, pkg string) (string, error) {
-	if err := ValidateNpmPackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, "npm", "view", pkg)
@@ -220,7 +215,7 @@ func (m *Npm) Update(ctx context.Context, pkg string) error {
 	}
 	var args []string
 	if pkg != "" {
-		if err := ValidateNpmPackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args = []string{"update", "-g", pkg}

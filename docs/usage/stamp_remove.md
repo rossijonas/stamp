@@ -32,6 +32,9 @@ stamp remove <package> [flags]
 
   # remove multiple packages in one command (per-manager batch, -m required)
   stamp remove htop atop btop -m dnf
+
+  # remove a versioned apt package (tracked as htop)
+  stamp remove htop=3.2.1 -m apt
 ```
 
 ### Options

@@ -246,7 +246,7 @@ func (m *DNF) Install(ctx context.Context, pkg string) error {
 	if isGroup(ctx) {
 		return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "group", "install", "-y", pkg), fmt.Sprintf("failed to install group %s", pkg))
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "install", "-y", pkg), fmt.Sprintf("failed to install %s", pkg))
@@ -260,7 +260,7 @@ func (m *DNF) Reinstall(ctx context.Context, pkg string) error {
 	if isGroup(ctx) {
 		return m.Install(ctx, pkg)
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "reinstall", "-y", pkg), fmt.Sprintf("failed to reinstall %s", pkg))
@@ -274,7 +274,7 @@ func (m *DNF) Remove(ctx context.Context, pkg string) error {
 	if isGroup(ctx) {
 		return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "group", "remove", "-y", pkg), fmt.Sprintf("failed to remove group %s", pkg))
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return err
 	}
 	return sudoExec(ctx, m.exec, sudoCmd(m.cmd, "remove", "-y", pkg), fmt.Sprintf("failed to remove %s", pkg))
@@ -289,7 +289,7 @@ func (m *DNF) InstallMany(ctx context.Context, pkgs ...string) error {
 	if isGroup(ctx) {
 		return fmt.Errorf("batch install is not supported for groups")
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	return sudoExec(ctx, m.exec, batchArgs(sudoCmd(m.cmd, "install", "-y"), pkgs), "failed to install packages")
@@ -300,7 +300,7 @@ func (m *DNF) ReinstallMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	return sudoExec(ctx, m.exec, batchArgs(sudoCmd(m.cmd, "reinstall", "-y"), pkgs), "failed to reinstall packages")
@@ -311,7 +311,7 @@ func (m *DNF) RemoveMany(ctx context.Context, pkgs ...string) error {
 	if err := requireConsent(ctx); err != nil {
 		return err
 	}
-	if err := validatePackages(pkgs); err != nil {
+	if err := validatePackages(m.Name(), pkgs); err != nil {
 		return err
 	}
 	return sudoExec(ctx, m.exec, batchArgs(sudoCmd(m.cmd, "remove", "-y"), pkgs), "failed to remove packages")
@@ -332,7 +332,7 @@ func (m *DNF) PreviewInstall(ctx context.Context, pkg string) (Preview, error) {
 		// An unknown group ID is a no-op: dnf errors "No match for argument".
 		return Preview{Output: string(out), Noop: dnfPreviewNoop(string(out), dnfNoopNothingToDo, dnfNoopNoMatchForArgument, dnfNoopDoesNotExist)}, nil
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	args := sudoCmd(m.cmd, "install", dnfFlagAssumeNo, pkg)
@@ -356,7 +356,7 @@ func (m *DNF) PreviewRemove(ctx context.Context, pkg string) (Preview, error) {
 		}
 		return Preview{Output: string(out), Noop: dnfPreviewNoop(string(out), dnfNoopNothingToDo, dnfNoopNoMatchForArgument)}, nil
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	args := sudoCmd(m.cmd, "remove", dnfFlagAssumeNo, pkg)
@@ -375,7 +375,7 @@ func (m *DNF) PreviewReinstall(ctx context.Context, pkg string) (Preview, error)
 	if isGroup(ctx) {
 		return m.PreviewInstall(ctx, pkg)
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return Preview{}, err
 	}
 	ctx = WithCombinedOutput(ctx)
@@ -467,7 +467,7 @@ func (m *DNF) Search(ctx context.Context, query string) ([]string, error) {
 		}
 		return result, nil
 	}
-	if err := ValidatePackageName(query); err != nil {
+	if err := ValidateSpecForManager(m.Name(), query); err != nil {
 		return nil, err
 	}
 	out, err := m.exec(ctx, m.cmd, "search", "-q", query)
@@ -486,7 +486,7 @@ func (m *DNF) Info(ctx context.Context, pkg string) (string, error) {
 		}
 		return string(out), nil
 	}
-	if err := ValidatePackageName(pkg); err != nil {
+	if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 		return "", err
 	}
 	out, err := m.exec(ctx, m.cmd, "info", pkg)
@@ -508,7 +508,7 @@ func (m *DNF) Update(ctx context.Context, pkg string) error {
 	}
 	args := sudoCmd(m.cmd, "upgrade", "-y")
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return err
 		}
 		args = append(args, pkg)
@@ -525,7 +525,7 @@ func (m *DNF) Update(ctx context.Context, pkg string) error {
 func (m *DNF) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
 	args := []string{m.cmd, "check-update"}
 	if pkg != "" {
-		if err := ValidatePackageName(pkg); err != nil {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
 			return nil, err
 		}
 		args = append(args, pkg)
@@ -614,12 +614,12 @@ func (m *DNF) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 
 // Hold pins a package via dnf versionlock add.
 func (m *DNF) Hold(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd(m.cmd, "versionlock", "add", pkg), "hold", pkg)
+	return runSingle(ctx, m.exec, sudoCmd(m.cmd, "versionlock", "add", pkg), "hold", "dnf", pkg)
 }
 
 // Unhold removes a version pin via dnf versionlock delete.
 func (m *DNF) Unhold(ctx context.Context, pkg string) error {
-	return runSingle(ctx, m.exec, sudoCmd(m.cmd, "versionlock", "delete", pkg), "unhold", pkg)
+	return runSingle(ctx, m.exec, sudoCmd(m.cmd, "versionlock", "delete", pkg), "unhold", "dnf", pkg)
 }
 
 // ListHeld returns held packages via dnf versionlock list.

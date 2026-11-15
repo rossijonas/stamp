@@ -47,8 +47,9 @@ stamp install yarn -m dnf
 ```
 
 If the installed name cannot be resolved to exactly one package, stamp prints a
-warning and records the requested name. Batch installs keep the requested
-names. Existing alias entries can be cleared with `stamp untrack`.
+warning and records the requested name. Batch installs resolve names after
+success; unresolved names stay as typed. Existing alias entries can be cleared
+with `stamp untrack`.
 
 ### Install multiple packages
 
@@ -179,7 +180,10 @@ stamp view htop      # alias for stamp info htop
 
 ### Reinstall
 
-The `reinstall` command works for both manifest-tracked and pre-existing packages:
+The `reinstall` command works for both manifest-tracked and pre-existing packages.
+For a tracked package, the recorded manager always wins; `-m` applies only to
+pre-existing packages. To change a package's manager, `stamp remove` it and
+install it again with the desired `-m`.
 
 ```bash
 stamp reinstall htop
@@ -194,9 +198,21 @@ For pre-existing packages (installed before `stamp init`), reinstall resolves th
 
 ### Package name validation
 
-Stamp validates package names to prevent shell injection. Generic names must start with a letter, number, or underscore, and contain only safe characters (`a-zA-Z0-9_-.+`). Names starting with `-` are rejected.
+Stamp validates package specs per manager. A shared guard rejects empty input,
+names starting with `-`, control characters, and shell metacharacters; each
+manager then applies its own grammar:
 
-Homebrew additionally accepts a tap-qualified formula — `owner/tap/formula` (one to three slash-separated segments, each following the rule above). The slash form is brew-only; every other manager rejects `/`.
+- apt: `htop=3.2`, `htop/bookworm`, `htop:amd64`
+- pacman: `extra/htop`, `htop>=3.2`
+- zypper: `oss:htop`, `htop>=3.2`
+- brew: `python@3.14`, `owner/tap/formula`
+- dnf: NEVRA, provides, file provides, binaries, rich dependencies
+- cargo: `ripgrep@14.1.0`; pipx/uv: `ruff==0.6.0`, `ruff@0.6.0`, `pkg[extra]`
+
+Rejected with a hint: paths and URLs, flags inside a spec, `@group` as a
+package name (use `--group`), apt `pkg+`/`pkg-` modifiers, and go `@version`.
+The full per-manager matrix is in
+[Package Specification Support](/project/package-spec-audit.html).
 
 npm accepts its native package-spec grammar:
 
@@ -212,6 +228,9 @@ stamp install typescript@5.6.3 -m npm
 - The manifest records the package name only (`@scope/tool`, `typescript`), never the
   version, so remove, reinstall, and update keep matching the installed package.
 - npm is not in the default resolution precedence, so pass `-m npm` explicitly.
+
+The full per-manager acceptance matrix, including versioned, repo-qualified, and
+rejected forms, is in [Package Specification Support](/project/package-spec-audit.html).
 
 ### Python tools (pipx)
 

@@ -32,13 +32,16 @@ stamp reinstall <package> [flags]
 
   # annotate a reinstall so you remember why later
   stamp reinstall lazygit -m brew --note "refresh intent"
+
+  # reinstall a versioned cargo crate (tracked as ripgrep)
+  stamp reinstall ripgrep@14.1.0 -m cargo
 ```
 
 ### Options
 
 ```
   -h, --help             help for reinstall
-  -m, --manager string   package manager to use (pre-existing packages only)
+  -m, --manager string   manager for pre-existing packages (tracked packages use their recorded manager)
   -n, --note string      annotation for this package
 ```
 

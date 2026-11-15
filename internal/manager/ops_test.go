@@ -24,7 +24,7 @@ func TestRunBatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			exec := mockExecutorHelper("", tt.mockErr)
-			err := runBatch(WithYes(context.Background()), exec, []string{"pacman", "-R", "--noconfirm"}, "remove", tt.pkgs)
+			err := runBatch(WithYes(context.Background()), exec, []string{"pacman", "-R", "--noconfirm"}, "remove", "pacman", tt.pkgs)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -37,7 +37,7 @@ func TestRunBatch(t *testing.T) {
 func TestRunBatch_NoConsent(t *testing.T) {
 	t.Parallel()
 	exec := mockExecutorHelper("", nil)
-	err := runBatch(context.Background(), exec, []string{"pacman", "-R"}, "remove", []string{"htop"})
+	err := runBatch(context.Background(), exec, []string{"pacman", "-R"}, "remove", "pacman", []string{"htop"})
 	require.Error(t, err)
 }
 
@@ -57,7 +57,7 @@ func TestRunSingle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			exec := mockExecutorHelper("", tt.mockErr)
-			err := runSingle(WithYes(context.Background()), exec, []string{"pacman", "-R", "--noconfirm", tt.pkg}, "remove", tt.pkg)
+			err := runSingle(WithYes(context.Background()), exec, []string{"pacman", "-R", "--noconfirm", tt.pkg}, "remove", "pacman", tt.pkg)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -70,7 +70,7 @@ func TestRunSingle(t *testing.T) {
 func TestRunSingle_NoConsent(t *testing.T) {
 	t.Parallel()
 	exec := mockExecutorHelper("", nil)
-	err := runSingle(context.Background(), exec, []string{"pacman", "-R"}, "remove", "htop")
+	err := runSingle(context.Background(), exec, []string{"pacman", "-R"}, "remove", "pacman", "htop")
 	require.Error(t, err)
 }
 

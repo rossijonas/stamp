@@ -37,7 +37,13 @@ func newInstallCmd() *cobra.Command {
   stamp install development-tools -m dnf --group
 
   # add a note so you remember why later
-  stamp add lazygit -m brew --note "better git TUI"`,
+  stamp add lazygit -m brew --note "better git TUI"
+
+  # install a versioned Homebrew formula
+  stamp install python@3.14 -m brew
+
+  # install a repo-qualified pacman package
+  stamp install extra/htop -m pacman`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInstall(cmd, appFromCtx(cmd), args, managerFlag, note, groupInstall)
@@ -76,10 +82,11 @@ func runInstall(cmd *cobra.Command, app *AppContext, args []string, managerFlag,
 		return fmt.Errorf("cannot resolve package manager: %w", err)
 	}
 
-	if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
-		if groupInstall {
+	if groupInstall {
+		if !isValidGroupID(pkgName) {
 			return catErr(ErrUsage, "group IDs contain only a-z0-9_- (see 'dnf group list')")
 		}
+	} else if err := manager.ValidatePackageForManager(adapter.Name(), pkgName); err != nil {
 		return err
 	}
 
@@ -208,7 +215,7 @@ func installMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag
 	if err := execBatchInstall(installCtx, adapter, bi, mixed, casks, pkgs); err != nil {
 		return err
 	}
-	addTrackedAll(app, pkgs, adapter.Name(), note)
+	addTrackedAll(cmd.Context(), app, adapter, pkgs, note, cmd.ErrOrStderr())
 
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
@@ -226,6 +233,21 @@ func countCasks(casks map[string]bool) int {
 		}
 	}
 	return n
+}
+
+// isValidGroupID reports whether s is a DNF group ID: lowercase letters,
+// digits, '-' and '_' only.
+func isValidGroupID(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // validateBatchPackages validates every package name against the chosen
@@ -264,11 +286,39 @@ func trackedInstallName(ctx context.Context, adapter manager.Adapter, spec strin
 	return name
 }
 
+// maintenanceName returns the native argument for remove/reinstall/update:
+// manifest identity first, then adapter resolution, then lexical identity.
+// Install keeps the raw spec; maintenance commands use the tracked name.
+func maintenanceName(ctx context.Context, app *AppContext, adapter manager.Adapter, spec string) string {
+	tracked := manager.TrackedName(adapter.Name(), spec)
+	for _, p := range app.manifest.Packages {
+		if p.Manager == adapter.Name() && (p.Name == spec || p.Name == tracked) {
+			return p.Name
+		}
+	}
+	if resolver, ok := adapter.(manager.InstalledNameResolver); ok {
+		if resolved, err := resolver.ResolveInstalledName(ctx, spec); err == nil && resolved != "" {
+			return resolved
+		}
+	}
+	return tracked
+}
+
+// maintenanceNames maps every spec in a batch through maintenanceName.
+func maintenanceNames(ctx context.Context, app *AppContext, adapter manager.Adapter, specs []string) []string {
+	out := make([]string, len(specs))
+	for i, spec := range specs {
+		out[i] = maintenanceName(ctx, app, adapter, spec)
+	}
+	return out
+}
+
 // addTrackedAll records every installed package in the manifest. Called once
 // after a batch install succeeds (saveManifest persists it).
-func addTrackedAll(app *AppContext, pkgs []string, mgr, note string) {
+func addTrackedAll(ctx context.Context, app *AppContext, adapter manager.Adapter, pkgs []string, note string, errOut io.Writer) {
 	for _, p := range pkgs {
-		app.manifest.AddPackage(manifest.Package{Name: manager.TrackedName(mgr, p), Manager: mgr, Notes: note, Origin: manifest.OriginStamped})
+		name := trackedInstallName(ctx, adapter, p, errOut)
+		app.manifest.AddPackage(manifest.Package{Name: name, Manager: adapter.Name(), Notes: note, Origin: manifest.OriginStamped})
 	}
 }
 
@@ -380,7 +430,10 @@ func newRemoveCmd() *cobra.Command {
   stamp del htop
 
   # remove multiple packages in one command (per-manager batch, -m required)
-  stamp remove htop atop btop -m dnf`,
+  stamp remove htop atop btop -m dnf
+
+  # remove a versioned apt package (tracked as htop)
+  stamp remove htop=3.2.1 -m apt`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
@@ -393,12 +446,12 @@ func newRemoveCmd() *cobra.Command {
 			}
 			pkgName := args[0]
 
-			adapter, isCask, err := resolveRemoveTarget(app, pkgName, managerFlag)
+			adapter, isCask, canonical, err := resolveRemoveTarget(cmd.Context(), app, pkgName, managerFlag)
 			if err != nil {
 				return err
 			}
 
-			return runSingleRemove(cmd, app, adapter, pkgName, isCask, groupRemove)
+			return runSingleRemove(cmd, app, adapter, pkgName, canonical, isCask, groupRemove)
 		},
 	}
 
@@ -412,7 +465,7 @@ func newRemoveCmd() *cobra.Command {
 // is not tracked.
 func findTrackedAdapter(pkgs []manifest.Package, adapters []manager.Adapter, name string) (manager.Adapter, bool, bool) {
 	for _, p := range pkgs {
-		tracked := p.Name == name || (p.Manager == "npm" && p.Name == manager.TrackedName("npm", name))
+		tracked := p.Name == name || p.Name == manager.TrackedName(p.Manager, name)
 		if !tracked {
 			continue
 		}
@@ -429,50 +482,79 @@ func findTrackedAdapter(pkgs []manifest.Package, adapters []manager.Adapter, nam
 // manifest-recorded manager when available, otherwise the -m manager, otherwise
 // the first adapter, otherwise ErrUnavailable. The -m path reports "unknown
 // manager %q" (distinct from resolveAdapterByFlag's message).
-func resolveRemoveTarget(app *AppContext, pkgName, managerFlag string) (manager.Adapter, bool, error) {
+// findTrackedResolved tries adapters that can resolve an installed name (e.g.
+// dnf NEVRA/provides specs) and matches the result against the manifest.
+func findTrackedResolved(ctx context.Context, pkgs []manifest.Package, adapters []manager.Adapter, name string) (manager.Adapter, bool, string, bool) {
+	for _, a := range adapters {
+		resolver, ok := a.(manager.InstalledNameResolver)
+		if !ok {
+			continue
+		}
+		resolved, err := resolver.ResolveInstalledName(ctx, name)
+		if err != nil {
+			continue
+		}
+		if adapter, cask, found := findTrackedAdapter(pkgs, []manager.Adapter{a}, resolved); found {
+			return adapter, cask, resolved, true
+		}
+	}
+	return nil, false, "", false
+}
+
+func resolveRemoveTarget(ctx context.Context, app *AppContext, pkgName, managerFlag string) (manager.Adapter, bool, string, error) {
 	if managerFlag == "" {
 		if a, cask, found := findTrackedAdapter(app.manifest.Packages, app.adapters, pkgName); found {
-			return a, cask, nil
+			return a, cask, "", nil
+		}
+		if a, cask, canonical, found := findTrackedResolved(ctx, app.manifest.Packages, app.adapters, pkgName); found {
+			return a, cask, canonical, nil
 		}
 		if isTapQualifiedRef(pkgName) {
 			if a := brewAdapter(app.adapters); a != nil {
-				return a, false, nil
+				return a, false, "", nil
 			}
 		}
 		if len(app.adapters) > 0 {
-			return app.adapters[0], false, nil
+			return app.adapters[0], false, "", nil
 		}
-		return nil, false, catErr(ErrUnavailable, "no package managers available")
+		return nil, false, "", catErr(ErrUnavailable, "no package managers available")
 	}
 
 	want := manager.ResolveManager(managerFlag)
 	for _, a := range app.adapters {
 		if a.Name() == want {
-			return a, false, nil
+			return a, false, "", nil
 		}
 	}
-	return nil, false, fmt.Errorf("unknown manager %q", managerFlag)
+	return nil, false, "", fmt.Errorf("unknown manager %q", managerFlag)
 }
 
 // runSingleRemove performs one package removal: group validation, context flag
 // stacking, confirmation gate, native remove, untrack, save, and the completion
 // status line.
-func runSingleRemove(cmd *cobra.Command, app *AppContext, adapter manager.Adapter, pkgName string, isCask, group bool) error {
+func runSingleRemove(cmd *cobra.Command, app *AppContext, adapter manager.Adapter, pkgName, canonical string, isCask, group bool) error {
 	if err := validateGroupSupport(adapter, group); err != nil {
 		return err
 	}
 
 	removeCtx := applyOpFlags(cmd.Context(), isCask && adapter.Name() == "brew", group)
+	removeName := canonical
+	if removeName == "" {
+		removeName = pkgName
+		if !group {
+			removeName = maintenanceName(cmd.Context(), app, adapter, pkgName)
+		}
+	}
 
 	if err := confirmDestructive(removeCtx, cmd.ErrOrStderr(), cmd.InOrStdin(), app.yes,
-		adapter, previewRemove, "Remove", pkgName); err != nil {
+		adapter, previewRemove, "Remove", removeName); err != nil {
 		return handleConsent(err)
 	}
 
 	// In -y mode the gate skipped the preview; pre-check so an absent package
 	// is not falsely reported as removed and untracked.
 	if app.yes {
-		pv, pErr := previewOutput(removeCtx, adapter, previewRemove, pkgName)
+		pv, pErr := previewOutput(removeCtx, adapter, previewRemove, removeName)
 		if pErr == nil && pv.Noop {
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  nothing to do: %s via %s\n", pkgName, adapter.Name())
 			return nil
@@ -483,11 +565,11 @@ func runSingleRemove(cmd *cobra.Command, app *AppContext, adapter manager.Adapte
 	tty := isOutputTerminal(errOut)
 	printStatus(errOut, tty, false, "removing", pkgName, adapter.Name(), "")
 
-	if err := adapter.Remove(manager.WithYes(removeCtx), pkgName); err != nil {
+	if err := adapter.Remove(manager.WithYes(removeCtx), removeName); err != nil {
 		return fmt.Errorf("remove failed: %w", err)
 	}
 
-	app.manifest.RemovePackage(manager.TrackedName(adapter.Name(), pkgName), adapter.Name())
+	app.manifest.RemovePackage(removeName, adapter.Name())
 	if err := app.saveManifest(); err != nil {
 		return fmt.Errorf("failed to save manifest: %w", err)
 	}
@@ -514,6 +596,7 @@ func removeMany(cmd *cobra.Command, app *AppContext, pkgs []string, managerFlag 
 	if err := validateBatchPackages(adapter, pkgs); err != nil {
 		return err
 	}
+	pkgs = maintenanceNames(cmd.Context(), app, adapter, pkgs)
 
 	br, ok := adapter.(manager.BatchRemover)
 	if !ok {
