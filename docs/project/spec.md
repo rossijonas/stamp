@@ -55,6 +55,7 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 | `stamp init` | | | Initializes `manifest.toml` and takes baseline snapshot. |
 | `stamp install <pkg>...` | `add` | `--manager, -m <name>`, `--note, -n <text>` | Installs natively and records intent. Multiple packages require `-m` (native batch support). A tap-qualified brew ref (`owner/tap/formula`) is accepted and routed to brew. |
 | `stamp remove <pkg>...` | `uninstall`, `rm`, `delete`, `del` | `--manager, -m <name>` | Removes natively and untracks. Multiple packages require `-m` (native batch support). |
+| `stamp untrack <pkg>` | | `--manager, -m <name>` | Drops a manifest entry without running the native manager. `-m` is required when the name is tracked under several managers. |
 | `stamp reinstall <pkg>...` | | | Reinstalls natively and records intent. Works for both manifest-tracked and pre-existing packages. Multiple packages require `-m` (native batch support). Tap-qualified brew refs accepted. |
 | `stamp search <query>` | | `--manager, -m <name>` | Searches across managers. A tap-qualified query (`owner/tap/formula`) scopes to brew. |
 | `stamp info <pkg>` | | `--manager, -m <name>` | Shows package information across managers, including raw outputs. Tap-qualified refs require `-m brew`. |
@@ -239,6 +240,13 @@ Detailed specifications, execution behaviors, and business rules for every subco
 - **Flags:** `--manager`, `-m`
 - **Behavior:** Looks up recorded manager from manifest if not overridden by `-m`. Prompts for confirmation (`Remove <pkg> via <mgr>? [y/N]`, `-y` to skip). Runs native remove, deletes package from manifest, saves manifest.
 - **Multiple packages (issue #185):** `stamp remove <pkg1> <pkg2> ... -m <mgr>` removes a whole batch in one native invocation. **Batch constraint:** multi-package batches are **per-manager only** — `-m <manager>` is mandatory and a single batch never spans managers; to operate on packages across managers, run one command per manager. Only managers with native multi-package support participate. Single combined prompt; one manifest save; output `removed N package(s) via <mgr>`.
+
+### `stamp untrack <pkg>`
+
+- **Usage:** Drops a package from the manifest without touching the system. Use it for stale or mis-attributed entries (a name the native manager no longer resolves).
+- **Flags:** `--manager`, `-m`
+- **Behavior:** Resolves the entry from the manifest only — no adapter has to be installed. If the same name is tracked under several managers, `-m` is required. Prompts (`Untrack <pkg> (<mgr>)? [y/N]`, default No, `-y` to skip); a non-interactive run without `-y` fails closed. Deletes the entry, prints `untracked <pkg> (<mgr>)`, and saves the manifest.
+- **Non-goal:** does not uninstall a package; use `stamp remove` for that.
 
 ### `stamp reinstall <pkg>` (C4)
 
@@ -763,3 +771,4 @@ To be a "good UNIX citizen", `stamp` must adhere to:
 26. **Reconcile (Snapshot Save on No Drift):** If reconcile detects no drift, the current snapshot is saved to disk so future package removals are tracked correctly.
 27. **Update:** `stamp update` runs native upgrade commands for all available managers concurrently. Errors from one manager don't block others. `--manager` flag scopes to a single manager. Non-zero exit if any manager fails.
 28. **Auto-Reconcile:** `stamp auto-reconcile on --period daily` installs a systemd or launchd timer to run `stamp reconcile` automatically at the configured interval.
+29. **Untrack:** `stamp untrack yarn -m dnf` removes the manifest entry without running the native manager; it prompts unless `-y` is passed.

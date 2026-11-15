@@ -91,7 +91,9 @@ contradicts the snapshot-is-reality / manifest-is-intent split.
 
 Rejected. The manifest is the user's declared intent. A package removed via
 `dnf remove` may be a deliberate uninstall; silently dropping it would erase
-intent, and is the opposite of `stamp restore`'s job.
+intent, and is the opposite of `stamp restore`'s job. An explicit,
+user-invoked `stamp untrack` (issue #270) is the supported escape hatch for
+stale entries; it never runs automatically.
 
 ### `stamp restore --dry-run --drift-only`
 

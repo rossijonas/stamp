@@ -63,5 +63,6 @@ stamp [flags]
 * [stamp taps](stamp_taps.html)	 - List Homebrew taps (alias for repo list -m brew)
 * [stamp unhold](stamp_unhold.html)	 - Remove a version pin, allowing upgrades
 * [stamp untap](stamp_untap.html)	 - Remove a Homebrew tap (alias for repo remove -m brew)
+* [stamp untrack](stamp_untrack.html)	 - Remove a package from the manifest without touching the system
 * [stamp update](stamp_update.html)	 - Run system upgrades across all package managers
 
