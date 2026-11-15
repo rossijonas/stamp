@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"runtime"
 
 	"github.com/spf13/cobra"
@@ -73,9 +72,9 @@ func checkCompletionStatus() completionStatus {
 }
 
 func buildManagersReport(adapters []manager.Adapter) []managerStatus {
-	adapterNames := make(map[string]bool)
+	adaptersByName := make(map[string]manager.Adapter, len(adapters))
 	for _, a := range adapters {
-		adapterNames[a.Name()] = true
+		adaptersByName[a.Name()] = a
 	}
 
 	knownManagers := []struct {
@@ -104,10 +103,15 @@ func buildManagersReport(adapters []manager.Adapter) []managerStatus {
 			Name:    km.name,
 			Details: "Executable not found in $PATH",
 		}
-		if adapterNames[km.name] {
+		if adapter, ok := adaptersByName[km.name]; ok {
 			status.Active = true
 			status.Details = km.details
-			path, err := exec.LookPath(km.name)
+
+			bin := km.name
+			if br, ok := adapter.(manager.BinaryReporter); ok {
+				bin = br.Binary()
+			}
+			path, err := lookPath(bin)
 			if err == nil {
 				status.Path = path
 			}

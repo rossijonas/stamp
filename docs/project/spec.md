@@ -90,11 +90,14 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 
 ### Supported Package Managers
 
+See [Supported Managers](../getting-started/supported-managers.html) for the
+full list and detection rules.
+
 #### System Managers
 
 | Manager | OS | Notes |
 | :--- | :--- | :--- |
-| **DNF / YUM** | Fedora/RHEL/CentOS | DNF preferred, YUM fallback when DNF unavailable |
+| **DNF / YUM** | RHEL family (Fedora, RHEL, CentOS, Rocky, AlmaLinux) | DNF preferred, YUM fallback when DNF unavailable |
 | **APT / apt-get** | Debian/Ubuntu | |
 | **Paru** | Arch Linux | Preferred when both Paru and Pacman are installed |
 | **Pacman** | Arch Linux | Fallback when Paru not installed |
@@ -109,6 +112,8 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 | Manager | Scope | Notes |
 | :--- | :--- | :--- |
 | `go install` | Go binaries | Full module paths required |
+| `cargo` | Rust crates | Uses `cargo install` |
+| `npm` | Node.js CLI tools | Global installs |
 | `pipx` | Python CLI tools | |
 | `uv` | Python CLI tools | Faster alternative to pipx |
 

@@ -32,6 +32,11 @@ func (m *APT) Name() string {
 	return "apt"
 }
 
+// Binary returns the executable this adapter runs ("apt" or "apt-get").
+func (m *APT) Binary() string {
+	return m.cmd
+}
+
 // ReconcileReliability reports OverInclusive: `apt list --installed` returns
 // all installed packages including the base OS and dependencies. Output is
 // consistent run-to-run, so baseline diffing stays safe.
@@ -41,14 +46,17 @@ func (m *APT) ReconcileReliability() ReconcileReliability {
 
 // ListInstalled returns a list of packages currently installed.
 func (m *APT) ListInstalled(ctx context.Context) ([]string, error) {
-	// Primary: apt list --installed
-	out, err := m.exec(ctx, m.cmd, "list", "--installed")
-	if err == nil {
-		return parseAPTListInstalled(out), nil
+	// Primary: apt list --installed. apt-get has no list subcommand, so it goes
+	// straight to the dpkg fallback.
+	if m.cmd == "apt" {
+		out, err := m.exec(ctx, m.cmd, "list", "--installed")
+		if err == nil {
+			return parseAPTListInstalled(out), nil
+		}
 	}
 
 	// Fallback: dpkg-query with state filtering (excludes "rc" packages)
-	out, err = m.exec(ctx, "dpkg-query", "-f", "${db:Status-Status} ${Package}\n", "-W")
+	out, err := m.exec(ctx, "dpkg-query", "-f", "${db:Status-Status} ${Package}\n", "-W")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
@@ -330,14 +338,26 @@ func (m *APT) Refresh(ctx context.Context) error {
 }
 
 // CheckUpdate returns a list of upgradable packages for apt.
-// Uses "apt list --upgradable" even for apt-get (apt-get has no list subcommand).
+// apt offers "apt list --upgradable"; apt-get has no list subcommand, so it
+// uses a simulated upgrade instead. The spec is normalized once, before any
+// command runs, so invalid input never reaches the process layer.
 func (m *APT) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
-	args := []string{"apt", "list", "--upgradable"}
+	name := ""
 	if pkg != "" {
-		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
+		spec, err := ParseSpecForManager(m.Name(), pkg)
+		if err != nil {
 			return nil, err
 		}
-		args = append(args, pkg)
+		name = spec.Name
+	}
+
+	if m.cmd != "apt" {
+		return m.checkUpdateAptGet(ctx, name)
+	}
+
+	args := []string{"apt", "list", "--upgradable"}
+	if name != "" {
+		args = append(args, name)
 	}
 	out, err := m.exec(ctx, args[0], args[1:]...)
 	if err != nil {
@@ -350,6 +370,56 @@ func (m *APT) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error)
 		return nil, fmt.Errorf("unrecognized apt list --upgradable output (parser may be outdated)")
 	}
 	return result, nil
+}
+
+// checkUpdateAptGet lists upgradable packages through a simulated upgrade.
+// apt-get has no "list --upgradable" equivalent, so the dry-run upgrade is the
+// only portable source. The caller supplies an already-normalized package name;
+// an empty name means no filter.
+func (m *APT) checkUpdateAptGet(ctx context.Context, name string) ([]UpdateInfo, error) {
+	out, err := m.exec(ctx, m.cmd, "-s", "upgrade")
+	if err != nil {
+		return nil, fmt.Errorf("failed to check updates: %w", err)
+	}
+
+	result := parseAPTGetSimulateUpgrade(out)
+	if name == "" {
+		return result, nil
+	}
+
+	filtered := make([]UpdateInfo, 0, len(result))
+	for _, update := range result {
+		if update.Package == name {
+			filtered = append(filtered, update)
+		}
+	}
+	return filtered, nil
+}
+
+// parseAPTGetSimulateUpgrade parses "apt-get -s upgrade" output.
+// Format: "Inst pkg [current] (available repo [arch])", where the bracketed
+// current version is absent for packages that would be newly installed.
+func parseAPTGetSimulateUpgrade(output []byte) []UpdateInfo {
+	var result []UpdateInfo
+	for _, line := range bytes.Split(output, []byte("\n")) {
+		fields := bytes.Fields(line)
+		if len(fields) < 3 || string(fields[0]) != "Inst" {
+			continue
+		}
+
+		info := UpdateInfo{Package: string(fields[1])}
+		rest := fields[2:]
+		if len(rest) > 1 && bytes.HasPrefix(rest[0], []byte("[")) {
+			info.CurrentVersion = string(bytes.Trim(rest[0], "[]"))
+			rest = rest[1:]
+		}
+		if len(rest) == 0 || !bytes.HasPrefix(rest[0], []byte("(")) {
+			continue
+		}
+		info.AvailableVersion = strings.TrimPrefix(string(rest[0]), "(")
+		result = append(result, info)
+	}
+	return result
 }
 
 // aptOnlyUpgradableHeader reports whether the output consists solely of the
@@ -414,7 +484,7 @@ func (m *APT) AutoRemove(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return nil, nil
 	}
-	args := sudoCmd("apt", "autoremove", "-y")
+	args := sudoCmd(m.cmd, "autoremove", "-y")
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to autoremove: %w", err)
@@ -432,7 +502,7 @@ func (m *APT) Clean(ctx context.Context, dryRun bool) ([]string, error) {
 	if dryRun {
 		return nil, nil
 	}
-	args := sudoCmd("apt", "clean")
+	args := sudoCmd(m.cmd, "clean")
 	_, err := m.exec(WithStreamIO(ctx), args[0], args[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean apt cache: %w", err)

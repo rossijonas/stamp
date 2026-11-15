@@ -53,8 +53,8 @@ are named after the tool, not the OS.
 |----------|-----------|------------|--------|
 | 1 | **Go** | `go` | ✓ Complete |
 | 2 | **Python** | `pipx`, `uv` | ✓ Complete |
-| 3 | **Rust** | `cargo` | ⚠ Planned |
-| 4 | **JavaScript** | `npm` | ⚠ Planned |
+| 3 | **Rust** | `cargo` | ✓ Complete |
+| 4 | **JavaScript** | `npm` | ✓ Complete |
 
 ## Alternatives Considered
 
@@ -78,5 +78,5 @@ are named after the tool, not the OS.
 - `Doctor` is unsupported for Go — no equivalent of `brew doctor`
 - Repo management is unsupported for all language toolchains (no taps, PPAs,
   or remotes in their model)
-- Future adapters (pipx, cargo, npm) must document which usage pattern
-  they support
+- Language toolchain adapters (pipx, cargo, npm, and future ones) must document
+  which usage pattern they support

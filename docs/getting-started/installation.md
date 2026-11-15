@@ -57,11 +57,14 @@ fish_add_path "$HOME/.local/bin"
 
 ### Platform notes
 
-Stamp runs on **Linux** and **macOS**. Windows support is planned.
+Stamp runs on **Linux** and **macOS**. Windows is not supported yet.
 
-- **Linux**: Works with DNF, APT, Flatpak, Snap, Zypper, Pacman, and Brew
-- **macOS**: Works with Brew and MacPorts
+- **Linux**: Uses the native system managers it detects on your distribution, plus any installed language toolchains
+- **macOS**: Uses Brew and MacPorts, plus any installed language toolchains
 - No additional runtime dependencies — Stamp is a single static binary
+
+See [Supported Managers](/getting-started/supported-managers.html) for the full
+list, platform availability, and detection rules.
 
 ### Uninstall
 
