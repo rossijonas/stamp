@@ -66,7 +66,7 @@ func executeSingleReinstall(cmd *cobra.Command, app *AppContext, adapter manager
 	restoreSaveSnapshots(cmd.Context(), errOut, app.adapters)
 
 	// Add to manifest if pre-existing
-	trackedName := manager.TrackedName(adapter.Name(), pkgName)
+	trackedName := trackedInstallName(cmd.Context(), adapter, pkgName, errOut)
 	if isPreExisting {
 		app.manifest.AddPackage(manifest.Package{
 			Name:    trackedName,

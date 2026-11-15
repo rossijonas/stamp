@@ -77,7 +77,8 @@ Group removal runs `dnf group remove -y <id>` — it removes the group meta-pack
 ### Untracking without removing
 
 Drop a manifest entry without running the native manager. Use this when the
-entry is stale or recorded under a name the native manager no longer resolves:
+entry is stale or recorded under a name the native manager no longer resolves
+(for example an alias entry created before stamp recorded canonical names):
 
 ```bash
 stamp untrack yarn -m dnf

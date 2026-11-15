@@ -29,6 +29,27 @@ Flatpak does not support the native `install <remote> <ref>` idiom —
 `flathub` is a remote name, not a package, and stamp would record it as
 a package. Use `stamp install <app-id> -m flatpak` instead.
 
+### Recording native package names
+
+Some managers accept a spec that resolves to a different installed package.
+dnf resolves `yarn` to `nodejs-corepack` through provides / file-provides.
+Stamp records the native package name so remove, reinstall, restore, and doctor
+keep working:
+
+```bash
+stamp install yarn -m dnf
+```
+
+```text
+▪ installing yarn via dnf...
+  note: yarn is provided by nodejs-corepack; tracking nodejs-corepack
+✓ installed yarn via dnf
+```
+
+If the installed name cannot be resolved to exactly one package, stamp prints a
+warning and records the requested name. Batch installs keep the requested
+names. Existing alias entries can be cleared with `stamp untrack`.
+
 ### Install multiple packages
 
 Install several packages in one command. **Batches are per-manager only** —

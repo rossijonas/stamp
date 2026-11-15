@@ -33,7 +33,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 
 | Command | Aliases | SPEC.md | Implemented | Wired to Logic | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `stamp install <pkg>...` | `add` | ✓ | ✓ | ✓ Resolver → adapter → manifest; multi-package batch with `-m` (per-manager only); tap-qualified brew refs (`owner/tap/formula`) auto-route to brew | ✓ Complete |
+| `stamp install <pkg>...` | `add` | ✓ | ✓ | ✓ Resolver → adapter → manifest; multi-package batch with `-m` (per-manager only); tap-qualified brew refs (`owner/tap/formula`) auto-route to brew; dnf alias installs record the native package name | ✓ Complete |
 | `stamp remove <pkg>...` | `uninstall`, `rm`, `delete`, `del` | ✓ | ✓ | ✓ Manifest lookup + adapter; multi-package batch with `-m` (per-manager only); tap-qualified brew refs auto-route to brew | ✓ Complete |
 | `stamp untrack <pkg>` | | ✓ | ✓ | ✓ Manifest-only removal; prompts unless `-y`; `-m` required when the name is ambiguous | ✓ Complete |
 | `stamp reinstall <pkg>...` | | ✓ | ✓ | ✓ Manifest-tracked + pre-existing via resolver + `Reinstall` adapter method; multi-package batch with `-m` (per-manager only, snap excluded); tap-qualified brew refs accepted | ✓ Complete |
