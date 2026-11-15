@@ -112,8 +112,15 @@ func runSingleInstall(cmd *cobra.Command, app *AppContext, adapter manager.Adapt
 		return fmt.Errorf("install failed: %w", err)
 	}
 
+	manifestName := manager.TrackedName(adapter.Name(), pkgName)
+	if !group {
+		// Group IDs are not packages: resolving them would query the manager
+		// for a name it cannot install and warn spuriously.
+		manifestName = trackedInstallName(cmd.Context(), adapter, pkgName, cmd.ErrOrStderr())
+	}
+
 	app.manifest.AddPackage(manifest.Package{
-		Name:    manager.TrackedName(adapter.Name(), pkgName),
+		Name:    manifestName,
 		Manager: adapter.Name(),
 		Notes:   note,
 		Cask:    cask,
@@ -231,6 +238,30 @@ func validateBatchPackages(adapter manager.Adapter, pkgs []string) error {
 		}
 	}
 	return nil
+}
+
+// trackedInstallName returns the manifest identity for a successful install.
+// Adapters implementing InstalledNameResolver may report the native name the
+// install actually added (e.g. dnf resolving "yarn" to "nodejs-corepack");
+// every other adapter keeps the requested spec. Resolution failures warn and
+// fall back to the spec: the system already changed, so the command still
+// records intent.
+func trackedInstallName(ctx context.Context, adapter manager.Adapter, spec string, errOut io.Writer) string {
+	tracked := manager.TrackedName(adapter.Name(), spec)
+	resolver, ok := adapter.(manager.InstalledNameResolver)
+	if !ok {
+		return tracked
+	}
+	name, err := resolver.ResolveInstalledName(ctx, spec)
+	if err != nil {
+		_, _ = fmt.Fprintf(errOut, "  warning: could not resolve installed name for %s: %v\n", spec, err)
+		return tracked
+	}
+	if name == "" || name == spec {
+		return tracked
+	}
+	_, _ = fmt.Fprintf(errOut, "  note: %s is provided by %s; tracking %s\n", spec, name, name)
+	return name
 }
 
 // addTrackedAll records every installed package in the manifest. Called once

@@ -122,6 +122,15 @@ type InstalledChecker interface {
 	CheckInstalled(ctx context.Context, pkgs []string) ([]string, error)
 }
 
+// InstalledNameResolver is implemented by adapters that can map a requested
+// spec to the native package name an install actually added. The CLI calls it
+// after a successful install/reinstall and records the returned name, so the
+// manifest holds native identity (e.g. dnf resolving "yarn" to
+// "nodejs-corepack"). Adapters without it keep the requested spec.
+type InstalledNameResolver interface {
+	ResolveInstalledName(ctx context.Context, spec string) (string, error)
+}
+
 // TapTrustManager is implemented by adapters that can manage whole-tap trust
 // (Homebrew 6.0.0+). The CLI type-asserts this interface for
 // `stamp repo trust`/`stamp repo untrust`; only brew implements it today.
@@ -200,6 +209,10 @@ var ErrCheckUnsupported = errors.New("check not supported")
 // ErrNotSupported is returned by adapter methods that are not supported
 // by a particular package manager (e.g. provides, autoremove).
 var ErrNotSupported = errors.New("not supported")
+
+// ErrInstalledNameUnresolved is returned by InstalledNameResolver when a
+// successful install cannot be mapped to a single native package name.
+var ErrInstalledNameUnresolved = errors.New("installed package name could not be resolved")
 
 // ErrConfirmationRequired is returned by destructive adapter methods when the
 // context carries no explicit operator consent (see WithYes). The CLI is the

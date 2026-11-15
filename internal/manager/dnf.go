@@ -170,6 +170,74 @@ func (m *DNF) CheckInstalled(ctx context.Context, pkgs []string) ([]string, erro
 
 var _ InstalledChecker = (*DNF)(nil)
 
+// ResolveInstalledName maps spec to the native package name an install added.
+// Queries are read-only and follow dnf's resolution order: exact package name,
+// provides, then file-provides by basename (how `dnf install yarn` selects
+// nodejs-corepack). Ambiguous or empty matches return
+// ErrInstalledNameUnresolved so the caller can warn instead of guessing.
+func (m *DNF) ResolveInstalledName(ctx context.Context, spec string) (string, error) {
+	bin, base := m.cmd, []string{"repoquery"}
+	if m.cmd == "yum" {
+		bin, base = "repoquery", nil
+	}
+
+	resolve := func(sel ...string) (string, bool, error) {
+		args := append([]string{}, base...)
+		args = append(args, "--installed")
+		args = append(args, sel...)
+		args = append(args, "--qf", dnfQFNameFmt)
+		out, err := m.exec(ctx, bin, args...)
+		if err != nil {
+			return "", false, fmt.Errorf("failed to resolve installed name for %s: %w", spec, err)
+		}
+		names := uniqueInstalledNames(parseLines(out))
+		switch len(names) {
+		case 0:
+			return "", false, nil
+		case 1:
+			return names[0], true, nil
+		default:
+			return "", false, fmt.Errorf("%w: %s matches multiple packages (%s)", ErrInstalledNameUnresolved, spec, strings.Join(names, ", "))
+		}
+	}
+
+	if name, ok, err := resolve(spec); err != nil {
+		return "", err
+	} else if ok {
+		return name, nil
+	}
+	if name, ok, err := resolve("--whatprovides", spec); err != nil {
+		return "", err
+	} else if ok {
+		return name, nil
+	}
+	if name, ok, err := resolve("--whatprovides", "*/"+spec); err != nil {
+		return "", err
+	} else if ok {
+		return name, nil
+	}
+	return "", fmt.Errorf("%w: %s", ErrInstalledNameUnresolved, spec)
+}
+
+var _ InstalledNameResolver = (*DNF)(nil)
+
+// uniqueInstalledNames removes empty and duplicate names, preserving order.
+func uniqueInstalledNames(names []string) []string {
+	seen := make(map[string]struct{}, len(names))
+	out := make([]string, 0, len(names))
+	for _, n := range names {
+		if n == "" {
+			continue
+		}
+		if _, dup := seen[n]; dup {
+			continue
+		}
+		seen[n] = struct{}{}
+		out = append(out, n)
+	}
+	return out
+}
+
 // Install executes the native installation command.
 func (m *DNF) Install(ctx context.Context, pkg string) error {
 	if err := requireConsent(ctx); err != nil {
