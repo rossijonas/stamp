@@ -57,8 +57,9 @@ optional adapter capability.
   system already changed, so the command still succeeds and still records
   intent.
 - **Scope:** single-package `install` and `reinstall`. Batches keep the
-  requested names; canonicalizing a batch costs one resolution per package and
-  is a follow-up.
+  requested names, and `--group` installs keep the group ID (groups are not
+  packages, so they are never resolved). Canonicalizing a batch costs one
+  resolution per package and is a follow-up.
 - **Existing entries are not rewritten.** Users clear legacy alias entries with
   `stamp untrack` and reinstall. Manifest intent is not mutated automatically
   (ADR-019).

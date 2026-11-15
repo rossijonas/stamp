@@ -112,8 +112,15 @@ func runSingleInstall(cmd *cobra.Command, app *AppContext, adapter manager.Adapt
 		return fmt.Errorf("install failed: %w", err)
 	}
 
+	manifestName := manager.TrackedName(adapter.Name(), pkgName)
+	if !group {
+		// Group IDs are not packages: resolving them would query the manager
+		// for a name it cannot install and warn spuriously.
+		manifestName = trackedInstallName(cmd.Context(), adapter, pkgName, cmd.ErrOrStderr())
+	}
+
 	app.manifest.AddPackage(manifest.Package{
-		Name:    trackedInstallName(cmd.Context(), adapter, pkgName, cmd.ErrOrStderr()),
+		Name:    manifestName,
 		Manager: adapter.Name(),
 		Notes:   note,
 		Cask:    cask,

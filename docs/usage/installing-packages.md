@@ -125,7 +125,8 @@ stamp install development-tools -m dnf --group
 
 Group IDs contain only lowercase letters, digits, `-` and `_`. Display names
 like `"Development Tools"` are rejected — find the ID first with
-`stamp search -m dnf --group <query>`.
+`stamp search -m dnf --group <query>`. Groups are recorded by their ID;
+installed-name resolution does not apply to group installs.
 
 ### Homebrew casks
 
