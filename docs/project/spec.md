@@ -116,6 +116,8 @@ See [ADR-015](../decisions/ADR-015-fail-closed-consent.md) and [ADR-016](../deci
 
 When a user runs a package or repository command (e.g., `stamp install htop`) without specifying `--manager`, the tool resolves ambiguity using a three-tier engine. (A tap-qualified Homebrew ref — `owner/tap/formula` — is an exception: its slash syntax is brew-specific, so it routes directly to brew and bypasses this engine; a two-segment `owner/tap` is a tap, use `stamp tap`.)
 
+Per-manager native spec acceptance is audited in the [Package Specification Support](package-spec-audit.html): it records each manager's grammar, current gaps, and the dispositions feeding the validator registry.
+
 1. **Tier 1: Explicit Override:** If `--manager <name>` or `-m <name>` is provided, `stamp` directly executes that manager's command.
 
 2. **Tier 2: User Preference (Declarative):** If the package exists in multiple managers, `stamp` checks the user's `config.toml` precedence list:
