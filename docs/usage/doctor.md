@@ -113,7 +113,9 @@ it shows up under `Missing:` in "Manifest Integrity" (and as `manifest.missing`
 in `--json`). This does **not** change the manifest status — a missing package
 is drift, not corruption. `stamp ls --type missing` lists the same set;
 `stamp restore` reinstalls them. Managers whose installed state cannot be
-queried are skipped.
+queried are skipped. If an entry is stale — tracked under a name the native
+manager no longer resolves — remove it with `stamp untrack` instead of
+restoring it.
 
 On dnf, presence resolves against the full installed set plus provides
 resolution — so packages installed as dependencies (e.g. `flatpak`) and

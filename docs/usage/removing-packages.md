@@ -74,6 +74,31 @@ Group removal runs `dnf group remove -y <id>` — it removes the group meta-pack
 3. Removes the package from the manifest
 4. Saves the updated manifest
 
+### Untracking without removing
+
+Drop a manifest entry without running the native manager. Use this when the
+entry is stale or recorded under a name the native manager no longer resolves:
+
+```bash
+stamp untrack yarn -m dnf
+```
+
+```text
+Untrack yarn (dnf)? [y/N]: y
+untracked yarn (dnf)
+```
+
+The installed package, if any, is left untouched — this edits intent only.
+When the same name is tracked under more than one manager, `-m` is required:
+
+```bash
+stamp untrack tool -m brew
+```
+
+Use `-y` to skip the prompt; without it, non-interactive runs fail closed. For a
+normal uninstall use `stamp remove`. If the package is still installed and was
+never snapshotted, a later `stamp reconcile` may track it again.
+
 ### Go tools
 
 ```bash

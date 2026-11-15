@@ -13,7 +13,7 @@ Stamp wraps all your package managers into a single CLI. Below are guides groupe
 ### Managing Packages
 
 - [Installing Packages](/usage/installing-packages.html) — Install with flags, notes, aliases, groups, and casks
-- [Removing Packages](/usage/removing-packages.html) — Remove, uninstall, and untrack with -m and --group
+- [Removing Packages](/usage/removing-packages.html) — Remove, uninstall, and manifest-only untrack with -m and --group
 - [Searching Packages](/usage/search.html) — Search across managers, scope with -m, use --group for DNF groups
 - [Viewing Package Info](/usage/info.html) — Query package details, JSON output, DNF group info
 

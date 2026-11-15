@@ -271,6 +271,7 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 
 	root.AddCommand(newInstallCmd())
 	root.AddCommand(newRemoveCmd())
+	root.AddCommand(newUntrackCmd())
 	root.AddCommand(newReinstallCmd())
 	root.AddCommand(newSearchCmd())
 	root.AddCommand(newInfoCmd())
