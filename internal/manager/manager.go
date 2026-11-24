@@ -363,6 +363,25 @@ type Previewer interface {
 	PreviewReinstall(ctx context.Context, pkg string) (Preview, error)
 }
 
+// UpdatePhaser is an optional capability interface for adapters whose update
+// covers two installations with different privilege needs: a prompt-free user
+// phase and an optionally authenticated system phase. The CLI runs the user
+// phase in parallel with other managers, then serializes system phases behind
+// an auth banner so polkit/sudo prompts never interleave with other output.
+type UpdatePhaser interface {
+	// UpdateUser updates user-scoped packages without authentication.
+	UpdateUser(ctx context.Context, pkg string) error
+	// UpdateSystem updates system-scoped packages; may require polkit.
+	UpdateSystem(ctx context.Context, pkg string) error
+	// CheckUser lists user-scoped updates without authentication.
+	CheckUser(ctx context.Context, pkg string) ([]UpdateInfo, error)
+	// CheckSystem lists system-scoped updates; may require polkit.
+	CheckSystem(ctx context.Context, pkg string) ([]UpdateInfo, error)
+	// HasSystemRefs reports whether pkg (or any package when pkg is empty) is
+	// installed at system scope. It performs no authenticated operation.
+	HasSystemRefs(ctx context.Context, pkg string) (bool, error)
+}
+
 // yesKey is the context key for operator consent (see WithYes).
 type yesKey struct{}
 

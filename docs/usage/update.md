@@ -72,7 +72,9 @@ prompts **natively** only when authentication is required. On hosts where
 `sudo` is configured with `NOPASSWD`, or where credentials are already cached,
 stamp never prompts. Before the parallel update phase stamp re-validates
 credentials; if a password is required and `sudo` cannot cache it, updates
-run serially so prompts never race.
+run serially so prompts never race. Flatpak system updates use polkit instead
+of sudo; they run in their own serial phase after the parallel update and never
+share stdin with other managers (see below).
 
 ### Check Only (Dry-Run)
 
@@ -129,6 +131,30 @@ Run updates one manager at a time instead of concurrently (useful for debugging)
 
 ```bash
 stamp update --serial
+```
+
+### Flatpak: user and system scopes
+
+Flatpak updates are split into two phases. User-scope refs update in parallel with the other managers and never need authentication. System-scope refs (apps and runtimes) update serially afterwards, behind a banner, because system metadata and appstream updates require polkit:
+
+```text
+▪ flatpak system update — authentication may be required (polkit)
+```
+
+`-y` answers flatpak's own prompts but cannot bypass polkit. On WSL and headless hosts without a graphical polkit agent, stamp probes the flatpak polkit actions with `pkcheck` and warns once before the system phase; the password prompt then appears in the terminal through `pkttyagent`.
+
+When no system-scope refs exist, the system phase is skipped. The check phase follows the same split: system-scope updates are only checked when system refs exist and a terminal is available; otherwise stamp prints `system check skipped (authentication required)`.
+
+If stdin is not a terminal and system refs exist, the user phase still runs and the system phase fails instead of blocking:
+
+```text
+Error: flatpak system updates need a terminal for authentication; rerun with --flatpak-user-only
+```
+
+Use `--flatpak-user-only` to skip system-scope flatpak updates and system-scope checks, for scripts and CI:
+
+```bash
+stamp update -y --flatpak-user-only
 ```
 
 ### Python tools (pipx / uv)

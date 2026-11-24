@@ -18,7 +18,35 @@ const (
 	outputPrefixKey
 	combinedOutputKey
 	stdInStringKey
+	noStdinKey
 )
+
+// WithNoStdin returns a context that prevents the child process from reading
+// the operator's terminal. Parallel updates use it so a prompt from one manager
+// cannot consume input intended for another; prompts then fail fast instead of
+// blocking. WithStdInString still takes precedence, so adapters that pipe a
+// consent answer keep working.
+func WithNoStdin(ctx context.Context) context.Context {
+	return context.WithValue(ctx, noStdinKey, true)
+}
+
+// NoStdin reports whether the context disables terminal input for children.
+func NoStdin(ctx context.Context) bool {
+	b, _ := ctx.Value(noStdinKey).(bool)
+	return b
+}
+
+// stdinReader picks the child's stdin source. An explicit auto-answer wins,
+// then a no-stdin context (nil means the null device), then the terminal.
+func stdinReader(ctx context.Context) io.Reader {
+	if s := getStdInString(ctx); s != "" {
+		return strings.NewReader(s)
+	}
+	if NoStdin(ctx) {
+		return nil
+	}
+	return os.Stdin
+}
 
 // WithStreamIO returns a new context that signals the executor to stream I/O.
 func WithStreamIO(ctx context.Context) context.Context {
@@ -115,14 +143,7 @@ func defaultExecutor(ctx context.Context, name string, args ...string) ([]byte, 
 	if isStreamIO(ctx) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-
-		if s := getStdInString(ctx); s != "" {
-			// Auto-answer a native manager prompt when the operator has already
-			// consented via stamp's gate. Takes precedence over the terminal.
-			cmd.Stdin = strings.NewReader(s)
-		} else if cmd.Stdin == nil {
-			cmd.Stdin = os.Stdin
-		}
+		cmd.Stdin = stdinReader(ctx)
 
 		if prefix := getOutputPrefix(ctx); prefix != "" {
 			cmd.Stdout = &prefixWriter{prefix: prefix, w: os.Stdout}

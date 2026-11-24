@@ -3,6 +3,8 @@ package manager
 import (
 	"context"
 	"errors"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -104,4 +106,34 @@ func TestDefaultExecutor_StreamFeedsStdInString(t *testing.T) {
 	// Streamed mode returns nil output, but the command must have consumed the
 	// piped line without error (it would fail/hang if stdin were the closed TTY).
 	_ = out
+}
+
+func TestNoStdin_RoundTrip(t *testing.T) {
+	t.Parallel()
+	require.True(t, NoStdin(WithNoStdin(context.Background())))
+	require.False(t, NoStdin(context.Background()))
+}
+
+func TestStdinReader_Precedence(t *testing.T) {
+	t.Parallel()
+
+	t.Run("auto-answer wins over no-stdin", func(t *testing.T) {
+		t.Parallel()
+		ctx := WithNoStdin(WithStdInString(context.Background(), "y\n"))
+		reader := stdinReader(ctx)
+		require.NotNil(t, reader)
+		got, err := io.ReadAll(reader)
+		require.NoError(t, err)
+		assert.Equal(t, "y\n", string(got))
+	})
+
+	t.Run("no-stdin disables the terminal", func(t *testing.T) {
+		t.Parallel()
+		assert.Nil(t, stdinReader(WithNoStdin(context.Background())))
+	})
+
+	t.Run("default is the terminal", func(t *testing.T) {
+		t.Parallel()
+		assert.Same(t, os.Stdin, stdinReader(context.Background()))
+	})
 }

@@ -16,6 +16,8 @@ Use -y to skip the check phase and auto-confirm for maximum speed.
 Use -m to scope to a single package manager.
 Use -p to update a single package (requires -m).
 Use --serial to run updates one manager at a time (default: parallel).
+Use --flatpak-user-only to skip system-scope flatpak updates and system checks,
+which avoids polkit authentication prompts on headless or scripted hosts.
 
 ```
 stamp update [flags]
@@ -43,6 +45,9 @@ stamp update [flags]
   # run updates one manager at a time instead of parallel
   stamp update --serial
 
+  # skip system-scope flatpak updates (avoids polkit prompts)
+  stamp update -y --flatpak-user-only
+
   # update a versioned apt package (tracked as htop)
   stamp update -p htop=3.2.1 -m apt
 
@@ -53,11 +58,12 @@ stamp update [flags]
 ### Options
 
 ```
-  -c, --check            check for available updates without applying them
-  -h, --help             help for update
-  -m, --manager string   package manager to update
-  -p, --package string   update a single package (requires --manager)
-  -s, --serial           run updates one at a time (sequential)
+  -c, --check               check for available updates without applying them
+      --flatpak-user-only   skip system-scope flatpak updates (avoids polkit prompts)
+  -h, --help                help for update
+  -m, --manager string      package manager to update
+  -p, --package string      update a single package (requires --manager)
+  -s, --serial              run updates one at a time (sequential)
 ```
 
 ### Options inherited from parent commands

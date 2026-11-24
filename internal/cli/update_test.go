@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -368,4 +369,156 @@ func TestUpdateCheck_TTYGlyphs(t *testing.T) {
 	output := buf.String()
 	assert.Contains(t, output, "▪ Refreshing package metadata...")
 	assert.Contains(t, output, "▪ Checking for updates...")
+}
+
+// mockPhaser is an adapter with split user/system update phases.
+type mockPhaser struct {
+	mockAdapter
+
+	mu      sync.Mutex
+	events  []string
+	noStdin map[string]bool
+	refs    bool
+	refsErr error
+	userUpd []manager.UpdateInfo
+	sysUpd  []manager.UpdateInfo
+	userErr error
+	sysErr  error
+}
+
+func (m *mockPhaser) record(ctx context.Context, event string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.noStdin == nil {
+		m.noStdin = make(map[string]bool)
+	}
+	m.events = append(m.events, event)
+	m.noStdin[event] = manager.NoStdin(ctx)
+}
+
+func (m *mockPhaser) UpdateUser(ctx context.Context, _ string) error {
+	m.record(ctx, "user")
+	return m.userErr
+}
+
+func (m *mockPhaser) UpdateSystem(ctx context.Context, _ string) error {
+	m.record(ctx, "system")
+	return m.sysErr
+}
+
+func (m *mockPhaser) CheckUser(context.Context, string) ([]manager.UpdateInfo, error) {
+	return m.userUpd, m.userErr
+}
+
+func (m *mockPhaser) CheckSystem(context.Context, string) ([]manager.UpdateInfo, error) {
+	return m.sysUpd, m.sysErr
+}
+
+func (m *mockPhaser) HasSystemRefs(context.Context, string) (bool, error) {
+	return m.refs, m.refsErr
+}
+
+func TestUpdateCmd_PhaserUserPhaseHasNoStdin(t *testing.T) {
+	phaser := &mockPhaser{mockAdapter: mockAdapter{name: "flatpak"}}
+	buf, err := execUpdateCmd(t, []string{"update", "-y"}, []manager.Adapter{phaser})
+	require.NoError(t, err)
+	require.Equal(t, []string{"user"}, phaser.events)
+	assert.True(t, phaser.noStdin["user"], "user phase must not read the terminal")
+	assert.NotContains(t, buf.String(), "system update")
+}
+
+func TestUpdateCmd_PhaserSystemPhaseSerialWithStdin(t *testing.T) {
+	phaser := &mockPhaser{mockAdapter: mockAdapter{name: "flatpak"}, refs: true}
+	probe := &inflight{}
+	regular := &mockAdapter{name: "dnf", UpdateFunc: func(_ context.Context, _ string) error {
+		probe.enter()
+		defer probe.exit()
+		return nil
+	}}
+	buf, err := execUpdateCmdSudo(t, []string{"update", "-y"}, []manager.Adapter{regular, phaser},
+		func(context.Context) bool { return true }, nil, true)
+	require.NoError(t, err)
+	require.Equal(t, []string{"user", "system"}, phaser.events)
+	assert.True(t, phaser.noStdin["user"])
+	assert.False(t, phaser.noStdin["system"], "auth phase keeps the terminal")
+	output := buf.String()
+	assert.Contains(t, output, "flatpak system update — authentication may be required (polkit)")
+	assert.Contains(t, output, "updated packages via flatpak system")
+}
+
+func TestUpdateCmd_PhaserNoSystemRefsSkipsSystem(t *testing.T) {
+	phaser := &mockPhaser{mockAdapter: mockAdapter{name: "flatpak"}}
+	buf, err := execUpdateCmd(t, []string{"update", "-y"}, []manager.Adapter{phaser})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"user"}, phaser.events)
+	assert.NotContains(t, buf.String(), "polkit")
+}
+
+func TestUpdateCmd_FlatpakUserOnlySkipsSystem(t *testing.T) {
+	phaser := &mockPhaser{mockAdapter: mockAdapter{name: "flatpak"}, refs: true}
+	buf, err := execUpdateCmd(t, []string{"update", "-y", "--flatpak-user-only"}, []manager.Adapter{phaser})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"user"}, phaser.events)
+	assert.NotContains(t, buf.String(), "system update")
+}
+
+func TestUpdateCmd_PhaserNonTTYSystemFailsAfterUser(t *testing.T) {
+	phaser := &mockPhaser{mockAdapter: mockAdapter{name: "flatpak"}, refs: true}
+	_, err := execUpdateCmdSudo(t, []string{"update", "-y"}, []manager.Adapter{phaser},
+		func(context.Context) bool { return true }, nil, false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "need a terminal")
+	assert.Equal(t, []string{"user"}, phaser.events, "user phase still runs; system never starts")
+}
+
+func TestUpdateCmd_PhaserPolkitWarningOnce(t *testing.T) {
+	old := polkitChallenge
+	polkitChallenge = func(context.Context, string) (bool, error) { return true, nil }
+	t.Cleanup(func() { polkitChallenge = old })
+
+	phaser := &mockPhaser{mockAdapter: mockAdapter{name: "flatpak"}, refs: true}
+	buf, err := execUpdateCmdSudo(t, []string{"update", "-y"}, []manager.Adapter{phaser},
+		func(context.Context) bool { return true }, nil, true)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "polkit authentication may be required")
+	assert.Equal(t, 1, strings.Count(output, "polkit authentication may be required"))
+}
+
+func TestUpdateCmd_CheckScopesSystemWhenTTY(t *testing.T) {
+	phaser := &mockPhaser{
+		mockAdapter: mockAdapter{name: "flatpak"},
+		refs:        true,
+		userUpd:     []manager.UpdateInfo{{Package: "com.spotify.Client"}},
+		sysUpd:      []manager.UpdateInfo{{Package: "org.gimp.GIMP"}},
+	}
+	buf, err := execUpdateCmdSudo(t, []string{"update", "--check"}, []manager.Adapter{phaser},
+		func(context.Context) bool { return true }, nil, true)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "flatpak: com.spotify.Client")
+	assert.Contains(t, output, "flatpak (system): org.gimp.GIMP")
+	assert.Contains(t, output, "flatpak system check — authentication may be required (polkit)")
+}
+
+func TestUpdateCmd_CheckNonTTYSystemSkipped(t *testing.T) {
+	phaser := &mockPhaser{
+		mockAdapter: mockAdapter{name: "flatpak"},
+		refs:        true,
+		userUpd:     []manager.UpdateInfo{{Package: "com.spotify.Client"}},
+	}
+	buf, err := execUpdateCmdSudo(t, []string{"update", "--check"}, []manager.Adapter{phaser},
+		func(context.Context) bool { return true }, nil, false)
+	require.NoError(t, err)
+	output := buf.String()
+	assert.Contains(t, output, "flatpak: system check skipped (authentication required)")
+	assert.NotContains(t, output, "flatpak (system)")
+}
+
+func TestUpdateCmd_CheckFlatpakUserOnlySkipsSystem(t *testing.T) {
+	phaser := &mockPhaser{mockAdapter: mockAdapter{name: "flatpak"}, refs: true}
+	buf, err := execUpdateCmdSudo(t, []string{"update", "--check", "--flatpak-user-only"}, []manager.Adapter{phaser},
+		func(context.Context) bool { return true }, nil, true)
+	require.NoError(t, err)
+	assert.NotContains(t, buf.String(), "system check")
 }
