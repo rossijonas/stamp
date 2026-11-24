@@ -16,7 +16,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | DNF / YUM | ✓ Complete | All | Fedora/RHEL, sudo for write ops, yum alias |
 | APT / apt-get | ✓ Complete | All | Debian/Ubuntu, sudo for write ops, dpkg-query fallback, add-apt-repository for PPAs |
 | Brew | ✓ Complete | All | macOS, user-space, two-phase update, cask support for GUI apps |
-| Flatpak | ✓ Complete | All | Linux sandboxed, -y flag |
+| Flatpak | ✓ Complete | All | Linux sandboxed, -y flag, user/system update phases |
 | Snap | ✓ Complete | All except repo mgmt | Ubuntu, Linux (universal), sudo for write ops |
 | Zypper | ✓ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
 | Paru | ✓ Complete | All except repo mgmt | Arch Linux, AUR + official repos, replaces pacman when available, sudo for write ops |

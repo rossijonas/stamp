@@ -359,6 +359,53 @@ func (m *Flatpak) Update(ctx context.Context, pkg string) error {
 	return nil
 }
 
+// UpdateUser updates user-scoped flatpak refs without authentication.
+func (m *Flatpak) UpdateUser(ctx context.Context, pkg string) error {
+	return m.updateScope(ctx, "--user", pkg)
+}
+
+// UpdateSystem updates system-scoped flatpak refs; polkit may prompt.
+func (m *Flatpak) UpdateSystem(ctx context.Context, pkg string) error {
+	return m.updateScope(ctx, "--system", pkg)
+}
+
+func (m *Flatpak) updateScope(ctx context.Context, scope, pkg string) error {
+	if err := requireConsent(ctx); err != nil {
+		return err
+	}
+	args := []string{"update", scope, "-y"}
+	if pkg != "" {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
+			return err
+		}
+		args = append(args, pkg)
+	}
+	_, err := m.exec(WithStreamIO(ctx), "flatpak", args...)
+	if err != nil {
+		return fmt.Errorf("failed to update flatpak %s scope: %w", strings.TrimPrefix(scope, "--"), err)
+	}
+	return nil
+}
+
+// HasSystemRefs reports whether pkg — or any ref when pkg is empty — is
+// installed at system scope. Read-only and auth-free.
+func (m *Flatpak) HasSystemRefs(ctx context.Context, pkg string) (bool, error) {
+	out, err := m.exec(ctx, "flatpak", "list", "--system", flatpakColumnsApplication)
+	if err != nil {
+		return false, fmt.Errorf("failed to list system flatpak refs: %w", err)
+	}
+	refs := parseFlatpakApplicationIDs(out)
+	if pkg == "" {
+		return len(refs) > 0, nil
+	}
+	for _, ref := range refs {
+		if ref == pkg {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // CheckUpdate runs flatpak update --no-deploy to check available updates.
 // Falls back to ErrCheckUnsupported if the flag isn't available (older flatpak).
 func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, error) {
@@ -375,6 +422,33 @@ func (m *Flatpak) CheckUpdate(ctx context.Context, pkg string) ([]UpdateInfo, er
 	}
 	return parseFlatpakDryRun(out), nil
 }
+
+// CheckUser lists user-scoped updates without authentication.
+func (m *Flatpak) CheckUser(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	return m.checkScope(ctx, "--user", pkg)
+}
+
+// CheckSystem lists system-scoped updates; polkit may prompt.
+func (m *Flatpak) CheckSystem(ctx context.Context, pkg string) ([]UpdateInfo, error) {
+	return m.checkScope(ctx, "--system", pkg)
+}
+
+func (m *Flatpak) checkScope(ctx context.Context, scope, pkg string) ([]UpdateInfo, error) {
+	args := []string{"update", scope, "--no-deploy", "-y"}
+	if pkg != "" {
+		if err := ValidateSpecForManager(m.Name(), pkg); err != nil {
+			return nil, err
+		}
+		args = append(args, pkg)
+	}
+	out, err := m.exec(ctx, "flatpak", args...)
+	if err != nil {
+		return nil, fmt.Errorf("%w", ErrCheckUnsupported)
+	}
+	return parseFlatpakDryRun(out), nil
+}
+
+var _ UpdatePhaser = (*Flatpak)(nil)
 
 // Refresh is a no-op for this manager.
 func (m *Flatpak) Refresh(_ context.Context) error {

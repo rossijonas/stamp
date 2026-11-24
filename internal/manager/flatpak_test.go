@@ -558,6 +558,126 @@ func TestFlatpak_PreviewReinstallDelegatesToInstall(t *testing.T) {
 	assert.Equal(t, "already installed via flatpak", pv.Output)
 }
 
+func TestFlatpak_UpdateScopes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		pkg  string
+		run  func(*Flatpak, context.Context) error
+		want []string
+	}{
+		{
+			name: "user all",
+			run:  func(m *Flatpak, ctx context.Context) error { return m.UpdateUser(ctx, "") },
+			want: []string{"flatpak", "update", "--user", "-y"},
+		},
+		{
+			name: "system all",
+			run:  func(m *Flatpak, ctx context.Context) error { return m.UpdateSystem(ctx, "") },
+			want: []string{"flatpak", "update", "--system", "-y"},
+		},
+		{
+			name: "user single package",
+			pkg:  "com.spotify.Client",
+			run:  func(m *Flatpak, ctx context.Context) error { return m.UpdateUser(ctx, "com.spotify.Client") },
+			want: []string{"flatpak", "update", "--user", "-y", "com.spotify.Client"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := NewFlatpak()
+			var got []string
+			m.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+				got = append([]string{name}, args...)
+				return nil, nil
+			}
+			require.NoError(t, tt.run(m, WithYes(context.Background())))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestFlatpak_CheckScopes(t *testing.T) {
+	t.Parallel()
+	out := "Updates for 'com.spotify.Client' in remote 'flathub'\n"
+	tests := []struct {
+		name string
+		run  func(*Flatpak, context.Context) ([]UpdateInfo, error)
+		want []string
+	}{
+		{
+			name: "user",
+			run:  func(m *Flatpak, ctx context.Context) ([]UpdateInfo, error) { return m.CheckUser(ctx, "") },
+			want: []string{"flatpak", "update", "--user", "--no-deploy", "-y"},
+		},
+		{
+			name: "system",
+			run:  func(m *Flatpak, ctx context.Context) ([]UpdateInfo, error) { return m.CheckSystem(ctx, "") },
+			want: []string{"flatpak", "update", "--system", "--no-deploy", "-y"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := NewFlatpak()
+			var got []string
+			m.exec = func(_ context.Context, name string, args ...string) ([]byte, error) {
+				got = append([]string{name}, args...)
+				return []byte(out), nil
+			}
+			updates, err := tt.run(m, WithYes(context.Background()))
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+			require.Len(t, updates, 1)
+			assert.Equal(t, "com.spotify.Client", updates[0].Package)
+		})
+	}
+}
+
+func TestFlatpak_CheckScopes_Unsupported(t *testing.T) {
+	t.Parallel()
+	m := NewFlatpak()
+	m.exec = mockExecutorHelper("", assert.AnError)
+	_, err := m.CheckUser(WithYes(context.Background()), "")
+	require.ErrorIs(t, err, ErrCheckUnsupported)
+}
+
+func TestFlatpak_HasSystemRefs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pkg     string
+		output  string
+		mockErr error
+		want    bool
+		wantErr bool
+	}{
+		{name: "refs exist", output: "Application ID\ncom.spotify.Client\n", want: true},
+		{name: "no refs", output: "Application ID\n", want: false},
+		{name: "package match", pkg: "com.spotify.Client", output: "Application ID\ncom.spotify.Client\n", want: true},
+		{name: "package absent", pkg: "org.gimp.GIMP", output: "Application ID\ncom.spotify.Client\n", want: false},
+		{name: "list error", mockErr: assert.AnError, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := NewFlatpak()
+			m.exec = mockExecutorHelper(tt.output, tt.mockErr)
+			got, err := m.HasSystemRefs(context.Background(), tt.pkg)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestFlatpak_CheckUpdate(t *testing.T) {
 	t.Parallel()
 	manager := NewFlatpak()
