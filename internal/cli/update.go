@@ -430,7 +430,9 @@ func newOutdatedCmd() *cobra.Command {
 		Use:   "outdated",
 		Short: "Check for available updates (alias for stamp update --check)",
 		Long: `Check across all package managers for outdated packages.
-Alias for "stamp update --check".`,
+Alias for "stamp update --check".
+Flatpak system-scope checks run only when a terminal is available; otherwise
+they are skipped with a notice.`,
 		Example: `  # check for outdated packages (alias form)
   stamp outdated
 
@@ -450,7 +452,9 @@ func newCheckUpdateCmd() *cobra.Command {
 		Use:   "check-update",
 		Short: "Check for available updates (alias for stamp update --check)",
 		Long: `Check across all package managers for available updates.
-Alias for "stamp update --check".`,
+Alias for "stamp update --check".
+Flatpak system-scope checks run only when a terminal is available; otherwise
+they are skipped with a notice.`,
 		Example: `  # check for available updates (alias form)
   stamp check-update
 

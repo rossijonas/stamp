@@ -101,7 +101,8 @@ To skip the check phase entirely for speed (useful in scripts or CI), use the `-
 stamp update -y
 ```
 
-This bypasses the check-update latency and proceeds directly to parallelized updates.
+This bypasses the check-update latency and proceeds directly to the user update
+phase. Authenticated system phases (flatpak) still run serially afterwards.
 
 ### Scoped to a Manager
 
@@ -141,6 +142,18 @@ Flatpak updates are split into two phases. User-scope refs update in parallel wi
 ▪ flatpak system update — authentication may be required (polkit)
 ```
 
+A full run finishes the user-scope work with the other managers, then runs the authenticated phase alone:
+
+```text
+[dnf] ...
+updated packages via dnf
+updated packages via flatpak user
+▪ flatpak system update — authentication may be required (polkit)
+updated packages via flatpak system
+```
+
+Success lines include the scope when a manager implements phases: `updated packages via flatpak user` and `updated packages via flatpak system`. With `-p <app-id> -m flatpak`, each scope runs only when that ref is installed there.
+
 `-y` answers flatpak's own prompts but cannot bypass polkit. On WSL and headless hosts without a graphical polkit agent, stamp probes the flatpak polkit actions with `pkcheck` and warns once before the system phase; the password prompt then appears in the terminal through `pkttyagent`.
 
 When no system-scope refs exist, the system phase is skipped. The check phase follows the same split: system-scope updates are only checked when system refs exist and a terminal is available; otherwise stamp prints `system check skipped (authentication required)`.
@@ -155,6 +168,12 @@ Use `--flatpak-user-only` to skip system-scope flatpak updates and system-scope 
 
 ```bash
 stamp update -y --flatpak-user-only
+```
+
+The same flag applies to the check phase:
+
+```bash
+stamp update --check --flatpak-user-only
 ```
 
 ### Python tools (pipx / uv)

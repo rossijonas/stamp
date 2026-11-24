@@ -9,6 +9,8 @@ Check for available updates (alias for stamp update --check)
 
 Check across all package managers for available updates.
 Alias for "stamp update --check".
+Flatpak system-scope checks run only when a terminal is available; otherwise
+they are skipped with a notice.
 
 ```
 stamp check-update [flags]
