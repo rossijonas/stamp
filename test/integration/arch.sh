@@ -75,6 +75,103 @@ check "list shows sl" bash -c "timeout $TIMEOUT stamp list | grep -q sl"
 check "remove sl via pacman" timeout $TIMEOUT_LONG stamp remove sl -m pacman -y
 check "list no longer shows sl" bash -c "timeout $TIMEOUT stamp list | grep -qv sl"
 
+echo "=== Yay (AUR helper) ==="
+yay_check() {
+	desc="$1"
+	shift
+	if "$@" >/dev/null 2>&1; then
+		pass "$desc"
+	else
+		fail "$desc"
+	fi
+}
+
+shim_dir=$(mktemp -d)
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s"\n' "$shim_dir/argv" > "$shim_dir/yay"
+chmod +x "$shim_dir/yay"
+
+: > "$shim_dir/argv"
+if PATH="$shim_dir:$PATH" timeout $TIMEOUT stamp search tree -m yay >/dev/null 2>&1; then
+	if grep -q -- '-Ss' "$shim_dir/argv"; then
+		pass "yay search argv"
+	else
+		fail "yay search argv"
+	fi
+else
+	fail "yay search argv"
+fi
+
+: > "$shim_dir/argv"
+if PATH="$shim_dir:$PATH" timeout $TIMEOUT stamp update -m yay -y >/dev/null 2>&1; then
+	if grep -q -- '-Syu' "$shim_dir/argv" && grep -q -- '--answerupgrade' "$shim_dir/argv"; then
+		pass "yay update argv"
+	else
+		fail "yay update argv"
+	fi
+else
+	fail "yay update argv"
+fi
+
+: > "$shim_dir/argv"
+if PATH="$shim_dir:$PATH" timeout $TIMEOUT stamp install tree -m yay -y >/dev/null 2>&1; then
+	if grep -q -- '-S' "$shim_dir/argv" && grep -q -- '--answerclean' "$shim_dir/argv" && grep -q -- '--answerdiff' "$shim_dir/argv"; then
+		pass "yay install argv"
+	else
+		fail "yay install argv"
+	fi
+	PATH="$shim_dir:$PATH" timeout $TIMEOUT stamp remove tree -m yay -y >/dev/null 2>&1 || true
+else
+	fail "yay install argv"
+fi
+
+if ! command -v yay >/dev/null 2>&1; then
+	echo "  • installing yay-bin from AUR (best-effort)..."
+	yay_build=$(mktemp -d)
+	# shellcheck disable=SC2016 # $1 is expanded by the inner shell
+	if timeout $TIMEOUT_EXTRA bash -c 'git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$1" && cd "$1" && makepkg -si --noconfirm' _ "$yay_build" >/dev/null 2>&1; then
+		pass "yay installed from AUR"
+	else
+		skip "yay unavailable (AUR/build)"
+	fi
+fi
+
+if command -v yay >/dev/null 2>&1; then
+	yay_check "doctor lists yay" bash -c "stamp doctor | grep -q yay"
+	yay_check "yay search" timeout $TIMEOUT_LONG stamp search tree -m yay
+	yay_check "yay check updates" timeout $TIMEOUT_LONG stamp update --check -m yay
+	yay_check "install tree via yay" timeout $TIMEOUT_EXTRA stamp install tree -m yay -y
+	yay_check "list shows tree" bash -c "timeout $TIMEOUT stamp list | grep -q tree"
+	yay_check "yay info" timeout $TIMEOUT stamp info tree -m yay
+	yay_check "remove tree via yay" timeout $TIMEOUT_EXTRA stamp remove tree -m yay -y
+
+	if out=$(sudo env PATH="$PATH" /usr/local/bin/stamp install tree -m yay -y 2>&1); then
+		fail "root refuses yay"
+	else
+		if echo "$out" | grep -q "must run as your user"; then
+			pass "root refuses yay"
+		else
+			fail "root refuses yay"
+		fi
+	fi
+
+	paru_dir=$(mktemp -d)
+	printf '#!/bin/sh\nexit 1\n' > "$paru_dir/paru"
+	chmod +x "$paru_dir/paru"
+	if out=$(PATH="$paru_dir:$PATH" stamp doctor 2>&1); then
+		if echo "$out" | grep -q "using paru" && echo "$out" | grep -q "ignored: yay"; then
+			pass "multiple helpers warn"
+		else
+			fail "multiple helpers warn"
+		fi
+	else
+		fail "multiple helpers warn"
+	fi
+
+	yay_check "copy paru restore manifest" bash -c "mkdir -p ~/.config/stamp && cp /test/fixtures/restore-manifest-paru.toml ~/.config/stamp/manifest.toml"
+	yay_check "restore paru manifest via yay" bash -c "timeout $TIMEOUT_EXTRA stamp restore -y 2>&1 | grep -q 'restored 1 package(s) via yay'"
+	yay_check "restored tree present" bash -c "command -v tree"
+fi
+
 echo "=== JSON Output ==="
 check "doctor shows managers" bash -c "stamp doctor 2>&1 | grep -qE 'brew|flatpak|apt|dnf'"
 check "doctor --json" stamp doctor --json

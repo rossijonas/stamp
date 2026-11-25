@@ -11,9 +11,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 
 RUN useradd -m -s /bin/bash linuxbrew && \
     echo "linuxbrew ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    su - linuxbrew -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
+    sudo -u linuxbrew -H bash -lc "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
 
-RUN su - linuxbrew -c "flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo"
+RUN sudo -u linuxbrew -H bash -lc "flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo"
 
 ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
 

@@ -52,7 +52,7 @@ Spec validation follows each adapter's grammar: `yay` accepts pacman's grammar (
 - `paru` write operations work as the user instead of failing under `sudo`.
 - `sudo stamp update` fails cleanly for helpers instead of breaking an AUR build.
 - The manifest stays truthful while restore remains portable across helpers.
-- `yay` cannot run in the Docker integration matrix: it is an AUR package and `makepkg` refuses root in containers. Unit tests with mocked executors cover it; this limitation is documented.
+- The Arch integration job runs as a non-root user, so `yay` is exercised there: a shim checks argv/flags deterministically, then a best-effort `yay-bin` install covers real search/install/remove, root refusal, the multiple-helper warning, and a paru→yay restore. AUR failures skip the real-helper checks.
 
 ## Alternatives Considered
 
