@@ -45,6 +45,10 @@ stamp list -m brew
 lazygit (brew) — better git TUI than default
 ```
 
+On Arch Linux, `-m pacman` also matches entries recorded under `paru` or `yay`
+(and vice versa): the three share one manager group so filters stay portable
+across helpers. The same applies to `stamp repo list -m`.
+
 ### Filter by entity type and origin
 
 Use `--type, -t` to filter by entity type (packages vs repos) and origin

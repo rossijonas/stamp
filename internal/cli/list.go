@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossijonas/stamp/internal/manager"
 	"github.com/rossijonas/stamp/internal/manifest"
 )
 
@@ -47,10 +48,10 @@ func validateListType(t string) error {
 // An empty manager or origin disables that filter. Origin matching uses
 // OriginEffective so pre-origin manifests (entries without an origin field)
 // count as stamped.
-func filterPackages(pkgs []manifest.Package, manager, origin string) []manifest.Package {
+func filterPackages(pkgs []manifest.Package, managerFilter, origin string) []manifest.Package {
 	filtered := []manifest.Package{}
 	for _, p := range pkgs {
-		if manager != "" && p.Manager != manager {
+		if managerFilter != "" && !manager.Matches(p.Manager, managerFilter) {
 			continue
 		}
 		if origin != "" && p.OriginEffective() != origin {
@@ -63,10 +64,10 @@ func filterPackages(pkgs []manifest.Package, manager, origin string) []manifest.
 
 // filterRepositories returns repositories matching the manager and origin
 // filters. See filterPackages for filter semantics.
-func filterRepositories(repos []manifest.Repository, manager, origin string) []manifest.Repository {
+func filterRepositories(repos []manifest.Repository, managerFilter, origin string) []manifest.Repository {
 	filtered := []manifest.Repository{}
 	for _, r := range repos {
-		if manager != "" && r.Manager != manager {
+		if managerFilter != "" && !manager.Matches(r.Manager, managerFilter) {
 			continue
 		}
 		if origin != "" && r.OriginEffective() != origin {

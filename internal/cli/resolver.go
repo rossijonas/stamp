@@ -25,13 +25,23 @@ func isTapQualifiedRef(pkg string) bool {
 	return strings.Count(pkg, "/") == 2
 }
 
+// findAdapter resolves a manager name to an adapter: exact match first, then an
+// interchangeable manager (pacman/paru/yay, yum/dnf).
+func findAdapter(adapters []manager.Adapter, name string) manager.Adapter {
+	for _, candidate := range manager.Equivalents(name) {
+		for _, a := range adapters {
+			if a.Name() == candidate {
+				return a
+			}
+		}
+	}
+	return nil
+}
+
 // resolveByOverride matches an explicit --manager override to an adapter.
 func resolveByOverride(adapters []manager.Adapter, override string) (manager.Adapter, error) {
-	resolved := manager.ResolveManager(override)
-	for _, a := range adapters {
-		if a.Name() == resolved {
-			return a, nil
-		}
+	if a := findAdapter(adapters, override); a != nil {
+		return a, nil
 	}
 	return nil, fmt.Errorf("unknown manager %q", override)
 }
@@ -44,10 +54,8 @@ func resolveByRules(config *Config, pkg string, adapters []manager.Adapter) mana
 			continue
 		}
 		if matched {
-			for _, a := range adapters {
-				if a.Name() == rule.Prefer {
-					return a
-				}
+			if a := findAdapter(adapters, rule.Prefer); a != nil {
+				return a
 			}
 		}
 	}
@@ -57,10 +65,8 @@ func resolveByRules(config *Config, pkg string, adapters []manager.Adapter) mana
 // resolveByPrecedence picks the first adapter on the global precedence list.
 func resolveByPrecedence(adapters []manager.Adapter, config *Config) manager.Adapter {
 	for _, name := range config.Precedence {
-		for _, a := range adapters {
-			if a.Name() == name {
-				return a
-			}
+		if a := findAdapter(adapters, name); a != nil {
+			return a
 		}
 	}
 	return nil

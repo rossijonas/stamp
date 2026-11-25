@@ -20,6 +20,7 @@ See also: [Technical Spec](spec.html), [OS × Manager Compatibility Matrix](../h
 | Snap | ✓ Complete | All except repo mgmt | Ubuntu, Linux (universal), sudo for write ops |
 | Zypper | ✓ Complete | All except repo mgmt | openSUSE/SLE, sudo for write ops |
 | Paru | ✓ Complete | All except repo mgmt | Arch Linux, AUR + official repos, replaces pacman when available, sudo for write ops |
+| Yay | ✓ Complete | All except repo mgmt | Arch Linux, AUR + official repos, runs as user and escalates internally, used when Paru is not installed |
 | Pacman | ✓ Complete | All except repo mgmt | Arch Linux, fallback when Paru is not installed, sudo for write ops |
 | MacPorts | ✓ Complete | All except repo mgmt | macOS, sudo for write ops |
 | Pipx | ✓ Complete | Install, Remove, Info, ListInstalled, Update (single + batch) | pip-installable CLI tools, --yes for non-interactive, JSON listing with text fallback, no search/doctor/repo support |
@@ -156,21 +157,21 @@ Per-manager native spec acceptance is tracked in the [Package Specification Supp
 
 ## Per-Manager Feature Support
 
-| Feature | DNF | APT | Pacman | Paru | Zypper | Snap | Flatpak | Brew | MacPorts | Go | Pipx | Uv | Npm | Cargo |
-|---------|:---:|:---:|:------:|:----:|:------:|:----:|:-------:|:----:|:--------:|:--:|:----:|:--:|:---:|:-----:|
-| **Install** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Reinstall** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Remove** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Search** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
-| **Info** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Update** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **CheckUpdate** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Doctor** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Cask** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Hold** | ✗ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Add Repo** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Remove Repo** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **List Repos** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Feature | DNF | APT | Pacman | Paru | Yay | Zypper | Snap | Flatpak | Brew | MacPorts | Go | Pipx | Uv | Npm | Cargo |
+|---------|:---:|:---:|:------:|:----:|:----:|:------:|:----:|:-------:|:----:|:--------:|:--:|:----:|:--:|:---:|:-----:|
+| **Install** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Reinstall** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Remove** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Search** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| **Info** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Update** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **CheckUpdate** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Doctor** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Cask** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Hold** | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Add Repo** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Remove Repo** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **List Repos** | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 
 ### Notes
 
@@ -178,13 +179,13 @@ Per-manager native spec acceptance is tracked in the [Package Specification Supp
 - **Update:** All managers support both batch (`stamp update`) and single-package (`stamp update -p <pkg> -m <mgr>`) updates.
 - **Doctor:** Only Brew has a native `doctor` command. Other managers print an informational message and continue.
 - **Cask:** Brew-specific feature for macOS GUI applications (`brew install --cask`). Flatpak and Snap support GUI apps natively on Linux through their standard install flow — no separate flag needed.
-- **Hold:** APT (apt-mark), DNF (dnf versionlock), Pacman/Paru (IgnorePkg in pacman.conf). Other managers do not support version pinning.
+- **Hold:** APT (apt-mark), DNF (dnf versionlock), Pacman/Paru/Yay (IgnorePkg in pacman.conf). Other managers do not support version pinning.
 - **Repo management:** DNF supports COPR repos and `.repo` file URLs (fetched verbatim, gpg settings preserved; URL-added repos are removed by deleting the `.repo` file, COPR repos via `dnf copr disable`), APT supports PPAs and custom URLs, Brew supports taps, Flatpak supports remotes. Other managers do not support third-party repository management through Stamp.
 - **Brew tap trust:** On Homebrew 6.0.0+, `stamp repo add <tap> -m brew` taps **and** trusts the tap (prompt reads "Add and trust ..."); `stamp repo remove <tap> -m brew` untrusts it. `stamp repo trust` / `stamp repo untrust` manage whole-tap trust explicitly. Trust is best-effort on older brew (warn instead of fail). A **tap-qualified install** (`stamp install owner/tap/formula`) instead lets Homebrew trust only that one item — no whole-tap trust — and stores the qualified name in the manifest.
-- **Non-interactive (`-y`):** With `-y`, stamp suppresses each manager's native prompt — `-y`/`--assume-no` for apt/dnf, `--noconfirm` for pacman/paru, `-y` for zypper, and a piped `y\n` to Homebrew's stdin for brew. Snap, MacPorts, and the toolchain adapters (Go, Npm, Pipx, Uv, Cargo) do not present native confirmation prompts.
+- **Non-interactive (`-y`):** With `-y`, stamp suppresses each manager's native prompt — `-y`/`--assume-no` for apt/dnf, `--noconfirm` for pacman/paru/yay, `-y` for zypper, and a piped `y\n` to Homebrew's stdin for brew. Snap, MacPorts, and the toolchain adapters (Go, Npm, Pipx, Uv, Cargo) do not present native confirmation prompts.
 - **CheckUpdate:** Toolchain managers (Go, Pipx, Uv) cannot preview updates. They print an informational notice during `stamp update --check` and continue.
 - **Backup retention:** The `[backup]` section of `config.toml` controls timestamped backup retention (logrotate-style: max/min count + min/max age axes, `0` = unlimited). `stamp reconcile` rotates manifest backups; `stamp init` re-init rotates manifest + snapshot backups. Misconfigurations are reported by `stamp doctor`.
-- **Reconcile reliability:** `stamp reconcile` always prints a reminder that it is a fallback (prefer `stamp install`) and a per-manager reliability note. `ListInstalled` reliability: Reliable (brew, flatpak, go, pipx, uv, npm, cargo, macports, snap — system snaps filtered); Over-inclusive (apt, dnf, zypper, pacman, paru). See `docs/usage/reconcile.md`.
+- **Reconcile reliability:** `stamp reconcile` always prints a reminder that it is a fallback (prefer `stamp install`) and a per-manager reliability note. `ListInstalled` reliability: Reliable (brew, flatpak, go, pipx, uv, npm, cargo, macports, snap — system snaps filtered); Over-inclusive (apt, dnf, zypper, pacman, paru, yay). See `docs/usage/reconcile.md`.
 - **Batch package operations:** `stamp install`/`remove`/`reinstall` accept multiple packages in one command with `-m <manager>` (per-manager only; `go`, `pipx`, `uv` excluded; `snap` excluded from batch reinstall). Homebrew falls back to per-package operations when a batch mixes casks and formulae.
 
 ---
@@ -195,9 +196,9 @@ Per-manager native spec acceptance is tracked in the [Package Specification Supp
 |---------|-------------|-------------------|---------------|--------|
 | **Cask (GUI Apps)** | macOS GUI application management via `brew install --cask`. Auto-detected on install, stored in manifest. | Brew | `stamp install <pkg> -m brew` | ✓ Complete |
 | **Tap-Qualified Install** | Install one formula from a third-party tap by its fully qualified name (`owner/tap/formula`); Homebrew trusts only that item, no whole-tap trust. Stored verbatim in the manifest. | Brew | `stamp install owner/tap/formula` | ✓ Complete |
-| **File Search (provides)** | Find which package owns a specific file or binary. | DNF, APT, Pacman, Paru, Zypper, MacPorts | `stamp provides <file>` | ✓ Complete |
-| **Orphan Cleanup (autoremove)** | Remove unused dependencies that were pulled in automatically. | Brew, DNF, APT, Pacman, Paru, Zypper, Flatpak, MacPorts | `stamp autoremove` | ✓ Complete |
-| **Cache Cleanup (clean)** | Clear locally cached package files to free disk space. | Brew, DNF, APT, Pacman, Paru, Zypper, Snap, MacPorts | `stamp clean` | ✓ Complete |
+| **File Search (provides)** | Find which package owns a specific file or binary. | DNF, APT, Pacman, Paru, Yay, Zypper, MacPorts | `stamp provides <file>` | ✓ Complete |
+| **Orphan Cleanup (autoremove)** | Remove unused dependencies that were pulled in automatically. | Brew, DNF, APT, Pacman, Paru, Yay, Zypper, Flatpak, MacPorts | `stamp autoremove` | ✓ Complete |
+| **Cache Cleanup (clean)** | Clear locally cached package files to free disk space. | Brew, DNF, APT, Pacman, Paru, Yay, Zypper, Snap, MacPorts | `stamp clean` | ✓ Complete |
 | **Version Pinning (hold)** | Pin packages at specific versions to prevent accidental upgrades. | APT, DNF, Pacman, Paru | `stamp hold <pkg>` | ✓ Complete |
 | **Group Install** | Install DNF package groups (e.g. "Development Tools"). | DNF | `stamp install --group` | ✓ Complete |
 | **Flatpak Override** | Manage Flatpak sandbox permissions (filesystem, socket, device access). | Flatpak | `stamp override` | ✓ Complete |

@@ -34,6 +34,7 @@ var specParsers = map[string]func(string) (Spec, error){
 	"yum":      parseDNFSpec,
 	"pacman":   parsePacmanSpec,
 	"paru":     parseParuSpec,
+	"yay":      parsePacmanSpec,
 	"zypper":   parseZypperSpec,
 	"snap":     parseSnapSpec,
 	"flatpak":  parseFlatpakSpec,

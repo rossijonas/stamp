@@ -52,14 +52,7 @@ device, and environment variables. At least one action flag is required.`,
 			}
 
 			// Resolve the adapter
-			resolved := manager.ResolveManager(managerFlag)
-			var adapter manager.Adapter
-			for _, a := range app.adapters {
-				if a.Name() == resolved {
-					adapter = a
-					break
-				}
-			}
+			adapter := findAdapter(app.adapters, managerFlag)
 			if adapter == nil {
 				return fmt.Errorf("manager %q not available", managerFlag)
 			}

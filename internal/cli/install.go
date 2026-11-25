@@ -43,7 +43,10 @@ func newInstallCmd() *cobra.Command {
   stamp install python@3.14 -m brew
 
   # install a repo-qualified pacman package
-  stamp install extra/htop -m pacman`,
+  stamp install extra/htop -m pacman
+
+  # install through yay as your user (AUR helper)
+  stamp install htop -m yay`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInstall(cmd, appFromCtx(cmd), args, managerFlag, note, groupInstall)
@@ -326,10 +329,8 @@ func addTrackedAll(ctx context.Context, app *AppContext, adapter manager.Adapter
 // ErrUnavailable error. Used by the multi-package paths where a single manager
 // must own the whole batch.
 func resolveAdapterByFlag(adapters []manager.Adapter, managerFlag string) (manager.Adapter, error) {
-	for _, a := range adapters {
-		if a.Name() == manager.ResolveManager(managerFlag) {
-			return a, nil
-		}
+	if a := findAdapter(adapters, managerFlag); a != nil {
+		return a, nil
 	}
 	return nil, catErr(ErrUnavailable, "manager %q is not available on this system", managerFlag)
 }
@@ -520,11 +521,8 @@ func resolveRemoveTarget(ctx context.Context, app *AppContext, pkgName, managerF
 		return nil, false, "", catErr(ErrUnavailable, "no package managers available")
 	}
 
-	want := manager.ResolveManager(managerFlag)
-	for _, a := range app.adapters {
-		if a.Name() == want {
-			return a, false, "", nil
-		}
+	if a := findAdapter(app.adapters, managerFlag); a != nil {
+		return a, false, "", nil
 	}
 	return nil, false, "", fmt.Errorf("unknown manager %q", managerFlag)
 }
@@ -772,11 +770,8 @@ func selectSearchTargets(adapters []manager.Adapter, managerFlag string) ([]mana
 	if managerFlag == "" {
 		return adapters, nil
 	}
-	want := manager.ResolveManager(managerFlag)
-	for _, a := range adapters {
-		if a.Name() == want {
-			return []manager.Adapter{a}, nil
-		}
+	if a := findAdapter(adapters, managerFlag); a != nil {
+		return []manager.Adapter{a}, nil
 	}
 	return nil, fmt.Errorf("unknown manager %q", managerFlag)
 }

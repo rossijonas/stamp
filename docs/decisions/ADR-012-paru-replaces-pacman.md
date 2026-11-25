@@ -4,7 +4,7 @@
 # ADR-012: Paru Replaces Pacman for Arch Linux (AUR Support)
 
 ## Status
-Accepted
+Superseded by [ADR-027](ADR-027-arch-helper-abstraction.html)
 
 ## Date
 2026-07-28

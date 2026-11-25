@@ -23,6 +23,7 @@ _Icons (`▪`, `✓`) are shown on interactive terminals; piped output is plain.
 ```bash
 stamp install spotify --manager flatpak
 stamp install lazygit -m brew
+stamp install htop -m yay       # AUR helper runs as your user
 ```
 
 Flatpak does not support the native `install <remote> <ref>` idiom —
@@ -203,7 +204,7 @@ names starting with `-`, control characters, and shell metacharacters; each
 manager then applies its own grammar:
 
 - apt: `htop=3.2`, `htop/bookworm`, `htop:amd64`
-- pacman: `extra/htop`, `htop>=3.2`
+- pacman/yay: `extra/htop`, `htop>=3.2`
 - zypper: `oss:htop`, `htop>=3.2`
 - brew: `python@3.14`, `owner/tap/formula`
 - dnf: NEVRA, provides, file provides, binaries, rich dependencies

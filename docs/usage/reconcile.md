@@ -111,7 +111,7 @@ drift is not mistaken for real package changes:
 | Reliability | Meaning | Managers |
 |---|---|---|
 | Reliable | Lists only user-installed packages | brew, flatpak, go, pipx, uv, npm, cargo, macports, **snap** (filtered) |
-| Over-inclusive | Lists all installed packages (base OS + deps included). Output is consistent run-to-run, so baseline diffing stays safe, but reconcile may list system packages | apt, **dnf**, zypper, pacman, paru |
+| Over-inclusive | Lists all installed packages (base OS + deps included). Output is consistent run-to-run, so baseline diffing stays safe, but reconcile may list system packages | apt, **dnf**, zypper, pacman, paru, yay |
 
 Example output:
 

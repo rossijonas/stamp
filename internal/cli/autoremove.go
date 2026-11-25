@@ -17,11 +17,8 @@ func resolveManagerTarget(adapters []manager.Adapter, managerFlag string) ([]man
 	if managerFlag == "" {
 		return adapters, nil
 	}
-	resolved := manager.ResolveManager(managerFlag)
-	for _, a := range adapters {
-		if a.Name() == resolved {
-			return []manager.Adapter{a}, nil
-		}
+	if a := findAdapter(adapters, managerFlag); a != nil {
+		return []manager.Adapter{a}, nil
 	}
 	return nil, fmt.Errorf("manager %q not available", managerFlag)
 }

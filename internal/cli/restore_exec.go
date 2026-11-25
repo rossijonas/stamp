@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"sync"
 
 	"github.com/rossijonas/stamp/internal/manager"
@@ -23,13 +24,7 @@ func restoreRepositories(ctx context.Context, w io.Writer, adapters []manager.Ad
 	}
 	_, _ = fmt.Fprintln(w, "Phase 1: Restoring Repositories...")
 	for _, r := range repos {
-		var adapter manager.Adapter
-		for _, a := range adapters {
-			if a.Name() == r.Manager {
-				adapter = a
-				break
-			}
-		}
+		adapter := findAdapter(adapters, r.Manager)
 		if adapter == nil {
 			_, _ = fmt.Fprintf(w, "  warning: manager %s not available for repository %s\n", r.Manager, r.Name)
 			continue
@@ -47,7 +42,7 @@ func restoreRepositories(ctx context.Context, w io.Writer, adapters []manager.Ad
 func installRestorePackage(ctx context.Context, w io.Writer, a manager.Adapter, pName string, matches []manifest.Package, outMu *sync.Mutex) error {
 	installCtx := ctx
 	for _, p := range matches {
-		if p.Name == pName && p.Manager == a.Name() {
+		if p.Name == pName && manager.Matches(p.Manager, a.Name()) {
 			if p.Cask {
 				installCtx = manager.WithCask(ctx)
 			}
@@ -96,7 +91,7 @@ func splitGroupPackages(names []string, matches []manifest.Package, mgr string) 
 	for _, n := range names {
 		isGroup := false
 		for _, p := range matches {
-			if p.Name == n && p.Manager == mgr && p.Group {
+			if p.Name == n && manager.Matches(p.Manager, mgr) && p.Group {
 				isGroup = true
 				break
 			}
@@ -190,9 +185,14 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 	}
 	_, _ = fmt.Fprintln(w, "Phase 2: Restoring Packages...")
 
-	byManager := make(map[string][]string)
-	for _, p := range pkgs {
-		byManager[p.Manager] = append(byManager[p.Manager], p.Name)
+	byAdapter, adaptersByName, unavailable := groupRestorePackages(adapters, pkgs)
+	missing := make([]string, 0, len(unavailable))
+	for mName := range unavailable {
+		missing = append(missing, mName)
+	}
+	sort.Strings(missing)
+	for _, mName := range missing {
+		_, _ = fmt.Fprintf(w, "  warning: manager %s not available, skipping %d package(s)\n", mName, unavailable[mName])
 	}
 
 	var errors []restoreError
@@ -200,19 +200,8 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 	var outMu sync.Mutex
 	var wg sync.WaitGroup
 
-	for mName, pNames := range byManager {
-		var adapter manager.Adapter
-		for _, a := range adapters {
-			if a.Name() == mName {
-				adapter = a
-				break
-			}
-		}
-		if adapter == nil {
-			_, _ = fmt.Fprintf(w, "  warning: manager %s not available, skipping %d package(s)\n", mName, len(pNames))
-			continue
-		}
-
+	for name, pNames := range byAdapter {
+		adapter := adaptersByName[name]
 		if serial {
 			restorePackageGroup(ctx, w, adapter, pNames, pkgs, &errMu, &outMu, &errors)
 			continue
@@ -229,6 +218,38 @@ func restorePackages(ctx context.Context, w io.Writer, adapters []manager.Adapte
 	return errors
 }
 
+// groupRestorePackages groups packages by the adapter that will install them.
+// Manifest manager names resolve through equivalence, so pacman and paru
+// entries on a yay host share one group and one native invocation instead of
+// racing through the same helper. The third return value counts packages whose
+// manager is unavailable.
+func groupRestorePackages(adapters []manager.Adapter, pkgs []manifest.Package) (map[string][]string, map[string]manager.Adapter, map[string]int) {
+	names := make(map[string][]string)
+	byName := make(map[string]manager.Adapter)
+	unavailable := make(map[string]int)
+	seen := make(map[string]map[string]struct{})
+
+	for _, p := range pkgs {
+		adapter := findAdapter(adapters, p.Manager)
+		if adapter == nil {
+			unavailable[p.Manager]++
+			continue
+		}
+		key := adapter.Name()
+		byName[key] = adapter
+		if seen[key] == nil {
+			seen[key] = make(map[string]struct{})
+		}
+		if _, ok := seen[key][p.Name]; ok {
+			continue
+		}
+		seen[key][p.Name] = struct{}{}
+		names[key] = append(names[key], p.Name)
+	}
+
+	return names, byName, unavailable
+}
+
 // restoreAdapters returns the adapters for the managers referenced by repos and
 // pkgs, so sudo decisions are scoped to the operations actually being restored.
 func restoreAdapters(adapters []manager.Adapter, repos []manifest.Repository, pkgs []manifest.Package) []manager.Adapter {
@@ -241,8 +262,11 @@ func restoreAdapters(adapters []manager.Adapter, repos []manifest.Repository, pk
 	}
 	var out []manager.Adapter
 	for _, a := range adapters {
-		if _, ok := need[a.Name()]; ok {
-			out = append(out, a)
+		for name := range need {
+			if manager.Matches(name, a.Name()) {
+				out = append(out, a)
+				break
+			}
 		}
 	}
 	return out

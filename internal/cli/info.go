@@ -39,10 +39,8 @@ func resolveInfoTargets(adapters []manager.Adapter, managerFlag string) ([]manag
 	if managerFlag == "" {
 		return adapters, nil
 	}
-	for _, a := range adapters {
-		if a.Name() == manager.ResolveManager(managerFlag) {
-			return []manager.Adapter{a}, nil
-		}
+	if a := findAdapter(adapters, managerFlag); a != nil {
+		return []manager.Adapter{a}, nil
 	}
 	return nil, fmt.Errorf("manager %q not found (required)", managerFlag)
 }
@@ -149,7 +147,7 @@ func renderInfoText(w io.Writer, pkg string, results []infoRawResult, managerFla
 // decide and a name one of them accepts is not gated out.
 func validateInfoArgs(pkgName, managerFlag string, groupInfo bool, targets []manager.Adapter) error {
 	if !groupInfo && managerFlag != "" {
-		if err := manager.ValidatePackageForManager(manager.ResolveManager(managerFlag), pkgName); err != nil {
+		if err := validateInfoPackage(pkgName, managerFlag, targets); err != nil {
 			return err
 		}
 	}
@@ -224,4 +222,13 @@ If -m, --manager is specified, displays the native manager's full raw info block
 	cmd.Flags().StringVarP(&managerFlag, "manager", "m", "", "package manager to query")
 	cmd.Flags().BoolVarP(&groupInfo, "group", "g", false, "query a DNF package group")
 	return cmd
+}
+
+// validateInfoPackage validates a package against the selected adapter, or the
+// aliased manager name when no adapter is installed.
+func validateInfoPackage(pkgName, managerFlag string, targets []manager.Adapter) error {
+	if a := findAdapter(targets, managerFlag); a != nil {
+		return manager.ValidatePackageForManager(a.Name(), pkgName)
+	}
+	return manager.ValidatePackageForManager(manager.ResolveManager(managerFlag), pkgName)
 }

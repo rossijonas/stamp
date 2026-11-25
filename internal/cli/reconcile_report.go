@@ -26,13 +26,7 @@ func filterAdapters(adapters []manager.Adapter, managerFlag string) ([]manager.A
 	if managerFlag == "" {
 		return adapters, nil
 	}
-	var found manager.Adapter
-	for _, a := range adapters {
-		if a.Name() == manager.ResolveManager(managerFlag) {
-			found = a
-			break
-		}
-	}
+	found := findAdapter(adapters, managerFlag)
 	if found == nil {
 		return nil, catErr(ErrUnavailable, "manager %q not available on this system", managerFlag)
 	}

@@ -522,3 +522,25 @@ func TestUpdateCmd_CheckFlatpakUserOnlySkipsSystem(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, buf.String(), "system check")
 }
+
+func TestUpdateCmd_SerialKeepsStdin(t *testing.T) {
+	var noStdin bool
+	adapter := &mockAdapter{name: "dnf", UpdateFunc: func(ctx context.Context, _ string) error {
+		noStdin = manager.NoStdin(ctx)
+		return nil
+	}}
+	_, err := execUpdateCmd(t, []string{"update", "-y", "--serial"}, []manager.Adapter{adapter})
+	require.NoError(t, err)
+	assert.False(t, noStdin, "serial runs keep stdin for prompts")
+}
+
+func TestUpdateCmd_ParallelDisablesStdin(t *testing.T) {
+	var noStdin bool
+	adapter := &mockAdapter{name: "dnf", UpdateFunc: func(ctx context.Context, _ string) error {
+		noStdin = manager.NoStdin(ctx)
+		return nil
+	}}
+	_, err := execUpdateCmd(t, []string{"update", "-y"}, []manager.Adapter{adapter})
+	require.NoError(t, err)
+	assert.True(t, noStdin, "parallel runs must not read the terminal")
+}

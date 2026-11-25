@@ -34,7 +34,7 @@ stamp autoremove --dry-run
     - libbaz
 ```
 
-Only managers that can list orphans independently (Pacman, Paru) show specific package names in dry-run mode.
+Only managers that can list orphans independently (Pacman, Paru, Yay) show specific package names in dry-run mode.
 
 ### Scoped to a manager
 
@@ -55,6 +55,7 @@ stamp autoremove -m brew
 | APT | `sudo apt autoremove -y` | ✗ |
 | Pacman | List: `pacman -Qdtq`, Remove: `sudo pacman -Rs` | ✓ lists orphans |
 | Paru | Same as pacman | ✓ lists orphans |
+| Yay | Same as pacman | ✓ lists orphans |
 | Zypper | `sudo zypper rm -u --non-interactive` | ✗ |
 | Flatpak | `flatpak uninstall --unused -y` | ✗ |
 | MacPorts | `sudo port reclaim --yes` | ✗ |

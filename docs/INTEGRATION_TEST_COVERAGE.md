@@ -6,6 +6,8 @@
 Stamp runs Docker-based integration tests across 7 Linux distributions.
 Each script tests the native package manager plus all cross-platform adapters.
 
+`yay` is not exercised here: it is an AUR package, and `makepkg` refuses to build as root inside containers. Its adapter is covered by mocked unit tests.
+
 ## Test Matrix
 
 | Distro | Script | Dockerfile | Native Adapter | Brew | Flatpak | Snap |

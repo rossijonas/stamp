@@ -20,6 +20,7 @@ Package Managers:
   dnf        ✓ Active   /usr/bin/dnf           Default system manager (Fedora/RHEL, alias yum)
   pacman     ✗ Not Found -                     Executable not found in $PATH
   paru       ✗ Not Found -                     Executable not found in $PATH
+  yay        ✗ Not Found -                     Executable not found in $PATH
   zypper     ✗ Not Found -                     Executable not found in $PATH
   snap       ✓ Active   /usr/bin/snap          Universal Linux package manager
   flatpak    ✓ Active   /usr/bin/flatpak       Sandboxed application distribution

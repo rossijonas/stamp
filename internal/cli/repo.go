@@ -103,10 +103,8 @@ func parseRepoAddArgs(args []string) (name, url string, err error) {
 // resolveAddAdapter resolves the adapter for a repo add command using
 // the explicit -m flag. The add command always requires an explicit manager.
 func resolveAddAdapter(app *AppContext, managerFlag string) (manager.Adapter, error) {
-	for _, a := range app.adapters {
-		if a.Name() == manager.ResolveManager(managerFlag) {
-			return a, nil
-		}
+	if a := findAdapter(app.adapters, managerFlag); a != nil {
+		return a, nil
 	}
 	return nil, fmt.Errorf("manager %q not found (required)", managerFlag)
 }
@@ -118,24 +116,14 @@ func resolveAdapterFromManifest(app *AppContext, name string) manager.Adapter {
 		if r.Name != name {
 			continue
 		}
-		for _, a := range app.adapters {
-			if a.Name() == r.Manager {
-				return a
-			}
-		}
-		break
+		return findAdapter(app.adapters, r.Manager)
 	}
 	return nil
 }
 
 // resolveAdapterFromFlag resolves an adapter using the explicit -m flag.
 func resolveAdapterFromFlag(app *AppContext, managerFlag string) manager.Adapter {
-	for _, a := range app.adapters {
-		if a.Name() == manager.ResolveManager(managerFlag) {
-			return a
-		}
-	}
-	return nil
+	return findAdapter(app.adapters, managerFlag)
 }
 
 // filterReposByManager returns repos matching managerFlag, or all if empty.
@@ -145,7 +133,7 @@ func filterReposByManager(repos []manifest.Repository, managerFlag string) []man
 	}
 	var filtered []manifest.Repository
 	for _, r := range repos {
-		if r.Manager == managerFlag {
+		if manager.Matches(r.Manager, managerFlag) {
 			filtered = append(filtered, r)
 		}
 	}

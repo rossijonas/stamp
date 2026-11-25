@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDetectAdapters_Runs(t *testing.T) {
@@ -190,4 +191,37 @@ func TestDetectAdapters_NeitherParuNorPacman(t *testing.T) {
 			t.Fatalf("neither paru nor pacman should be detected: got %s", a.Name())
 		}
 	}
+}
+
+func TestDetectAdapters_YayWhenParuAbsent(t *testing.T) {
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+	lookPath = func(name string) (string, error) {
+		if name == "yay" {
+			return "/usr/bin/yay", nil
+		}
+		return "", fmt.Errorf("not found: %s", name)
+	}
+
+	adapters := detectAdapters()
+	require.Len(t, adapters, 1)
+	assert.Equal(t, "yay", adapters[0].Name())
+}
+
+func TestDetectAdapters_PrefersParuOverYay(t *testing.T) {
+	lookPathOrig := lookPath
+	defer func() { lookPath = lookPathOrig }()
+	lookPath = func(name string) (string, error) {
+		if name == "paru" || name == "yay" {
+			return "/usr/bin/" + name, nil
+		}
+		return "", fmt.Errorf("not found: %s", name)
+	}
+
+	adapters, warnings := detectAdaptersWithWarnings()
+	require.Len(t, adapters, 1)
+	assert.Equal(t, "paru", adapters[0].Name())
+	require.Len(t, warnings, 1)
+	assert.Contains(t, warnings[0], "yay")
+	assert.Contains(t, warnings[0], "using paru")
 }

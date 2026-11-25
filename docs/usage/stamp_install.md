@@ -35,6 +35,9 @@ stamp install <package> [flags]
 
   # install a repo-qualified pacman package
   stamp install extra/htop -m pacman
+
+  # install through yay as your user (AUR helper)
+  stamp install htop -m yay
 ```
 
 ### Options

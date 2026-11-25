@@ -49,7 +49,8 @@ stamp clean --dry-run
 | DNF | `sudo dnf clean all` | ✗ |
 | APT | `sudo apt clean` | ✗ |
 | Pacman | `sudo pacman -Sc --noconfirm` | ✗ |
-| Paru | `sudo paru -Sc --noconfirm` | ✗ |
+| Paru | `paru -Sc --noconfirm` | ✗ |
+| Yay | `yay -Sc --noconfirm` | ✗ |
 | Zypper | `sudo zypper clean --non-interactive` | ✗ |
 | Snap | Old revisions removal via `snap remove --revision` | ✓ (shows old revisions) |
 | MacPorts | `sudo port clean --all installed` | ✗ |

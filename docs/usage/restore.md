@@ -25,7 +25,8 @@ packages are retried individually with per-package error attribution.
 Homebrew casks are installed with --cask and DNF groups with --group
 automatically. Brew packages installed by their tap-qualified name
 (`owner/tap/formula`) are restored as-is, which re-grants Homebrew's per-item
-tap trust.
+tap trust. Arch entries recorded under `pacman`, `paru`, or `yay` restore
+through whichever helper is installed; `-m pacman` also matches helper entries.
 ```
 
 ### Dry run
