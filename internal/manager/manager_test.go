@@ -3,11 +3,22 @@ package manager
 import (
 	"bytes"
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestMain pins the effective UID to a non-root user so adapter write tests do
+// not trip the AUR root-refusal path. Root tests override geteuid explicitly.
+func TestMain(m *testing.M) {
+	old := geteuid
+	geteuid = func() int { return 1000 }
+	code := m.Run()
+	geteuid = old
+	os.Exit(code)
+}
 
 // mockExecutorHelper returns an Executor that injects a predefined string output.
 func mockExecutorHelper(output string, err error) Executor {
@@ -400,4 +411,35 @@ func TestWithOutputPrefix(t *testing.T) {
 
 	empty := getOutputPrefix(ctx)
 	assert.Empty(t, empty)
+}
+
+func TestEquivalents(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		request  string
+		want     []string
+		contains string
+	}{
+		{name: "pacman group", request: "pacman", want: []string{"pacman", "paru", "yay"}},
+		{name: "paru group", request: "paru", want: []string{"paru", "yay", "pacman"}},
+		{name: "yum alias", request: "yum", want: []string{"yum", "dnf"}},
+		{name: "dnf group", request: "dnf", want: []string{"dnf", "yum"}},
+		{name: "unknown", request: "brew", want: []string{"brew"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, Equivalents(tt.request))
+			assert.True(t, Matches(tt.want[0], tt.request))
+			assert.True(t, Matches(tt.request, tt.want[0]))
+		})
+	}
+}
+
+func TestEquivalents_ReturnsCopy(t *testing.T) {
+	t.Parallel()
+	got := Equivalents("pacman")
+	got[0] = "mutated"
+	assert.Equal(t, "pacman", Equivalents("pacman")[0])
 }

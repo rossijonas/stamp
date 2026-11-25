@@ -10,7 +10,7 @@ Pin a package at its current version to prevent upgrades
 Pin a package at its current version to prevent accidental upgrades.
 
 Scoped to a single manager with the --manager flag.
-Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePkg).
+Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru/yay (IgnorePkg).
 
 ```
 stamp hold <package> [flags]

@@ -31,6 +31,7 @@ Every stamp command has aliases matching your favorite package manager's native 
 | APT / DNF | `apt show` / `dnf info` | `stamp show <pkg>` |
 | APT | `apt list --upgradable` | `stamp outdated` |
 | DNF | `dnf check-update` | `stamp check-update` |
+| Pacman / Paru / Yay | `pacman -Qu` / `paru -Qu` / `yay -Qu` | `stamp outdated` |
 | Brew | `brew outdated` | `stamp outdated` |
 | Brew | `brew tap <name>` | `stamp tap <name>` |
 | Brew | `brew untap <name>` | `stamp untap <name>` |

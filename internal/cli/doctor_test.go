@@ -27,6 +27,7 @@ func TestBuildManagersReport_UsesAdapterBinary(t *testing.T) {
 		{name: "apt-get fallback", adapter: manager.NewAPT("apt-get"), binary: "apt-get"},
 		{name: "yum fallback", adapter: manager.NewDNF("yum"), binary: "yum"},
 		{name: "macports uses port", adapter: manager.NewMacPorts(), binary: "port"},
+		{name: "yay binary", adapter: manager.NewYay(), binary: "yay"},
 		{name: "falls back to adapter name", adapter: &manager.Mock{ManagerName: "brew"}, binary: "brew"},
 	}
 
@@ -96,7 +97,7 @@ func TestDoctor_JSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, runtime.GOOS, report.System)
-	assert.Len(t, report.PackageManagers, 14)
+	assert.Len(t, report.PackageManagers, 15)
 
 	names := make(map[string]bool)
 	for _, m := range report.PackageManagers {

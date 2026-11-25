@@ -74,7 +74,9 @@ stamp never prompts. Before the parallel update phase stamp re-validates
 credentials; if a password is required and `sudo` cannot cache it, updates
 run serially so prompts never race. Flatpak system updates use polkit instead
 of sudo; they run in their own serial phase after the parallel update and never
-share stdin with other managers (see below).
+share stdin with other managers (see below). AUR helpers (`paru`, `yay`) run
+as your user and escalate internally; `sudo stamp` is refused for helper
+writes (ADR-027).
 
 ### Check Only (Dry-Run)
 
@@ -110,6 +112,7 @@ Scope the check and update to a single package manager with `-m` / `--manager`:
 
 ```bash
 stamp update -m apt
+stamp update -m yay   # AUR helper runs as your user, not root
 ```
 
 ### Single Package

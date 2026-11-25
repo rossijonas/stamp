@@ -45,8 +45,9 @@ tasks:
         vars: { DISTRO: opensuse }
 
   test:integration:platform:
-    desc: "Run integration tests for a single platform (internal)"
-    internal: true
+    desc: "Run integration tests for one distro (DISTRO=fedora|arch|...)"
+    requires:
+      vars: [DISTRO]
     cmds:
       - cmd: docker build --build-arg BIN=bin/stamp -f test/Dockerfile.{{.DISTRO}} -t stamp-test-{{.DISTRO}} .
         silent: true

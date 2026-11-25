@@ -46,6 +46,7 @@ no packages provide /usr/bin/nonexistent
 | APT | `dpkg -S <file>` | Always available (not `apt-file`) |
 | Pacman | `pacman -F <file>` | Requires `pacman -Fy` to sync file database first |
 | Paru | `pacman -F <file>` | Same as pacman |
+| Yay | `pacman -F <file>` | Same as pacman |
 | Zypper | `zypper what-provides <file>` | |
 | MacPorts | `port provides <file>` | |
 | Others | ✗ Not supported | — |

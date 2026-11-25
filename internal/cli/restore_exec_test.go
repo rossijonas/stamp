@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -343,4 +344,64 @@ func TestRestoreBatch_SinglePackageUsesBatch(t *testing.T) {
 	require.Empty(t, errs)
 	assert.Equal(t, 1, mockBrew.InstallManyCalls, "single package still batched")
 	assert.Contains(t, buf.String(), "restored 1 package(s) via brew")
+}
+
+func TestRestoreAdapters_EquivalentHelper(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&mockAdapter{name: "yay"}}
+	pkgs := []manifest.Package{{Name: "htop", Manager: "paru"}}
+	got := restoreAdapters(adapters, nil, pkgs)
+	require.Len(t, got, 1)
+	assert.Equal(t, "yay", got[0].Name())
+}
+
+func TestGroupRestorePackages(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&mockAdapter{name: "yay"}}
+	pkgs := []manifest.Package{
+		{Name: "htop", Manager: "pacman"},
+		{Name: "ripgrep", Manager: "paru"},
+		{Name: "htop", Manager: "paru"},
+		{Name: "orphan", Manager: "brew"},
+	}
+
+	names, byName, unavailable := groupRestorePackages(adapters, pkgs)
+	require.Len(t, names, 1)
+	assert.ElementsMatch(t, []string{"htop", "ripgrep"}, names["yay"])
+	assert.Equal(t, "yay", byName["yay"].Name())
+	assert.Equal(t, 1, unavailable["brew"], "unavailable manager counted")
+}
+
+func TestGroupRestorePackages_YumToDnf(t *testing.T) {
+	t.Parallel()
+	adapters := []manager.Adapter{&mockAdapter{name: "dnf"}}
+	pkgs := []manifest.Package{{Name: "htop", Manager: "yum"}}
+
+	names, byName, unavailable := groupRestorePackages(adapters, pkgs)
+	require.Len(t, names, 1)
+	assert.Equal(t, []string{"htop"}, names["dnf"])
+	assert.Equal(t, "dnf", byName["dnf"].Name())
+	assert.Empty(t, unavailable)
+}
+
+func TestRestorePackages_UnavailableWarningsSorted(t *testing.T) {
+	t.Parallel()
+	pkgs := []manifest.Package{
+		{Name: "a", Manager: "snap"},
+		{Name: "b", Manager: "brew"},
+		{Name: "c", Manager: "zypper"},
+	}
+	var buf bytes.Buffer
+	errs := restorePackages(context.Background(), &buf, nil, pkgs, false)
+	require.Empty(t, errs)
+
+	out := buf.String()
+	brewAt := strings.Index(out, "manager brew")
+	snapAt := strings.Index(out, "manager snap")
+	zypperAt := strings.Index(out, "manager zypper")
+	require.NotEqual(t, -1, brewAt)
+	require.NotEqual(t, -1, snapAt)
+	require.NotEqual(t, -1, zypperAt)
+	assert.Less(t, brewAt, snapAt)
+	assert.Less(t, snapAt, zypperAt)
 }

@@ -92,13 +92,10 @@ func confirmUntrack(cmd *cobra.Command, app *AppContext, pkg manifest.Package) (
 // manifest-only: no adapter needs to be installed.
 func selectUntrackedPackage(pkgs []manifest.Package, name, managerFlag string) (manifest.Package, error) {
 	if managerFlag != "" {
-		want := manager.ResolveManager(managerFlag)
-		for _, p := range pkgs {
-			if p.Name == name && p.Manager == want {
-				return p, nil
-			}
+		if p, ok := trackedUnder(pkgs, name, managerFlag); ok {
+			return p, nil
 		}
-		return manifest.Package{}, fmt.Errorf("package %q is not tracked under %q", name, want)
+		return manifest.Package{}, fmt.Errorf("package %q is not tracked under %q", name, managerFlag)
 	}
 
 	var matches []manifest.Package
@@ -120,4 +117,17 @@ func selectUntrackedPackage(pkgs []manifest.Package, name, managerFlag string) (
 		slices.Sort(managers)
 		return manifest.Package{}, catErr(ErrUsage, "package %q is tracked under multiple managers (%s); use -m", name, strings.Join(managers, ", "))
 	}
+}
+
+// trackedUnder finds a manifest entry under the requested manager or an
+// interchangeable one (e.g. -m pacman on a paru/yay entry).
+func trackedUnder(pkgs []manifest.Package, name, managerFlag string) (manifest.Package, bool) {
+	for _, want := range manager.Equivalents(managerFlag) {
+		for _, p := range pkgs {
+			if p.Name == name && p.Manager == want {
+				return p, true
+			}
+		}
+	}
+	return manifest.Package{}, false
 }

@@ -85,6 +85,7 @@ func buildManagersReport(adapters []manager.Adapter) []managerStatus {
 		{"dnf", "Default system manager (Fedora/RHEL, alias yum)"},
 		{"pacman", "Package manager for Arch Linux"},
 		{"paru", "AUR helper for Arch Linux (replaces pacman)"},
+		{"yay", "AUR helper for Arch Linux (replaces pacman)"},
 		{"zypper", "Package manager for openSUSE/SLES"},
 		{"snap", "Universal Linux package manager"},
 		{"flatpak", "Sandboxed application distribution"},
@@ -185,13 +186,7 @@ func buildDoctorReport(ctx context.Context, app *AppContext) *doctorReport {
 // runManagerDoctor runs a single manager's native doctor diagnostics and
 // prints the result. Returns an error when the manager is unavailable.
 func runManagerDoctor(cmd *cobra.Command, adapters []manager.Adapter, managerFlag string) error {
-	var adapter manager.Adapter
-	for _, a := range adapters {
-		if a.Name() == manager.ResolveManager(managerFlag) {
-			adapter = a
-			break
-		}
-	}
+	adapter := findAdapter(adapters, managerFlag)
 	if adapter == nil {
 		return catErr(ErrUnavailable, "manager %q not available on this system", managerFlag)
 	}

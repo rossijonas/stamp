@@ -117,7 +117,7 @@ check "list -m dnf" timeout $TIMEOUT stamp list -m dnf
 echo "=== Error Paths ==="
 check_fail "install invalid name" timeout $TIMEOUT stamp install -invalid -m dnf
 # dnf treats removing non-existent packages as a successful no-op (exit=0), so check_fail is skipped
-check "search no results" bash -c "timeout $TIMEOUT stamp search xyznonexistent -m dnf 2>&1 | grep -q 'No matches'"
+check "search no results" bash -c "timeout $TIMEOUT stamp search xyznonexistent -m dnf 2>&1 | grep -qi 'no results'"
 echo "  • search without -m (best-effort, flatpak may be slow)..."
 if timeout $TIMEOUT stamp search htop >/dev/null 2>&1; then
 	pass "search without -m"

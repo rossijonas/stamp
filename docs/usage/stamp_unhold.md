@@ -10,7 +10,7 @@ Remove a version pin, allowing upgrades
 Remove a version pin from a package, allowing it to be upgraded again.
 
 Scoped to a single manager with the --manager flag.
-Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePkg).
+Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru/yay (IgnorePkg).
 
 ```
 stamp unhold <package> [flags]

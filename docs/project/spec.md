@@ -99,8 +99,9 @@ full list and detection rules.
 | :--- | :--- | :--- |
 | **DNF / YUM** | RHEL family (Fedora, RHEL, CentOS, Rocky, AlmaLinux) | DNF preferred, YUM fallback when DNF unavailable |
 | **APT / apt-get** | Debian/Ubuntu | |
-| **Paru** | Arch Linux | Preferred when both Paru and Pacman are installed |
-| **Pacman** | Arch Linux | Fallback when Paru not installed |
+| **Paru** | Arch Linux | Preferred AUR helper when installed |
+| **Yay** | Arch Linux | AUR helper used when Paru is not installed |
+| **Pacman** | Arch Linux | Fallback when no AUR helper is installed |
 | **Zypper** | openSUSE/SLES | |
 | **Snap** | Linux (universal) | |
 | **Flatpak** | Linux (sandboxed) | |

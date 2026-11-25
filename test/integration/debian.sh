@@ -125,7 +125,7 @@ check "list -m apt" timeout $TIMEOUT stamp list -m apt
 echo "=== Error Paths ==="
 check_fail "install invalid name" timeout $TIMEOUT stamp install -invalid -m apt
 check_fail "remove nonexistent pkg" timeout $TIMEOUT stamp remove nonexistent-pkg -m apt -y
-check "search no results" bash -c "timeout $TIMEOUT stamp search xyznonexistent -m apt 2>&1 | grep -q 'no results' || timeout $TIMEOUT stamp search xyznonexistent -m apt 2>&1 | grep -q 'No matches'"
+check "search no results" bash -c "timeout $TIMEOUT stamp search xyznonexistent -m apt 2>&1 | grep -qi 'no results'"
 echo "  • search without -m (best-effort, flatpak may be slow)..."
 if timeout $TIMEOUT stamp search htop >/dev/null 2>&1; then
 	pass "search without -m"

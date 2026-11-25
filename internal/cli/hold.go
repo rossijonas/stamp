@@ -28,7 +28,7 @@ func newHoldCmd() *cobra.Command {
 		Long: `Pin a package at its current version to prevent accidental upgrades.
 
 Scoped to a single manager with the --manager flag.
-Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePkg).`,
+Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru/yay (IgnorePkg).`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
@@ -62,7 +62,7 @@ func newUnholdCmd() *cobra.Command {
 		Long: `Remove a version pin from a package, allowing it to be upgraded again.
 
 Scoped to a single manager with the --manager flag.
-Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru (IgnorePkg).`,
+Supported managers: apt (apt-mark), dnf (dnf versionlock), pacman/paru/yay (IgnorePkg).`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app := appFromCtx(cmd)
@@ -119,11 +119,8 @@ func resolveTargets(adapters []manager.Adapter, managerFlag string) ([]manager.A
 	if managerFlag == "" {
 		return adapters, nil
 	}
-	resolved := manager.ResolveManager(managerFlag)
-	for _, a := range adapters {
-		if a.Name() == resolved {
-			return []manager.Adapter{a}, nil
-		}
+	if a := findAdapter(adapters, managerFlag); a != nil {
+		return []manager.Adapter{a}, nil
 	}
 	return nil, fmt.Errorf("manager %q not available", managerFlag)
 }

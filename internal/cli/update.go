@@ -18,11 +18,12 @@ type checkResult struct {
 	Err     error
 }
 
-func runUpdate(ctx context.Context, w io.Writer, a manager.Adapter, pkg string, prefix string, userPhase bool) bool {
+func runUpdate(ctx context.Context, w io.Writer, a manager.Adapter, pkg string, prefix string, userPhase, noStdin bool) bool {
 	ctx = manager.WithOutputPrefix(ctx, prefix)
-	if userPhase {
+	if noStdin {
 		// Parallel user-phase children must never read the terminal: a prompt
-		// from one manager would consume input intended for another.
+		// from one manager would consume input intended for another. Serial
+		// runs keep stdin so a manager can prompt when sudo is not cached.
 		ctx = manager.WithNoStdin(ctx)
 	}
 
@@ -152,7 +153,7 @@ func runUpdatesSerial(ctx context.Context, w io.Writer, adapters []manager.Adapt
 	var hasErr bool
 	for _, a := range adapters {
 		printProgress(w, tty, "▪", fmt.Sprintf("updating via %s...", a.Name()))
-		if !runUpdate(ctx, w, a, pkg, "", true) {
+		if !runUpdate(ctx, w, a, pkg, "", true, false) {
 			hasErr = true
 		}
 	}
@@ -168,7 +169,7 @@ func runUpdatesParallel(ctx context.Context, w io.Writer, adapters []manager.Ada
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if !runUpdate(ctx, w, a, pkg, "["+a.Name()+"] ", true) {
+			if !runUpdate(ctx, w, a, pkg, "["+a.Name()+"] ", true, true) {
 				mu.Lock()
 				hasErr = true
 				mu.Unlock()
@@ -240,7 +241,7 @@ func runSystemPhases(ctx context.Context, w io.Writer, adapters []manager.Adapte
 		}
 
 		_, _ = fmt.Fprintf(w, "▪ %s system update — authentication may be required (polkit)\n", a.Name())
-		if !runUpdate(ctx, w, a, pkg, "", false) {
+		if !runUpdate(ctx, w, a, pkg, "", false, false) {
 			hasErr = true
 		}
 	}
@@ -375,6 +376,9 @@ func newUpdateCmd() *cobra.Command {
 
   # skip system-scope flatpak updates (avoids polkit prompts)
   stamp update -y --flatpak-user-only
+
+  # update through yay as your user (AUR helper)
+  stamp update -m yay
 
   # update a versioned apt package (tracked as htop)
   stamp update -p htop=3.2.1 -m apt

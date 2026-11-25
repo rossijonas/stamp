@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -106,7 +107,53 @@ func lookPathFirst(names ...string) (string, bool) {
 }
 
 func detectAdapters() []manager.Adapter {
+	adapters, _ := detectAdaptersWithWarnings()
+	return adapters
+}
+
+// detectArchAdapter registers one Arch manager (paru > yay > pacman) and warns
+// when other AUR helpers are installed.
+func detectArchAdapter() (manager.Adapter, []string) {
+	helpers := []struct {
+		bin  string
+		ctor func() manager.Adapter
+	}{
+		{"paru", func() manager.Adapter { return manager.NewParu() }},
+		{"yay", func() manager.Adapter { return manager.NewYay() }},
+	}
+	var installed, ignored []string
+	var chosen manager.Adapter
+	var chosenBin string
+	for _, h := range helpers {
+		if _, err := lookPath(h.bin); err != nil {
+			continue
+		}
+		installed = append(installed, h.bin)
+		if chosen == nil {
+			chosen = h.ctor()
+			chosenBin = h.bin
+		} else {
+			ignored = append(ignored, h.bin)
+		}
+	}
+	if chosen == nil {
+		if _, err := lookPath("pacman"); err == nil {
+			return manager.NewPacman(), nil
+		}
+		return nil, nil
+	}
+	if len(installed) > 1 {
+		return chosen, []string{fmt.Sprintf("%s are installed; using %s (ignored: %s)",
+			strings.Join(installed, " and "), chosenBin, strings.Join(ignored, ", "))}
+	}
+	return chosen, nil
+}
+
+// detectAdaptersWithWarnings registers one AUR helper (paru > yay > pacman) and
+// reports the helpers it ignored, so the operator can switch precedence.
+func detectAdaptersWithWarnings() ([]manager.Adapter, []string) {
 	adapters := make([]manager.Adapter, 0)
+	var warnings []string
 	detect := func(bin string, fn func() manager.Adapter) {
 		if _, err := lookPath(bin); err == nil {
 			adapters = append(adapters, fn())
@@ -125,10 +172,9 @@ func detectAdapters() []manager.Adapter {
 		detect("flatpak", func() manager.Adapter { return manager.NewFlatpak() })
 		detect("snap", func() manager.Adapter { return manager.NewSnap() })
 		detect("zypper", func() manager.Adapter { return manager.NewZypper() })
-		if _, err := lookPath("paru"); err == nil {
-			adapters = append(adapters, manager.NewParu())
-		} else if _, err := lookPath("pacman"); err == nil {
-			adapters = append(adapters, manager.NewPacman())
+		if a, warns := detectArchAdapter(); a != nil {
+			adapters = append(adapters, a)
+			warnings = append(warnings, warns...)
 		}
 	}
 	detect("brew", func() manager.Adapter { return manager.NewBrew() })
@@ -140,7 +186,7 @@ func detectAdapters() []manager.Adapter {
 	if runtime.GOOS == "darwin" {
 		detect("port", func() manager.Adapter { return manager.NewMacPorts() })
 	}
-	return adapters
+	return adapters, warnings
 }
 
 func newAppContext(yes, verbose, json bool, adapters []manager.Adapter, cfgPath, mfPath string) (*AppContext, error) {
@@ -233,7 +279,11 @@ func NewRootCmd(opts ...RootOption) *cobra.Command {
 
 			adapters := cfg.adapters
 			if adapters == nil {
-				adapters = detectAdapters()
+				var warnings []string
+				adapters, warnings = detectAdaptersWithWarnings()
+				for _, warning := range warnings {
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  warning: %s\n", warning)
+				}
 			}
 
 			app, err := newAppContext(yes, verbose, json, adapters, cPath, mPath)

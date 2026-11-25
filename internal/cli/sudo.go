@@ -16,11 +16,12 @@ var (
 	sudoEnsure = manager.EnsureSudo
 )
 
-// needsSudo reports whether any of the given adapters runs commands through sudo.
+// needsSudo reports whether any of the given adapters needs sudo credentials.
+// AUR helpers escalate internally but still need the cached credential.
 func needsSudo(adapters []manager.Adapter) bool {
 	for _, a := range adapters {
 		switch a.Name() {
-		case "dnf", "apt", "zypper", "pacman", "paru", "macports", "snap", "npm":
+		case "dnf", "apt", "zypper", "pacman", "paru", "yay", "macports", "snap", "npm":
 			return true
 		}
 	}

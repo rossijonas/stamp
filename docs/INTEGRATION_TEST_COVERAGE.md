@@ -6,6 +6,8 @@
 Stamp runs Docker-based integration tests across 7 Linux distributions.
 Each script tests the native package manager plus all cross-platform adapters.
 
+The Arch script also exercises `yay`: a deterministic shim checks search/update/install argv and flags, then it attempts a best-effort `yay-bin` install from the AUR as the non-root container user and runs search/info/check-update/install/remove, root refusal, the multiple-helper warning, and a paru→yay restore. If the AUR or build is unavailable, the real-helper checks are skipped.
+
 ## Test Matrix
 
 | Distro | Script | Dockerfile | Native Adapter | Brew | Flatpak | Snap |

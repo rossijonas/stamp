@@ -139,3 +139,19 @@ func TestResolver_SkipsMissingPrecedenceEntry(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "brew", a.Name())
 }
+
+func TestResolver_OverrideEquivalent(t *testing.T) {
+	t.Parallel()
+	r := NewResolver([]manager.Adapter{&mockAdapter{name: "yay"}}, &Config{})
+	got, err := r.Resolve("htop", "pacman")
+	require.NoError(t, err)
+	assert.Equal(t, "yay", got.Name())
+}
+
+func TestResolver_PrecedenceEquivalent(t *testing.T) {
+	t.Parallel()
+	r := NewResolver([]manager.Adapter{&mockAdapter{name: "yay"}}, &Config{Precedence: []string{"pacman"}})
+	got, err := r.Resolve("htop", "")
+	require.NoError(t, err)
+	assert.Equal(t, "yay", got.Name())
+}

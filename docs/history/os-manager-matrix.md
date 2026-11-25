@@ -12,6 +12,7 @@
 | **Flatpak** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | - |
 | **Brew** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Paru** | - | - | - | - | - | ✓* | - | - |
+| **Yay** | - | - | - | - | - | ✓* | - | - |
 | **Pacman** | - | - | - | - | - | ✓* | - | - |
 | **MacPorts** | - | - | - | - | - | - | - | ✓ |
 
@@ -32,9 +33,9 @@
 
 ### Conditions
 
-1. **Paru** replaces **Pacman** when both are installed on Arch Linux. Both rows
-   are marked `✓*` because either can be active; Stamp falls back to Pacman when
-   Paru is absent.
+1. Exactly one AUR helper is registered on Arch Linux, in the order
+   **Paru** > **Yay** > **Pacman**. All three rows are marked `✓*` because any of
+   them can be active; Stamp warns when more than one helper is installed.
 
 ### Windows
 

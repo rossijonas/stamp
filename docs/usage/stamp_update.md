@@ -48,6 +48,9 @@ stamp update [flags]
   # skip system-scope flatpak updates (avoids polkit prompts)
   stamp update -y --flatpak-user-only
 
+  # update through yay as your user (AUR helper)
+  stamp update -m yay
+
   # update a versioned apt package (tracked as htop)
   stamp update -p htop=3.2.1 -m apt
 

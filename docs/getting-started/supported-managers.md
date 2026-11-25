@@ -19,18 +19,19 @@ this machine.
 | macports | macOS | Detected through the `port` binary |
 | npm | macOS, Linux | Globally installed CLI tools |
 | pacman | Arch Linux | Fallback when `paru` is not installed |
-| paru | Arch Linux | Preferred over `pacman` when both are installed; AUR support |
+| paru | Arch Linux | Preferred AUR helper; AUR support |
 | pipx | macOS, Linux | Python CLI tools |
 | snap | Linux | Universal Linux packages |
 | uv | macOS, Linux | Python CLI tools via `uv tool` |
+| yay | Arch Linux | AUR helper used when `paru` is not installed; runs as the user |
 | zypper | openSUSE, SLES | |
 
 ### Detection rules
 
 - A manager is registered only when its binary is found in `$PATH`. Run
   `stamp doctor` for the current list and resolved paths.
-- On Arch Linux, `paru` replaces `pacman` when both are installed. If `paru` is
-  absent, stamp falls back to `pacman`.
+- On Arch Linux, exactly one helper is registered: `paru`, then `yay`, then
+  plain `pacman`. Stamp warns when more than one helper is installed.
 - `dnf` registers once, under the `dnf` name, whether the system provides `dnf`
   or `yum`.
 - `macports` is macOS-only and is detected through the `port` binary.

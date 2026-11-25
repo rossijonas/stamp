@@ -77,6 +77,7 @@ stamp search htop -m dnf
 | Brew | ✓ | Uses `brew search` |
 | Pacman | ✓ | Uses `pacman -Ss` |
 | Paru | ✓ | Uses `paru -Ss` (includes AUR) |
+| Yay | ✓ | Uses `yay -Ss` (includes AUR) |
 | Flatpak | ✓ | Uses `flatpak search --columns=application` |
 | Zypper | ✓ | Uses `zypper search` |
 | Snap | ✓ | Uses `snap find` |

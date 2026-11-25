@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -414,6 +415,33 @@ func init() {
 }
 
 var managerAliases map[string]string
+
+// managerEquivalents groups managers that can substitute for each other. The
+// requested name comes first, then the preferred alternatives.
+var managerEquivalents = map[string][]string{
+	"dnf":    {"dnf", "yum"},
+	"pacman": {"pacman", "paru", "yay"},
+	"paru":   {"paru", "yay", "pacman"},
+	"yay":    {"yay", "paru", "pacman"},
+}
+
+// Equivalents returns the candidate manager names for name, exact first, then
+// interchangeable managers (AUR helpers, yum/dnf). The returned slice is a copy.
+func Equivalents(name string) []string {
+	if resolved, ok := managerAliases[name]; ok {
+		return []string{name, resolved}
+	}
+	if group, ok := managerEquivalents[name]; ok {
+		return slices.Clone(group)
+	}
+	return []string{name}
+}
+
+// Matches reports whether name is the requested manager or one of its
+// interchangeable equivalents.
+func Matches(name, requested string) bool {
+	return slices.Contains(Equivalents(requested), name)
+}
 
 // ResolveManager resolves the manager name, including aliases (e.g. "yum" → "dnf").
 func ResolveManager(name string) string {

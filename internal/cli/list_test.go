@@ -475,3 +475,11 @@ func TestListCmd_TypeMissing_EmptyManifest(t *testing.T) {
 	out := runListCmdWithAdapters(t, mPath, cPath, adapters, "-t", "missing")
 	assert.Contains(t, out, "no missing packages")
 }
+
+func TestFilterPackages_EquivalentManager(t *testing.T) {
+	t.Parallel()
+	pkgs := []manifest.Package{{Name: "htop", Manager: "yay"}}
+	got := filterPackages(pkgs, "pacman", "")
+	require.Len(t, got, 1)
+	assert.Equal(t, "yay", got[0].Manager)
+}

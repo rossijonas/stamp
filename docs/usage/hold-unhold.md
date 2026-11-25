@@ -64,6 +64,7 @@ no packages held
 | DNF | `sudo dnf versionlock add <pkg>` | `sudo dnf versionlock delete <pkg>` | `dnf versionlock list` |
 | Pacman | Adds to `IgnorePkg` in `/etc/pacman.conf` | Removes from `IgnorePkg` | Parses `IgnorePkg` |
 | Paru | Same as pacman | Same as pacman | Same as pacman |
+| Yay | Same as pacman | Same as pacman | Same as pacman |
 | Others | ✗ Not supported | ✗ Not supported | ✗ Not supported |
 
 Hold/unhold requires `--manager` flag. Listing `stamp held` aggregates across all supported managers.
